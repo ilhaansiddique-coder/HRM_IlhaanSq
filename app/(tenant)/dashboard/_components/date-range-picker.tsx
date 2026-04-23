@@ -221,7 +221,7 @@ export function DateRangePicker() {
       <PopoverContent
         align="start"
         sideOffset={8}
-        className="!w-[min(820px,calc(100vw-1rem))] !max-w-none p-0"
+        className="!w-fit !max-w-[calc(100vw-1rem)] p-0"
       >
         <div className="flex flex-col md:flex-row">
           {/* Presets */}
