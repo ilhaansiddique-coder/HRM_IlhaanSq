@@ -62,7 +62,7 @@ export default async function DashboardPage() {
       {/* Row 3 — Top Products + Sales Map (Bangladesh) + Volume vs Service */}
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <TopProductsList items={analytics.topProducts} />
-        <SalesMapChart data={analytics.salesByRegion} />
+        <SalesMapChart data={analytics.salesByDistrict} />
         <VolumeServiceChart data={analytics.volumeVsService} />
       </div>
     </div>

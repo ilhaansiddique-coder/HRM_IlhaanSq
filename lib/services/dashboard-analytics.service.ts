@@ -586,162 +586,182 @@ export async function getVolumeVsService(
   });
 }
 
-// ─── 8. Sales by Region (Bangladesh divisions choropleth) ───
-// Aggregates sales revenue into Bangladesh's 8 administrative divisions
-// by mapping the sale.city / customerAddress string to a division.
+// ─── 8. Sales by District (Bangladesh 64-district choropleth) ───
+// Aggregates sales revenue into Bangladesh's 64 districts by mapping
+// sale.city / customerAddress to a canonical district key. Output keys
+// match the ADM2_EN field in public/geo/bd-districts.geojson.
 
-export type BdDivision =
-  | "dhaka"
-  | "chattogram"
-  | "khulna"
-  | "rajshahi"
-  | "barishal"
-  | "sylhet"
-  | "rangpur"
-  | "mymensingh";
-
-export type SalesByRegionPoint = {
-  division: BdDivision;
-  label: string;
+export type SalesByDistrictPoint = {
+  district: string; // canonical key, matches ADM2_EN in GeoJSON
+  division: string;
   revenue: number;
   orders: number;
-  percent: number; // of top division
+  percent: number; // of top district
 };
 
-// City/district → division. Common BD city spellings are folded in.
-// Keys are lowercased before lookup.
-const CITY_TO_DIVISION: Record<string, BdDivision> = {
-  // Dhaka division
-  dhaka: "dhaka",
-  gazipur: "dhaka",
-  narayanganj: "dhaka",
-  tangail: "dhaka",
-  manikganj: "dhaka",
-  narsingdi: "dhaka",
-  munshiganj: "dhaka",
-  faridpur: "dhaka",
-  gopalganj: "dhaka",
-  madaripur: "dhaka",
-  rajbari: "dhaka",
-  shariatpur: "dhaka",
-  kishoreganj: "dhaka",
-  savar: "dhaka",
-  uttara: "dhaka",
-  mirpur: "dhaka",
-  mohammadpur: "dhaka",
-  dhanmondi: "dhaka",
-  gulshan: "dhaka",
-  banani: "dhaka",
-  badda: "dhaka",
-  motijheel: "dhaka",
+// Canonical district keys (matches ADM2_EN in the bundled GeoJSON).
+// The dataset uses older spellings (Chittagong, Barisal, Comilla, Jessore,
+// Bogra, Maulvibazar, Nawabganj, Brahamanbaria). We surface friendly labels
+// separately but keep the canonical spelling as the join key.
+const DISTRICTS: Array<{ key: string; label: string; division: string }> = [
+  // Barishal
+  { key: "Barguna", label: "Barguna", division: "Barishal" },
+  { key: "Barisal", label: "Barishal", division: "Barishal" },
+  { key: "Bhola", label: "Bhola", division: "Barishal" },
+  { key: "Jhalokati", label: "Jhalokati", division: "Barishal" },
+  { key: "Patuakhali", label: "Patuakhali", division: "Barishal" },
+  { key: "Pirojpur", label: "Pirojpur", division: "Barishal" },
+  // Chattogram
+  { key: "Bandarban", label: "Bandarban", division: "Chattogram" },
+  { key: "Brahamanbaria", label: "Brahmanbaria", division: "Chattogram" },
+  { key: "Chandpur", label: "Chandpur", division: "Chattogram" },
+  { key: "Chittagong", label: "Chattogram", division: "Chattogram" },
+  { key: "Comilla", label: "Cumilla", division: "Chattogram" },
+  { key: "Cox's Bazar", label: "Cox's Bazar", division: "Chattogram" },
+  { key: "Feni", label: "Feni", division: "Chattogram" },
+  { key: "Khagrachhari", label: "Khagrachhari", division: "Chattogram" },
+  { key: "Lakshmipur", label: "Lakshmipur", division: "Chattogram" },
+  { key: "Noakhali", label: "Noakhali", division: "Chattogram" },
+  { key: "Rangamati", label: "Rangamati", division: "Chattogram" },
+  // Dhaka
+  { key: "Dhaka", label: "Dhaka", division: "Dhaka" },
+  { key: "Faridpur", label: "Faridpur", division: "Dhaka" },
+  { key: "Gazipur", label: "Gazipur", division: "Dhaka" },
+  { key: "Gopalganj", label: "Gopalganj", division: "Dhaka" },
+  { key: "Kishoreganj", label: "Kishoreganj", division: "Dhaka" },
+  { key: "Madaripur", label: "Madaripur", division: "Dhaka" },
+  { key: "Manikganj", label: "Manikganj", division: "Dhaka" },
+  { key: "Munshiganj", label: "Munshiganj", division: "Dhaka" },
+  { key: "Narayanganj", label: "Narayanganj", division: "Dhaka" },
+  { key: "Narsingdi", label: "Narsingdi", division: "Dhaka" },
+  { key: "Rajbari", label: "Rajbari", division: "Dhaka" },
+  { key: "Shariatpur", label: "Shariatpur", division: "Dhaka" },
+  { key: "Tangail", label: "Tangail", division: "Dhaka" },
+  // Khulna
+  { key: "Bagerhat", label: "Bagerhat", division: "Khulna" },
+  { key: "Chuadanga", label: "Chuadanga", division: "Khulna" },
+  { key: "Jessore", label: "Jashore", division: "Khulna" },
+  { key: "Jhenaidah", label: "Jhenaidah", division: "Khulna" },
+  { key: "Khulna", label: "Khulna", division: "Khulna" },
+  { key: "Kushtia", label: "Kushtia", division: "Khulna" },
+  { key: "Magura", label: "Magura", division: "Khulna" },
+  { key: "Meherpur", label: "Meherpur", division: "Khulna" },
+  { key: "Narail", label: "Narail", division: "Khulna" },
+  { key: "Satkhira", label: "Satkhira", division: "Khulna" },
+  // Mymensingh
+  { key: "Jamalpur", label: "Jamalpur", division: "Mymensingh" },
+  { key: "Mymensingh", label: "Mymensingh", division: "Mymensingh" },
+  { key: "Netrakona", label: "Netrokona", division: "Mymensingh" },
+  { key: "Sherpur", label: "Sherpur", division: "Mymensingh" },
+  // Rajshahi
+  { key: "Bogra", label: "Bogura", division: "Rajshahi" },
+  { key: "Joypurhat", label: "Joypurhat", division: "Rajshahi" },
+  { key: "Naogaon", label: "Naogaon", division: "Rajshahi" },
+  { key: "Natore", label: "Natore", division: "Rajshahi" },
+  { key: "Nawabganj", label: "Chapai Nawabganj", division: "Rajshahi" },
+  { key: "Pabna", label: "Pabna", division: "Rajshahi" },
+  { key: "Rajshahi", label: "Rajshahi", division: "Rajshahi" },
+  { key: "Sirajganj", label: "Sirajganj", division: "Rajshahi" },
+  // Rangpur
+  { key: "Dinajpur", label: "Dinajpur", division: "Rangpur" },
+  { key: "Gaibandha", label: "Gaibandha", division: "Rangpur" },
+  { key: "Kurigram", label: "Kurigram", division: "Rangpur" },
+  { key: "Lalmonirhat", label: "Lalmonirhat", division: "Rangpur" },
+  { key: "Nilphamari", label: "Nilphamari", division: "Rangpur" },
+  { key: "Panchagarh", label: "Panchagarh", division: "Rangpur" },
+  { key: "Rangpur", label: "Rangpur", division: "Rangpur" },
+  { key: "Thakurgaon", label: "Thakurgaon", division: "Rangpur" },
+  // Sylhet
+  { key: "Habiganj", label: "Habiganj", division: "Sylhet" },
+  { key: "Maulvibazar", label: "Moulvibazar", division: "Sylhet" },
+  { key: "Sunamganj", label: "Sunamganj", division: "Sylhet" },
+  { key: "Sylhet", label: "Sylhet", division: "Sylhet" },
+];
 
-  // Chattogram division
-  chattogram: "chattogram",
-  chittagong: "chattogram",
-  "cox's bazar": "chattogram",
-  "coxs bazar": "chattogram",
-  "cox bazar": "chattogram",
-  rangamati: "chattogram",
-  bandarban: "chattogram",
-  khagrachari: "chattogram",
-  khagrachhari: "chattogram",
-  noakhali: "chattogram",
-  feni: "chattogram",
-  lakshmipur: "chattogram",
-  laxmipur: "chattogram",
-  comilla: "chattogram",
-  cumilla: "chattogram",
-  chandpur: "chattogram",
-  brahmanbaria: "chattogram",
-  "b-baria": "chattogram",
+export const BD_DISTRICT_META = DISTRICTS;
 
-  // Khulna division
-  khulna: "khulna",
-  jessore: "khulna",
-  jashore: "khulna",
-  satkhira: "khulna",
-  bagerhat: "khulna",
-  kushtia: "khulna",
-  chuadanga: "khulna",
-  jhenaidah: "khulna",
-  magura: "khulna",
-  narail: "khulna",
-  meherpur: "khulna",
+// Alias table: cities / sub-districts / alternate spellings → canonical key.
+// Lookups are done lowercased.
+const CITY_TO_DISTRICT: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  const put = (alias: string, key: string) => {
+    map[alias.toLowerCase()] = key;
+  };
+  // Auto-register every canonical key and its friendly label.
+  for (const d of DISTRICTS) {
+    put(d.key, d.key);
+    put(d.label, d.key);
+  }
 
-  // Barishal division
-  barishal: "barishal",
-  barisal: "barishal",
-  patuakhali: "barishal",
-  barguna: "barishal",
-  jhalokati: "barishal",
-  jhalokathi: "barishal",
-  bhola: "barishal",
-  pirojpur: "barishal",
+  // Common alternate / historical spellings
+  put("chattogram", "Chittagong");
+  put("chittagong", "Chittagong");
+  put("ctg", "Chittagong");
+  put("barishal", "Barisal");
+  put("barisal", "Barisal");
+  put("cumilla", "Comilla");
+  put("comilla", "Comilla");
+  put("cox bazar", "Cox's Bazar");
+  put("coxs bazar", "Cox's Bazar");
+  put("jashore", "Jessore");
+  put("jessore", "Jessore");
+  put("bogura", "Bogra");
+  put("bogra", "Bogra");
+  put("moulvibazar", "Maulvibazar");
+  put("maulvibazar", "Maulvibazar");
+  put("moulavibazar", "Maulvibazar");
+  put("brahmanbaria", "Brahamanbaria");
+  put("b-baria", "Brahamanbaria");
+  put("chapai nawabganj", "Nawabganj");
+  put("chapainawabganj", "Nawabganj");
+  put("nawabganj", "Nawabganj");
+  put("netrokona", "Netrakona");
+  put("netrakona", "Netrakona");
+  put("khagrachari", "Khagrachhari");
+  put("khagrachhari", "Khagrachhari");
+  put("laxmipur", "Lakshmipur");
+  put("jhalokathi", "Jhalokati");
+  put("jhalokati", "Jhalokati");
 
-  // Sylhet division
-  sylhet: "sylhet",
-  moulvibazar: "sylhet",
-  maulvibazar: "sylhet",
-  habiganj: "sylhet",
-  sunamganj: "sylhet",
+  // Major Dhaka neighbourhoods / suburbs
+  for (const nb of [
+    "savar",
+    "uttara",
+    "mirpur",
+    "mohammadpur",
+    "dhanmondi",
+    "gulshan",
+    "banani",
+    "badda",
+    "motijheel",
+    "tejgaon",
+    "khilgaon",
+    "rampura",
+    "basundhara",
+    "bashundhara",
+  ]) {
+    put(nb, "Dhaka");
+  }
 
-  // Rajshahi division
-  rajshahi: "rajshahi",
-  bogura: "rajshahi",
-  bogra: "rajshahi",
-  naogaon: "rajshahi",
-  natore: "rajshahi",
-  chapainawabganj: "rajshahi",
-  "chapai nawabganj": "rajshahi",
-  pabna: "rajshahi",
-  sirajganj: "rajshahi",
-  joypurhat: "rajshahi",
+  return map;
+})();
 
-  // Rangpur division
-  rangpur: "rangpur",
-  dinajpur: "rangpur",
-  gaibandha: "rangpur",
-  nilphamari: "rangpur",
-  lalmonirhat: "rangpur",
-  kurigram: "rangpur",
-  panchagarh: "rangpur",
-  thakurgaon: "rangpur",
-
-  // Mymensingh division
-  mymensingh: "mymensingh",
-  jamalpur: "mymensingh",
-  sherpur: "mymensingh",
-  netrokona: "mymensingh",
-  netrakona: "mymensingh",
-};
-
-const DIVISION_LABELS: Record<BdDivision, string> = {
-  dhaka: "Dhaka",
-  chattogram: "Chattogram",
-  khulna: "Khulna",
-  rajshahi: "Rajshahi",
-  barishal: "Barishal",
-  sylhet: "Sylhet",
-  rangpur: "Rangpur",
-  mymensingh: "Mymensingh",
-};
-
-function resolveDivision(raw: string | null | undefined): BdDivision | null {
+function resolveDistrict(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const s = raw.toLowerCase().trim();
-  if (CITY_TO_DIVISION[s]) return CITY_TO_DIVISION[s];
+  if (CITY_TO_DISTRICT[s]) return CITY_TO_DISTRICT[s];
 
-  // Substring match — customerAddress often contains the city name
-  // surrounded by other text ("House 12, Dhaka, Bangladesh").
-  for (const key of Object.keys(CITY_TO_DIVISION)) {
-    if (s.includes(key)) return CITY_TO_DIVISION[key];
+  // Substring match — customerAddress often contains the city embedded
+  // in free-text ("House 12, Dhanmondi, Dhaka-1209").
+  for (const alias of Object.keys(CITY_TO_DISTRICT)) {
+    if (s.includes(alias)) return CITY_TO_DISTRICT[alias];
   }
   return null;
 }
 
-export async function getSalesByRegion(
+export async function getSalesByDistrict(
   tenantId: Scope
-): Promise<SalesByRegionPoint[]> {
+): Promise<SalesByDistrictPoint[]> {
   const rows = await prisma.sale.findMany({
     where: {
       ...tenantFilter(tenantId),
@@ -755,15 +775,17 @@ export async function getSalesByRegion(
     },
   });
 
-  const buckets = new Map<BdDivision, { revenue: number; orders: number }>();
-  (Object.keys(DIVISION_LABELS) as BdDivision[]).forEach((d) =>
-    buckets.set(d, { revenue: 0, orders: 0 })
-  );
+  const buckets = new Map<string, { revenue: number; orders: number }>();
+  for (const d of DISTRICTS) {
+    buckets.set(d.key, { revenue: 0, orders: 0 });
+  }
 
   for (const r of rows) {
-    const div = resolveDivision(r.city) ?? resolveDivision(r.customerAddress);
-    if (!div) continue;
-    const b = buckets.get(div)!;
+    const key =
+      resolveDistrict(r.city) ?? resolveDistrict(r.customerAddress);
+    if (!key) continue;
+    const b = buckets.get(key);
+    if (!b) continue;
     b.revenue += Number(r.grandTotal);
     b.orders += 1;
   }
@@ -773,11 +795,11 @@ export async function getSalesByRegion(
     1
   );
 
-  return (Object.keys(DIVISION_LABELS) as BdDivision[]).map((div) => {
-    const b = buckets.get(div)!;
+  return DISTRICTS.map((d) => {
+    const b = buckets.get(d.key)!;
     return {
-      division: div,
-      label: DIVISION_LABELS[div],
+      district: d.key,
+      division: d.division,
       revenue: Math.round(b.revenue),
       orders: b.orders,
       percent: Math.round((b.revenue / topRevenue) * 100),
@@ -812,7 +834,7 @@ export async function getDashboardAnalytics(tenantId: Scope) {
     revenueTrend,
     targetVsReality,
     topProducts,
-    salesByRegion,
+    salesByDistrict,
     volumeVsService,
   ] = await Promise.all([
     getKpiCards(tenantId),
@@ -821,7 +843,7 @@ export async function getDashboardAnalytics(tenantId: Scope) {
     getRevenueTrend(tenantId),
     getTargetVsReality(tenantId),
     getTopProducts(tenantId, 5),
-    getSalesByRegion(tenantId),
+    getSalesByDistrict(tenantId),
     getVolumeVsService(tenantId),
   ]);
 
@@ -832,7 +854,7 @@ export async function getDashboardAnalytics(tenantId: Scope) {
     revenueTrend,
     targetVsReality,
     topProducts,
-    salesByRegion,
+    salesByDistrict,
     volumeVsService,
   };
 }
