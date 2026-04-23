@@ -21,8 +21,9 @@ export function CTA() {
               Ready to take control of your inventory?
             </h2>
             <p className="mt-4 text-base md:text-lg text-muted-foreground">
-              Join hundreds of businesses already running their operations on
-              RaheDeen. Set up takes less than a day.
+              Stop juggling spreadsheets. Get a single dashboard that shows
+              every product, sale, and customer in real time. Set up takes
+              less than a day.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/request-demo">
