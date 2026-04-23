@@ -59,7 +59,9 @@ export async function downloadCashMemoPdf(
     try {
       const fonts = (doc as unknown as { fonts?: FontFaceSet }).fonts;
       if (fonts?.ready) await fonts.ready;
-    } catch {}
+    } catch {
+      // Font readiness is best-effort; some browsers don't expose it on iframes.
+    }
     await new Promise((r) => setTimeout(r, 250));
 
     const canvas = await html2canvas(doc.body, {

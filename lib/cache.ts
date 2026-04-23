@@ -81,7 +81,7 @@ const CUSTOMERS_LIST_HARD_CAP = 500;
 
 export async function getCachedCustomers(tenantId: string) {
   const key = CacheKeys.customers(tenantId);
-  const cached = await cacheGet<Prisma.CustomerGetPayload<{}>[]>(key);
+  const cached = await cacheGet<Prisma.CustomerGetPayload<object>[]>(key);
   if (cached) return cached;
 
   const db = tenantDb(tenantId);
@@ -211,7 +211,7 @@ export async function getCachedDashboard(
 
 export async function getCachedBusinessSettings(tenantId: string) {
   const key = CacheKeys.businessSettings(tenantId);
-  const cached = await cacheGet<Prisma.BusinessSettingsGetPayload<{}>>(key);
+  const cached = await cacheGet<Prisma.BusinessSettingsGetPayload<object>>(key);
   if (cached) return cached;
 
   const db = tenantDb(tenantId);
@@ -227,7 +227,7 @@ export async function getCachedBusinessSettings(tenantId: string) {
 
 export async function getCachedSystemSettings(tenantId: string) {
   const key = CacheKeys.systemSettings(tenantId);
-  const cached = await cacheGet<Prisma.SystemSettingsGetPayload<{}>>(key);
+  const cached = await cacheGet<Prisma.SystemSettingsGetPayload<object>>(key);
   if (cached) return cached;
 
   const db = tenantDb(tenantId);
@@ -252,7 +252,7 @@ export async function invalidateSettingsCache(tenantId: string) {
 
 export async function getCachedPaymentMethods(tenantId: string) {
   const key = CacheKeys.paymentMethods(tenantId);
-  const cached = await cacheGet<Prisma.PaymentMethodGetPayload<{}>[]>(key);
+  const cached = await cacheGet<Prisma.PaymentMethodGetPayload<object>[]>(key);
   if (cached) return cached;
 
   const db = tenantDb(tenantId);
