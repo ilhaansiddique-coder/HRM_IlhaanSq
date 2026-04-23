@@ -78,13 +78,6 @@ export default async function ProductsPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Products</h1>
-        <p className="text-sm text-muted-foreground">
-          {stats.totalItems} product{stats.totalItems !== 1 ? "s" : ""} in catalog
-        </p>
-      </div>
-
       <ProductList initialProducts={serialized} stats={stats} />
     </div>
   );
