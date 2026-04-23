@@ -2,6 +2,7 @@ import { requireTenant } from "@/lib/auth";
 import { getCachedDashboard } from "@/lib/cache";
 import { prisma } from "@/lib/db";
 import { DashboardCards } from "./_components/dashboard-cards";
+import { DashboardToolbar } from "./_components/dashboard-toolbar";
 
 export default async function DashboardPage() {
   const session = await requireTenant();
@@ -23,6 +24,8 @@ export default async function DashboardPage() {
           Welcome back, {session.name}
         </p>
       </div>
+
+      <DashboardToolbar />
 
       <DashboardCards
         metrics={metrics}
