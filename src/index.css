@@ -38,21 +38,10 @@
   src: url("/fonts/Manrope-800.woff2") format("woff2");
 }
 
-@font-face {
-  font-family: "Fraunces";
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("/fonts/Fraunces-600.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Fraunces";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("/fonts/Fraunces-700.woff2") format("woff2");
-}
+/* Fraunces replaced with Bricolage Grotesque, loaded via next/font in app/layout.tsx.
+   See --font-display below. Legacy Fraunces-*.woff2 files in /public/fonts are
+   unused by the app but kept for now in case any printed/exported template
+   references them. */
 
 @tailwind base;
 @tailwind components;
@@ -108,7 +97,9 @@
     --sidebar-ring: var(--color-primary);
 
     --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
-    --font-display: "Fraunces", ui-serif, serif;
+    /* --font-display is set at runtime by next/font (see app/layout.tsx).
+       The fallback below only applies if the font fails to load. */
+    --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   }
 
   html[data-theme="forest"] {
@@ -219,7 +210,8 @@
 
   h1,
   h2,
-  h3 {
+  h3,
+  h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }

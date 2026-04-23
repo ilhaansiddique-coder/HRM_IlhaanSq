@@ -21,8 +21,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
-				display: ["Fraunces", "ui-serif", "serif"],
+				sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+				display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
 			},
 			colors: {
 				border: 'var(--border)',

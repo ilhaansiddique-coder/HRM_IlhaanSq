@@ -1,9 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Bricolage_Grotesque } from "next/font/google";
 
 import "../src/index.css";
 import "lenis/dist/lenis.css";
 import { LenisProvider } from "./_components/lenis-provider";
+
+// Headings (h1–h4) use Bricolage Grotesque via --font-display.
+// Body text keeps using Manrope via --font-sans (declared in src/index.css).
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
 
 export const metadata: Metadata = {
   applicationName: "RaheDeen Inventory",
@@ -74,7 +84,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={bricolage.variable} suppressHydrationWarning>
       <body>
         <Script id="theme-bootstrap" strategy="beforeInteractive">
           {themeBootstrapScript}
