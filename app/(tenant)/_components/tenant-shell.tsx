@@ -160,7 +160,7 @@ function AppSidebar({
   const { state, toggleSidebar } = useSidebar();
   const { activePath: pathname } = useOptimisticNav();
   const isCollapsed = state === "collapsed";
-  const [selectedTheme, setSelectedTheme] = useState<DaisyThemeName>("forest");
+  const [selectedTheme, setSelectedTheme] = useState<DaisyThemeName>("light");
 
   useEffect(() => {
     setSelectedTheme(resolveTheme(getStoredTheme()));

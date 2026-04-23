@@ -52,8 +52,9 @@ export const viewport: Viewport = {
 };
 
 // Smart bootstrap:
-// - Public routes (/, /login, /request-demo, /invite/*, /reset-password) → daisy "light" or "dark"
-// - Tenant/admin routes → user-selected daisy theme (forest, dracula, etc.)
+// - Public routes respect OS color-scheme preference or saved 'public-theme'
+// - Tenant/admin routes → user-selected theme (light or night); defaults to light
+// Only 'light' and 'night' are valid; legacy stored values fall back to 'light'.
 // Runs before React paints to prevent flash.
 const themeBootstrapScript = `
 (function () {
@@ -63,16 +64,21 @@ const themeBootstrapScript = `
     var isPublic = path === '/' || publicPrefixes.some(function (p) {
       return p !== '/' && (path === p || path.indexOf(p + '/') === 0);
     });
+    var validThemes = ['light', 'night'];
 
     if (isPublic) {
       var saved = window.localStorage.getItem('public-theme');
       var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      var theme = saved || (prefersDark ? 'dark' : 'light');
+      var candidate = saved === 'dark' ? 'night' : saved;
+      var theme = validThemes.indexOf(candidate) >= 0
+        ? candidate
+        : (prefersDark ? 'night' : 'light');
       document.documentElement.setAttribute('data-theme', theme);
-      document.documentElement.classList.toggle('dark', theme === 'dark');
+      document.documentElement.classList.toggle('dark', theme === 'night');
     } else {
-      var savedTheme = window.localStorage.getItem('daisy-theme') || 'forest';
-      document.documentElement.setAttribute('data-theme', savedTheme);
+      var savedTheme = window.localStorage.getItem('daisy-theme');
+      var theme = validThemes.indexOf(savedTheme) >= 0 ? savedTheme : 'light';
+      document.documentElement.setAttribute('data-theme', theme);
     }
   } catch (e) {
     document.documentElement.setAttribute('data-theme', 'light');
