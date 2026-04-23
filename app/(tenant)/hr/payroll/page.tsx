@@ -15,13 +15,7 @@ export default async function PayrollOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Payroll</h1>
-          <p className="text-sm text-muted-foreground">
-            Salary structures, monthly runs and payslips
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <div className="flex gap-2">
           <Link href="/hr/payroll/structures">
             <Button variant="outline">

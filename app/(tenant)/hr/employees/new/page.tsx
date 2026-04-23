@@ -29,12 +29,6 @@ export default async function NewEmployeePage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Add Employee</h1>
-          <p className="text-sm text-muted-foreground">
-            Create a new employee record
-          </p>
-        </div>
       </div>
 
       <Card className="border-border/70 bg-card/80">

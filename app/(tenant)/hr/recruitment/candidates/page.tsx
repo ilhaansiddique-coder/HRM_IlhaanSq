@@ -28,10 +28,6 @@ export default async function CandidatesPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/hr/recruitment"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Candidates</h1>
-          <p className="text-sm text-muted-foreground">{candidates.length} candidate{candidates.length !== 1 ? "s" : ""} in the talent pool</p>
-        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">

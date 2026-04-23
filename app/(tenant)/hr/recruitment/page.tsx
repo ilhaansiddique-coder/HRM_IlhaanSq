@@ -15,11 +15,7 @@ export default async function RecruitmentOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Recruitment</h1>
-          <p className="text-sm text-muted-foreground">Jobs, candidates and hiring pipeline</p>
-        </div>
+      <div className="flex items-center justify-end">
         <div className="flex gap-2">
           <Link href="/hr/recruitment/candidates"><Button variant="outline"><UserPlus className="h-4 w-4" />Candidates</Button></Link>
           <Link href="/hr/recruitment/jobs"><Button><Briefcase className="h-4 w-4" />Jobs</Button></Link>

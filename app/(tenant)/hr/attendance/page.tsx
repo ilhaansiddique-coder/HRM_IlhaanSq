@@ -30,11 +30,6 @@ export default async function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Attendance</h1>
-        <p className="text-sm text-muted-foreground">Daily check-in / check-out tracking</p>
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-4">
         <StatCard
           icon={<CheckCircle2 className="h-4 w-4" />}

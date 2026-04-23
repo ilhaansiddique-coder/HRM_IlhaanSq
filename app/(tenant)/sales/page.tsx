@@ -23,13 +23,6 @@ export default async function SalesPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Sales</h1>
-        <p className="text-sm text-muted-foreground">
-          {serialized.length} order{serialized.length !== 1 ? "s" : ""}
-        </p>
-      </div>
-
       <SalesList initialSales={serialized} />
     </div>
   );

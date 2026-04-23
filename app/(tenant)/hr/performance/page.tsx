@@ -19,11 +19,7 @@ export default async function PerformanceOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Performance</h1>
-          <p className="text-sm text-muted-foreground">Goals, OKRs, KPIs and reviews</p>
-        </div>
+      <div className="flex items-center justify-end">
         <div className="flex gap-2">
           <Link href="/hr/performance/cycles"><Button variant="outline"><Calendar className="h-4 w-4" />Cycles</Button></Link>
           <Link href="/hr/performance/goals"><Button><Plus className="h-4 w-4" />New Goal</Button></Link>

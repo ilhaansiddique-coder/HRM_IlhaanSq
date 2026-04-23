@@ -48,11 +48,7 @@ export default async function DocumentsOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Documents</h1>
-          <p className="text-sm text-muted-foreground">Employee files, contracts and e-signatures</p>
-        </div>
+      <div className="flex items-center justify-end">
         <Link href="/hr/documents/categories"><Button variant="outline"><Settings className="h-4 w-4" />Categories</Button></Link>
       </div>
 

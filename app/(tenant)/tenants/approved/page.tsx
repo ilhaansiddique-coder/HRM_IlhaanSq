@@ -25,13 +25,6 @@ export default async function ApprovedPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Approved Tenants</h1>
-        <p className="text-sm text-muted-foreground">
-          {requests.length} approved request{requests.length !== 1 ? "s" : ""}
-        </p>
-      </div>
-
       <Card className="border-border/70 bg-card/80">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

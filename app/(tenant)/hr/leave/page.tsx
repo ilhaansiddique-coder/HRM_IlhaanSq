@@ -37,13 +37,7 @@ export default async function LeavePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Leave Management</h1>
-          <p className="text-sm text-muted-foreground">
-            Track requests, approvals, and leave types
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <Link href="/hr/leave/types">
           <Button variant="outline">
             <Settings className="h-4 w-4" />

@@ -17,15 +17,6 @@ export default async function RequestsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Tenant Requests</h1>
-        <p className="text-sm text-muted-foreground">
-          {requests.length === 0
-            ? "All caught up — no pending requests"
-            : `${requests.length} request${requests.length !== 1 ? "s" : ""} awaiting your review`}
-        </p>
-      </div>
-
       {requests.length === 0 ? (
         <Card className="border-border/70 bg-card/40">
           <CardContent className="py-16 text-center">

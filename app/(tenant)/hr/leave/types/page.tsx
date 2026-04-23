@@ -31,12 +31,6 @@ export default async function LeaveTypesPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Leave Types</h1>
-          <p className="text-sm text-muted-foreground">
-            Configure leave categories and entitlements
-          </p>
-        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">

@@ -22,10 +22,6 @@ export default async function NewRunPage() {
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
         <Link href="/hr/payroll"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Run Payroll</h1>
-          <p className="text-sm text-muted-foreground">Process payroll for a pay period</p>
-        </div>
       </div>
 
       {!ready && (

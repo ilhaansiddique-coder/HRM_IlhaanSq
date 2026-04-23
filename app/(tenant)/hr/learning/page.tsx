@@ -15,11 +15,7 @@ export default async function LearningOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Learning</h1>
-          <p className="text-sm text-muted-foreground">Courses, enrollments and certifications</p>
-        </div>
+      <div className="flex items-center justify-end">
         <div className="flex gap-2">
           <Link href="/hr/learning/enrollments"><Button variant="outline"><Award className="h-4 w-4" />Enrollments</Button></Link>
           <Link href="/hr/learning/courses"><Button><Plus className="h-4 w-4" />New Course</Button></Link>

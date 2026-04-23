@@ -20,12 +20,8 @@ export default async function RunsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <Link href="/hr/payroll"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Payroll Runs</h1>
-          <p className="text-sm text-muted-foreground">{runs.length} run{runs.length !== 1 ? "s" : ""} executed</p>
-        </div>
         <Link href="/hr/payroll/runs/new"><Button><Plus className="h-4 w-4" />Run Payroll</Button></Link>
       </div>
 

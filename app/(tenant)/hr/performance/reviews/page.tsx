@@ -30,10 +30,6 @@ export default async function ReviewsPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/hr/performance"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Performance Reviews</h1>
-          <p className="text-sm text-muted-foreground">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</p>
-        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">

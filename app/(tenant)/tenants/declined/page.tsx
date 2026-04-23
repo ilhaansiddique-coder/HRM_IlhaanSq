@@ -17,13 +17,6 @@ export default async function DeclinedPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Declined Requests</h1>
-        <p className="text-sm text-muted-foreground">
-          {requests.length} declined request{requests.length !== 1 ? "s" : ""} with internal notes
-        </p>
-      </div>
-
       {requests.length === 0 ? (
         <Card className="border-border/70 bg-card/40">
           <CardContent className="py-16 text-center">

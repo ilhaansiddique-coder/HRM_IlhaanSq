@@ -13,13 +13,6 @@ export default async function CreateTenantPage() {
   await requireSuperAdmin();
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Create Tenant</h1>
-        <p className="text-sm text-muted-foreground">
-          Manually provision a new tenant workspace and admin account
-        </p>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="border-border/70 bg-card/80">
           <CardHeader>

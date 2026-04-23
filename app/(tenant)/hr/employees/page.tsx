@@ -36,13 +36,7 @@ export default async function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Employees</h1>
-          <p className="text-sm text-muted-foreground">
-            {employees.length} employee{employees.length !== 1 ? "s" : ""} on record
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <Link href="/hr/employees/new">
           <Button>
             <Plus className="h-4 w-4" />

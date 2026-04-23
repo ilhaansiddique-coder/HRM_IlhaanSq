@@ -18,10 +18,6 @@ export default async function NewSalePage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/sales"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">New Sale</h1>
-          <p className="text-sm text-muted-foreground">Create an order — invoice number is auto-generated</p>
-        </div>
       </div>
 
       <POSSaleForm

@@ -40,13 +40,6 @@ export default async function AlertsPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Alerts</h1>
-        <p className="text-sm text-muted-foreground">
-          {totalAlerts === 0 ? "Everything looks good" : `${totalAlerts} item${totalAlerts !== 1 ? "s" : ""} need attention`}
-        </p>
-      </div>
-
       {/* Low stock */}
       <Card className="border-warning/35 bg-card/80">
         <CardHeader>

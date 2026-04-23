@@ -22,13 +22,6 @@ export default async function InvoicesPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
-        <p className="text-sm text-muted-foreground">
-          {serialized.length} invoice{serialized.length !== 1 ? "s" : ""}
-        </p>
-      </div>
-
       <InvoiceList initialSales={serialized} />
     </div>
   );

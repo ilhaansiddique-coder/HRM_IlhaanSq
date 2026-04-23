@@ -37,13 +37,7 @@ export default async function HRDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Human Resources</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your team, attendance, and leave in one place
-          </p>
-        </div>
+      <div className="flex items-start justify-end">
         <Link href="/hr/employees/new">
           <Button>
             <Plus className="h-4 w-4" />

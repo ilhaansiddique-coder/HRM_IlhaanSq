@@ -8,13 +8,6 @@ export default async function CustomersPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
-        <p className="text-sm text-muted-foreground">
-          {customers.length} customer{customers.length !== 1 ? "s" : ""}
-        </p>
-      </div>
-
       <CustomerList initialCustomers={customers} />
     </div>
   );

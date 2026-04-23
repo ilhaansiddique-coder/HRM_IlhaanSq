@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/auth";
-import { Shield } from "lucide-react";
 import { getAdminAnalytics, getRecentActivity } from "@/lib/services/analytics.service";
 import {
   listTenantUsers,
@@ -73,16 +72,6 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex items-start gap-3">
-        <Shield className="h-6 w-6 text-primary mt-1" />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Administration</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage users, monitor business performance, and configure system settings
-          </p>
-        </div>
-      </div>
-
       <AdminTabs
         currentUserId={session.userId}
         analytics={analytics}

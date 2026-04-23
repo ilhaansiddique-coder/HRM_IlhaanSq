@@ -32,13 +32,6 @@ export default async function DepartmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Departments</h1>
-        <p className="text-sm text-muted-foreground">
-          Organize your workforce into business units
-        </p>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* List */}
         <Card className="border-border/70 bg-card/80">

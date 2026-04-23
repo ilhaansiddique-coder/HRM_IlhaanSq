@@ -26,13 +26,6 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
-        <p className="text-sm text-muted-foreground">
-          Stock levels across {serialized.length} products
-        </p>
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border/70 bg-card/80">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

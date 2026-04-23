@@ -42,13 +42,6 @@ export default async function PackagingPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Packaging</h1>
-        <p className="text-sm text-muted-foreground">
-          Orders waiting to be packaged and shipped
-        </p>
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-border/70 bg-card/80">
           <CardHeader className="pb-2">
