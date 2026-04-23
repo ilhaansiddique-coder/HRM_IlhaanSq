@@ -22,18 +22,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        const t0 = Date.now();
+        const mark = (label: string) =>
+          console.log(`[auth-timing] ${label}: ${Date.now() - t0}ms`);
+
         if (!credentials?.email || !credentials?.password) return null;
 
         const email = (credentials.email as string).toLowerCase().trim();
         const password = credentials.password as string;
 
+        const tRate = Date.now();
         const rate = await checkRate("auth", `auth:${email}`);
+        console.log(`[auth-timing] rate-limit: ${Date.now() - tRate}ms`);
         if (!rate.allowed) {
           throw new Error(
             `Too many login attempts. Try again in ${rate.retryAfterSec}s.`
           );
         }
 
+        const tDb = Date.now();
         const user = await prisma.user.findUnique({
           where: { email },
           include: {
@@ -48,11 +55,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           },
         });
+        console.log(`[auth-timing] db-findUser: ${Date.now() - tDb}ms`);
 
-        if (!user) return null;
+        if (!user) {
+          mark("done(no-user)");
+          return null;
+        }
 
+        const tBcrypt = Date.now();
         const isValid = await bcrypt.compare(password, user.passwordHash);
-        if (!isValid) return null;
+        console.log(`[auth-timing] bcrypt-compare: ${Date.now() - tBcrypt}ms`);
+        if (!isValid) {
+          mark("done(bad-pw)");
+          return null;
+        }
 
         // Update last sign-in timestamp (fire and forget)
         prisma.user
@@ -61,6 +77,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             data: { lastSignInAt: new Date() },
           })
           .catch(() => {});
+
+        mark("done(success)");
 
         const defaultMembership =
           user.memberships.find((m) => m.isDefault) ?? user.memberships[0];
