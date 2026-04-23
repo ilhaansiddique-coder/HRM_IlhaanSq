@@ -24,8 +24,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-
       <DashboardToolbar />
 
       {/* Row 1 — KPI cards (left, 2/3) + Visitor Insights (right, 1/3 on xl, stack below) */}
