@@ -232,7 +232,7 @@ function AppSidebar({
                     className={navClass(isRouteActive(item.url))}
                   >
                     <NavLink href={item.url}>
-                      <span className="flex items-center gap-2.5 rounded-full px-2.5 py-1.5 text-sm font-medium transition-colors">
+                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors">
                         <item.icon className="h-[18px] w-[18px] flex-shrink-0" />
                         {!isCollapsed && <span>{item.title}</span>}
                       </span>
@@ -250,7 +250,7 @@ function AppSidebar({
                       tooltip={isCollapsed ? "HR" : undefined}
                       className={navClass(isInHr)}
                     >
-                      <span className="flex items-center gap-2.5 rounded-full px-2.5 py-1.5 text-sm font-medium w-full">
+                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium w-full">
                         <UserCog className="h-[18px] w-[18px] flex-shrink-0" />
                         {!isCollapsed && (
                           <>
@@ -295,7 +295,7 @@ function AppSidebar({
                         tooltip={isCollapsed ? "Tenants" : undefined}
                         className={navClass(isInTenantsAdmin)}
                       >
-                        <span className="flex items-center gap-2.5 rounded-full px-2.5 py-1.5 text-sm font-medium w-full">
+                        <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium w-full">
                           <Building2 className="h-[18px] w-[18px] flex-shrink-0" />
                           {!isCollapsed && (
                             <>
@@ -370,7 +370,7 @@ function AppSidebar({
                   className={navClass(isRouteActive("/settings"))}
                 >
                   <NavLink href="/settings">
-                    <span className="flex items-center gap-2.5 rounded-full px-2.5 py-1.5 text-sm font-medium">
+                    <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium">
                       <Settings className="h-[18px] w-[18px]" />
                       {!isCollapsed && <span>Settings</span>}
                     </span>
@@ -386,7 +386,7 @@ function AppSidebar({
                     className={navClass(isRouteActive("/admin"))}
                   >
                     <NavLink href="/admin">
-                      <span className="flex items-center gap-2.5 rounded-full px-2.5 py-1.5 text-sm font-medium">
+                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium">
                         <Shield className="h-[18px] w-[18px]" />
                         {!isCollapsed && <span>Administration</span>}
                       </span>
@@ -481,7 +481,7 @@ function AppSidebar({
             <SidebarMenuButton
               onClick={() => signOut({ callbackUrl: "/login" })}
               tooltip={isCollapsed ? "Sign Out" : undefined}
-              className="flex items-center gap-3 rounded-full px-3 py-2"
+              className="flex items-center gap-3 rounded-md px-3 py-2"
             >
               <LogOut className="h-5 w-5 flex-shrink-0" />
               {!isCollapsed && <span>Sign Out</span>}
@@ -491,7 +491,7 @@ function AppSidebar({
             <SidebarMenuButton
               onClick={toggleSidebar}
               tooltip={isCollapsed ? "Expand sidebar" : undefined}
-              className="flex items-center gap-3 rounded-full px-3 py-2"
+              className="flex items-center gap-3 rounded-md px-3 py-2"
             >
               <PanelLeft className="h-5 w-5 flex-shrink-0" />
               {!isCollapsed && <span>Collapse</span>}
