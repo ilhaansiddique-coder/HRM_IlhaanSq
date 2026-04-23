@@ -196,11 +196,8 @@ export function generateCashMemoHtml(
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Cash Memo — ${escapeHtml(sale.invoiceNumber)}</title>
 <style>
-@font-face { font-family:"Manrope"; font-weight:400; src:url("/fonts/Manrope-400.woff2") format("woff2"); font-display:swap; }
-@font-face { font-family:"Manrope"; font-weight:500; src:url("/fonts/Manrope-500.woff2") format("woff2"); font-display:swap; }
-@font-face { font-family:"Manrope"; font-weight:600; src:url("/fonts/Manrope-600.woff2") format("woff2"); font-display:swap; }
-@font-face { font-family:"Manrope"; font-weight:700; src:url("/fonts/Manrope-700.woff2") format("woff2"); font-display:swap; }
-@font-face { font-family:"Manrope"; font-weight:800; src:url("/fonts/Manrope-800.woff2") format("woff2"); font-display:swap; }
+@font-face { font-family:"Bricolage Grotesque"; font-weight:400 800; src:url("/fonts/BricolageGrotesque-Variable-latin.woff2") format("woff2"); font-display:swap; }
+@font-face { font-family:"Bricolage Grotesque"; font-weight:400 800; src:url("/fonts/BricolageGrotesque-Variable-latin-ext.woff2") format("woff2"); font-display:swap; unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+20A0-20CF, U+A720-A7FF; }
 @page { size: A5 portrait; margin: 0; }
 @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 
@@ -217,7 +214,7 @@ body {
   margin: 0;
   padding: 5px;
   min-height: 100vh;
-  font: 12px/1.35 "Manrope", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+  font: 12px/1.35 "Bricolage Grotesque", "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
   color: var(--ink);
   background: #e5e7eb;
   display: flex;
