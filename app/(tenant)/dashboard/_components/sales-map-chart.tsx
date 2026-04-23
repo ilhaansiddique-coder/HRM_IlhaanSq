@@ -119,11 +119,42 @@ function featureCentroid(
   return [sumX / n, sumY / n];
 }
 
-// ─── Color scale ────────────────────────────────────────────
+// ─── Color scale (viridis) ──────────────────────────────────
+// Perceptually-uniform, colorblind-safe, and legible on both light and
+// dark backgrounds. Stops are the canonical viridis palette at deciles.
+const VIRIDIS_STOPS: Array<[number, number, number]> = [
+  [68, 1, 84],    // #440154
+  [72, 40, 120],  // #482878
+  [62, 74, 137],  // #3e4a89
+  [49, 104, 142], // #31688e
+  [38, 130, 142], // #26828e
+  [31, 158, 137], // #1f9e89
+  [53, 183, 121], // #35b779
+  [109, 205, 89], // #6dcd59
+  [180, 222, 44], // #b4de2c
+  [253, 231, 37], // #fde725
+];
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+function viridis(t: number): string {
+  const clamped = Math.max(0, Math.min(1, t));
+  const scaled = clamped * (VIRIDIS_STOPS.length - 1);
+  const i = Math.min(Math.floor(scaled), VIRIDIS_STOPS.length - 2);
+  const f = scaled - i;
+  const [r1, g1, b1] = VIRIDIS_STOPS[i];
+  const [r2, g2, b2] = VIRIDIS_STOPS[i + 1];
+  const r = Math.round(lerp(r1, r2, f));
+  const g = Math.round(lerp(g1, g2, f));
+  const b = Math.round(lerp(b1, b2, f));
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 function fillForPercent(p: number): string {
-  const alpha = 0.08 + (p / 100) * 0.82;
-  return `rgba(99, 102, 241, ${alpha.toFixed(3)})`;
+  // Map 0–100 % directly onto the viridis ramp.
+  return viridis(p / 100);
 }
 
 // ─── Component ──────────────────────────────────────────────
@@ -238,9 +269,8 @@ export function SalesMapChart({ data }: { data: SalesByDistrictPoint[] }) {
                       key={p.key}
                       d={p.d}
                       fill={fillForPercent(pct)}
-                      stroke={isHovered ? "#4338CA" : "#ffffff"}
-                      strokeOpacity={isHovered ? 1 : 0.75}
-                      strokeWidth={isHovered ? 1.2 : 0.4}
+                      stroke={isHovered ? "#ffffff" : "rgba(15, 23, 42, 0.55)"}
+                      strokeWidth={isHovered ? 1.6 : 0.5}
                       className="cursor-pointer transition-[stroke-width,stroke]"
                       onMouseEnter={() => setHovered(p.key)}
                       onMouseLeave={() => setHovered(null)}
@@ -292,19 +322,23 @@ export function SalesMapChart({ data }: { data: SalesByDistrictPoint[] }) {
         )}
       </div>
 
-      {/* Color scale legend */}
-      <div className="mt-2 flex items-center justify-center gap-2">
-        <span className="text-[10px] text-muted-foreground">Low</span>
-        <div className="flex h-2 w-40 overflow-hidden rounded-full">
-          {[8, 25, 45, 65, 85, 95].map((p) => (
-            <div
-              key={p}
-              className="h-full flex-1"
-              style={{ background: fillForPercent(p) }}
-            />
-          ))}
-        </div>
-        <span className="text-[10px] text-muted-foreground">High</span>
+      {/* Color scale legend — smooth viridis gradient */}
+      <div className="mt-3 flex items-center justify-center gap-2">
+        <span className="text-[10px] text-muted-foreground">
+          {formatAmount(0)}
+        </span>
+        <div
+          className="h-2 w-44 rounded-full"
+          style={{
+            background: `linear-gradient(to right, ${Array.from(
+              { length: 11 },
+              (_, i) => viridis(i / 10)
+            ).join(", ")})`,
+          }}
+        />
+        <span className="text-[10px] text-muted-foreground">
+          {leader && leader.revenue > 0 ? formatAmount(leader.revenue) : "High"}
+        </span>
       </div>
 
       {totalRevenue === 0 && (
