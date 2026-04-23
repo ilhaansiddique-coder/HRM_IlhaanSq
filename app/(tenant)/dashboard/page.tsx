@@ -24,21 +24,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Welcome back, {session.name}
-          {session.isSuperAdmin && platform && (
-            <span className="ml-2 text-xs text-muted-foreground">
-              · {platform.totalTenants} tenants · {platform.totalUsers} users
-              {platform.pendingRequests > 0 &&
-                ` · ${platform.pendingRequests} pending request${
-                  platform.pendingRequests !== 1 ? "s" : ""
-                }`}
-            </span>
-          )}
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
 
       <DashboardToolbar />
 
