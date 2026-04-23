@@ -45,7 +45,10 @@ export default async function DashboardPage() {
       {/* Row 1 — KPI cards (left, 2/3) + Visitor Insights (right, 1/3 on xl, stack below) */}
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <KpiCardsRow kpi={analytics.kpi} />
+          <KpiCardsRow
+            kpi={analytics.kpi}
+            platformMetrics={platform ?? undefined}
+          />
         </div>
         <div className="xl:col-span-1">
           <VisitorInsightsChart data={analytics.visitorInsights} />

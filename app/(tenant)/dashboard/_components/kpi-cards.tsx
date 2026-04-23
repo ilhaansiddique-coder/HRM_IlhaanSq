@@ -1,10 +1,19 @@
 "use client";
 
-import { DollarSign, ShoppingBag, Package, UserPlus } from "lucide-react";
-import type { KpiCards as KpiData } from "@/lib/services/dashboard-analytics.service";
+import {
+  Building2,
+  DollarSign,
+  Package,
+  ShoppingBag,
+  UserPlus,
+} from "lucide-react";
+import type {
+  KpiCards as KpiData,
+  PlatformCounters,
+} from "@/lib/services/dashboard-analytics.service";
 import { useCurrency } from "../../_components/providers";
 
-type Variant = "pink" | "orange" | "green" | "indigo";
+type Variant = "pink" | "cyan" | "orange" | "green" | "indigo";
 
 const TONES: Record<
   Variant,
@@ -15,6 +24,12 @@ const TONES: Record<
     chip: "bg-[#F8BAD2] dark:bg-[#6b2e44]",
     icon: "text-[#E94E77] dark:text-[#f38fae]",
     label: "text-[#6b2e44] dark:text-[#f8bad2]",
+  },
+  cyan: {
+    bg: "bg-[#E6F4F9] dark:bg-[#1a2e38]",
+    chip: "bg-[#B4DCEC] dark:bg-[#2a556b]",
+    icon: "text-[#1A8DB5] dark:text-[#7ec5de]",
+    label: "text-[#0f4a5e] dark:text-[#b4dcec]",
   },
   orange: {
     bg: "bg-[#FFF3E6] dark:bg-[#3a2a1a]",
@@ -36,8 +51,15 @@ const TONES: Record<
   },
 };
 
-export function KpiCardsRow({ kpi }: { kpi: KpiData }) {
+export function KpiCardsRow({
+  kpi,
+  platformMetrics,
+}: {
+  kpi: KpiData;
+  platformMetrics?: PlatformCounters;
+}) {
   const { formatAmount } = useCurrency();
+  const hasTenantCard = !!platformMetrics;
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card/80 p-4 md:p-5">
@@ -45,7 +67,13 @@ export function KpiCardsRow({ kpi }: { kpi: KpiData }) {
         Today&apos;s Sales
       </h3>
       <p className="text-xs text-muted-foreground mb-4">Sales Summary</p>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div
+        className={`grid grid-cols-2 gap-3 ${
+          hasTenantCard
+            ? "md:grid-cols-3 xl:grid-cols-5"
+            : "md:grid-cols-4"
+        }`}
+      >
         <KpiTile
           variant="pink"
           icon={<DollarSign className="h-4 w-4" />}
@@ -53,6 +81,24 @@ export function KpiCardsRow({ kpi }: { kpi: KpiData }) {
           label="Total Sales"
           changePct={kpi.revenueChangePct}
         />
+        {platformMetrics && (
+          <KpiTile
+            variant="cyan"
+            icon={<Building2 className="h-4 w-4" />}
+            value={platformMetrics.totalTenants.toLocaleString()}
+            label="Total Tenants"
+            footer={
+              platformMetrics.pendingRequests > 0
+                ? `${platformMetrics.pendingRequests} pending request${
+                    platformMetrics.pendingRequests !== 1 ? "s" : ""
+                  }`
+                : "All tenants active"
+            }
+            footerTone={
+              platformMetrics.pendingRequests > 0 ? "warn" : "neutral"
+            }
+          />
+        )}
         <KpiTile
           variant="orange"
           icon={<ShoppingBag className="h-4 w-4" />}
@@ -85,15 +131,39 @@ function KpiTile({
   value,
   label,
   changePct,
+  footer,
+  footerTone,
 }: {
   variant: Variant;
   icon: React.ReactNode;
   value: string;
   label: string;
-  changePct: number;
+  changePct?: number;
+  footer?: string;
+  footerTone?: "up" | "down" | "warn" | "neutral";
 }) {
   const tone = TONES[variant];
-  const up = changePct >= 0;
+
+  // Resolve the footer line: explicit `footer` prop wins, otherwise
+  // fall back to the "+X% from yesterday" format from `changePct`.
+  let footerText = footer;
+  let resolvedTone: "up" | "down" | "warn" | "neutral" =
+    footerTone ?? "neutral";
+  if (!footerText && typeof changePct === "number") {
+    const up = changePct >= 0;
+    footerText = `${up ? "+" : ""}${changePct}% from yesterday`;
+    resolvedTone = up ? "up" : "down";
+  }
+
+  const footerClass =
+    resolvedTone === "up"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : resolvedTone === "down"
+        ? "text-rose-600 dark:text-rose-400"
+        : resolvedTone === "warn"
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-muted-foreground";
+
   return (
     <div className={`rounded-xl p-4 ${tone.bg}`}>
       <div
@@ -105,14 +175,9 @@ function KpiTile({
         {value}
       </div>
       <div className={`mt-1 text-xs font-medium ${tone.label}`}>{label}</div>
-      <div
-        className={`mt-2 text-[11px] ${
-          up ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-        }`}
-      >
-        {up ? "+" : ""}
-        {changePct}% from yesterday
-      </div>
+      {footerText && (
+        <div className={`mt-2 text-[11px] ${footerClass}`}>{footerText}</div>
+      )}
     </div>
   );
 }
