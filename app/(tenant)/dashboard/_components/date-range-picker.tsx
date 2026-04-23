@@ -220,11 +220,12 @@ export function DateRangePicker() {
 
       <PopoverContent
         align="start"
-        className="w-auto max-w-[calc(100vw-2rem)] p-0"
+        sideOffset={8}
+        className="!w-[min(820px,calc(100vw-1rem))] !max-w-none p-0"
       >
         <div className="flex flex-col md:flex-row">
           {/* Presets */}
-          <div className="w-full border-b border-border/60 p-3 md:w-48 md:border-b-0 md:border-r">
+          <div className="w-full border-b border-border/60 p-3 md:w-44 md:shrink-0 md:border-b-0 md:border-r">
             <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Presets
             </p>
@@ -250,7 +251,7 @@ export function DateRangePicker() {
           </div>
 
           {/* Calendar + actions */}
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <Calendar
               mode="range"
               selected={draftRange}
