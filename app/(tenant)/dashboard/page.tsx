@@ -10,6 +10,7 @@ import { TotalRevenueChart } from "./_components/total-revenue-chart";
 import { RevenueTrendChart } from "./_components/revenue-trend-chart";
 import { TargetRealityChart } from "./_components/target-reality-chart";
 import { TopProductsList } from "./_components/top-products-list";
+import { SalesMapChart } from "./_components/sales-map-chart";
 import { VolumeServiceChart } from "./_components/volume-service-chart";
 
 export default async function DashboardPage() {
@@ -58,9 +59,10 @@ export default async function DashboardPage() {
         <TargetRealityChart data={analytics.targetVsReality} />
       </div>
 
-      {/* Row 3 — Top Products + Volume vs Service */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Row 3 — Top Products + Sales Map (Bangladesh) + Volume vs Service */}
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <TopProductsList items={analytics.topProducts} />
+        <SalesMapChart data={analytics.salesByRegion} />
         <VolumeServiceChart data={analytics.volumeVsService} />
       </div>
     </div>

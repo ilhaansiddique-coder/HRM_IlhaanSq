@@ -586,6 +586,205 @@ export async function getVolumeVsService(
   });
 }
 
+// ─── 8. Sales by Region (Bangladesh divisions choropleth) ───
+// Aggregates sales revenue into Bangladesh's 8 administrative divisions
+// by mapping the sale.city / customerAddress string to a division.
+
+export type BdDivision =
+  | "dhaka"
+  | "chattogram"
+  | "khulna"
+  | "rajshahi"
+  | "barishal"
+  | "sylhet"
+  | "rangpur"
+  | "mymensingh";
+
+export type SalesByRegionPoint = {
+  division: BdDivision;
+  label: string;
+  revenue: number;
+  orders: number;
+  percent: number; // of top division
+};
+
+// City/district → division. Common BD city spellings are folded in.
+// Keys are lowercased before lookup.
+const CITY_TO_DIVISION: Record<string, BdDivision> = {
+  // Dhaka division
+  dhaka: "dhaka",
+  gazipur: "dhaka",
+  narayanganj: "dhaka",
+  tangail: "dhaka",
+  manikganj: "dhaka",
+  narsingdi: "dhaka",
+  munshiganj: "dhaka",
+  faridpur: "dhaka",
+  gopalganj: "dhaka",
+  madaripur: "dhaka",
+  rajbari: "dhaka",
+  shariatpur: "dhaka",
+  kishoreganj: "dhaka",
+  savar: "dhaka",
+  uttara: "dhaka",
+  mirpur: "dhaka",
+  mohammadpur: "dhaka",
+  dhanmondi: "dhaka",
+  gulshan: "dhaka",
+  banani: "dhaka",
+  badda: "dhaka",
+  motijheel: "dhaka",
+
+  // Chattogram division
+  chattogram: "chattogram",
+  chittagong: "chattogram",
+  "cox's bazar": "chattogram",
+  "coxs bazar": "chattogram",
+  "cox bazar": "chattogram",
+  rangamati: "chattogram",
+  bandarban: "chattogram",
+  khagrachari: "chattogram",
+  khagrachhari: "chattogram",
+  noakhali: "chattogram",
+  feni: "chattogram",
+  lakshmipur: "chattogram",
+  laxmipur: "chattogram",
+  comilla: "chattogram",
+  cumilla: "chattogram",
+  chandpur: "chattogram",
+  brahmanbaria: "chattogram",
+  "b-baria": "chattogram",
+
+  // Khulna division
+  khulna: "khulna",
+  jessore: "khulna",
+  jashore: "khulna",
+  satkhira: "khulna",
+  bagerhat: "khulna",
+  kushtia: "khulna",
+  chuadanga: "khulna",
+  jhenaidah: "khulna",
+  magura: "khulna",
+  narail: "khulna",
+  meherpur: "khulna",
+
+  // Barishal division
+  barishal: "barishal",
+  barisal: "barishal",
+  patuakhali: "barishal",
+  barguna: "barishal",
+  jhalokati: "barishal",
+  jhalokathi: "barishal",
+  bhola: "barishal",
+  pirojpur: "barishal",
+
+  // Sylhet division
+  sylhet: "sylhet",
+  moulvibazar: "sylhet",
+  maulvibazar: "sylhet",
+  habiganj: "sylhet",
+  sunamganj: "sylhet",
+
+  // Rajshahi division
+  rajshahi: "rajshahi",
+  bogura: "rajshahi",
+  bogra: "rajshahi",
+  naogaon: "rajshahi",
+  natore: "rajshahi",
+  chapainawabganj: "rajshahi",
+  "chapai nawabganj": "rajshahi",
+  pabna: "rajshahi",
+  sirajganj: "rajshahi",
+  joypurhat: "rajshahi",
+
+  // Rangpur division
+  rangpur: "rangpur",
+  dinajpur: "rangpur",
+  gaibandha: "rangpur",
+  nilphamari: "rangpur",
+  lalmonirhat: "rangpur",
+  kurigram: "rangpur",
+  panchagarh: "rangpur",
+  thakurgaon: "rangpur",
+
+  // Mymensingh division
+  mymensingh: "mymensingh",
+  jamalpur: "mymensingh",
+  sherpur: "mymensingh",
+  netrokona: "mymensingh",
+  netrakona: "mymensingh",
+};
+
+const DIVISION_LABELS: Record<BdDivision, string> = {
+  dhaka: "Dhaka",
+  chattogram: "Chattogram",
+  khulna: "Khulna",
+  rajshahi: "Rajshahi",
+  barishal: "Barishal",
+  sylhet: "Sylhet",
+  rangpur: "Rangpur",
+  mymensingh: "Mymensingh",
+};
+
+function resolveDivision(raw: string | null | undefined): BdDivision | null {
+  if (!raw) return null;
+  const s = raw.toLowerCase().trim();
+  if (CITY_TO_DIVISION[s]) return CITY_TO_DIVISION[s];
+
+  // Substring match — customerAddress often contains the city name
+  // surrounded by other text ("House 12, Dhaka, Bangladesh").
+  for (const key of Object.keys(CITY_TO_DIVISION)) {
+    if (s.includes(key)) return CITY_TO_DIVISION[key];
+  }
+  return null;
+}
+
+export async function getSalesByRegion(
+  tenantId: Scope
+): Promise<SalesByRegionPoint[]> {
+  const rows = await prisma.sale.findMany({
+    where: {
+      ...tenantFilter(tenantId),
+      isDeleted: false,
+      paymentStatus: { not: "cancelled" },
+    },
+    select: {
+      grandTotal: true,
+      city: true,
+      customerAddress: true,
+    },
+  });
+
+  const buckets = new Map<BdDivision, { revenue: number; orders: number }>();
+  (Object.keys(DIVISION_LABELS) as BdDivision[]).forEach((d) =>
+    buckets.set(d, { revenue: 0, orders: 0 })
+  );
+
+  for (const r of rows) {
+    const div = resolveDivision(r.city) ?? resolveDivision(r.customerAddress);
+    if (!div) continue;
+    const b = buckets.get(div)!;
+    b.revenue += Number(r.grandTotal);
+    b.orders += 1;
+  }
+
+  const topRevenue = Math.max(
+    ...Array.from(buckets.values()).map((b) => b.revenue),
+    1
+  );
+
+  return (Object.keys(DIVISION_LABELS) as BdDivision[]).map((div) => {
+    const b = buckets.get(div)!;
+    return {
+      division: div,
+      label: DIVISION_LABELS[div],
+      revenue: Math.round(b.revenue),
+      orders: b.orders,
+      percent: Math.round((b.revenue / topRevenue) * 100),
+    };
+  });
+}
+
 // ─── Platform-wide counters (super admin only) ──────────────
 
 export type PlatformCounters = {
@@ -613,6 +812,7 @@ export async function getDashboardAnalytics(tenantId: Scope) {
     revenueTrend,
     targetVsReality,
     topProducts,
+    salesByRegion,
     volumeVsService,
   ] = await Promise.all([
     getKpiCards(tenantId),
@@ -621,6 +821,7 @@ export async function getDashboardAnalytics(tenantId: Scope) {
     getRevenueTrend(tenantId),
     getTargetVsReality(tenantId),
     getTopProducts(tenantId, 5),
+    getSalesByRegion(tenantId),
     getVolumeVsService(tenantId),
   ]);
 
@@ -631,6 +832,7 @@ export async function getDashboardAnalytics(tenantId: Scope) {
     revenueTrend,
     targetVsReality,
     topProducts,
+    salesByRegion,
     volumeVsService,
   };
 }
