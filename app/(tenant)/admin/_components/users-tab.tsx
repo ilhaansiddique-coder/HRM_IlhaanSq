@@ -1,0 +1,349 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { PERMISSION_CATEGORIES, ROLES } from "@/lib/permissions";
+import {
+  createUserAction,
+  deleteUserAction,
+  togglePermissionAction,
+  updateUserAction,
+} from "../actions";
+
+const roleColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  owner: "default",
+  admin: "default",
+  manager: "secondary",
+  staff: "outline",
+  member: "outline",
+};
+
+
+export function UsersTab({
+  users,
+  currentUserId,
+  rolePermissions,
+}: {
+  users: any[];
+  currentUserId: string;
+  rolePermissions: Record<string, Record<string, boolean>>;
+}) {
+  const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("staff");
+
+  // Helper: is this permission allowed for the currently selected role?
+  const isAllowed = (permKey: string): boolean =>
+    rolePermissions[selectedRole]?.[permKey] ?? false;
+
+  return (
+    <div className="space-y-6">
+      {/* User Management Card */}
+      <Card className="border-border/70 bg-card/80">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>Create and manage user accounts</CardDescription>
+          </div>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Add User
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Last Active</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((m) => {
+                  const isMe = m.userId === currentUserId;
+                  return (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">
+                        {m.user.fullName}
+                        {isMe && <span className="text-xs text-muted-foreground ml-2">(you)</span>}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{m.user.email}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {m.user.phone ?? "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={roleColors[m.role] ?? "outline"}>{m.role}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(m.user.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {m.user.lastSignInAt
+                          ? new Date(m.user.lastSignInAt).toLocaleDateString()
+                          : "Never"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="View">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setEditing(m)}
+                            title="Edit"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          {!isMe && (
+                            <form action={deleteUserAction} className="inline-block">
+                              <input type="hidden" name="userId" value={m.userId} />
+                              <Button
+                                type="submit"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                title="Remove"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </form>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Permissions Matrix */}
+      <Card className="border-border/70 bg-card/80">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>User Role Permission Management</CardTitle>
+            <CardDescription>Control which features each role can access</CardDescription>
+          </div>
+          <Select value={selectedRole} onValueChange={setSelectedRole}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r} className="capitalize">
+                  {r}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="general">
+            <TabsList className="flex w-full overflow-x-auto justify-start">
+              {Object.entries(PERMISSION_CATEGORIES).map(([key, cat]) => (
+                <TabsTrigger key={key} value={key} className="text-xs whitespace-nowrap">
+                  {cat.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {Object.entries(PERMISSION_CATEGORIES).map(([key, cat]) => (
+              <TabsContent key={key} value={key} className="mt-4 space-y-2">
+                {cat.permissions.map((perm) => (
+                  <PermissionRow
+                    // Force remount when role changes so the toggle reflects the new role's saved value
+                    key={`${selectedRole}-${perm.key}`}
+                    role={selectedRole}
+                    permission={perm}
+                    initialAllowed={isAllowed(perm.key)}
+                  />
+                ))}
+              </TabsContent>
+            ))}
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Add User Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add User</DialogTitle>
+            <DialogDescription>Create a new user account for this workspace</DialogDescription>
+          </DialogHeader>
+          <form
+            action={async (fd) => {
+              await createUserAction(fd);
+              setAddOpen(false);
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input id="fullName" name="fullName" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone (optional)</Label>
+              <Input id="phone" name="phone" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" name="password" type="password" required minLength={6} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select name="role" defaultValue="staff">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.filter((r) => r !== "owner").map((r) => (
+                    <SelectItem key={r} value={r} className="capitalize">
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Create User</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      {editing && (
+        <Dialog open={!!editing} onOpenChange={() => setEditing(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit {editing.user.fullName}</DialogTitle>
+              <DialogDescription>Update user details or reset password</DialogDescription>
+            </DialogHeader>
+            <form
+              action={async (fd) => {
+                await updateUserAction(fd);
+                setEditing(null);
+              }}
+              className="space-y-4"
+            >
+              <input type="hidden" name="userId" value={editing.userId} />
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  defaultValue={editing.user.fullName}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input id="phone" name="phone" defaultValue={editing.user.phone ?? ""} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">New Password (leave blank to keep current)</Label>
+                <Input id="password" name="password" type="password" minLength={6} />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+function PermissionRow({
+  role,
+  permission,
+  initialAllowed,
+}: {
+  role: string;
+  permission: { key: string; label: string };
+  initialAllowed: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [enabled, setEnabled] = useState(initialAllowed);
+
+  function handleToggle(checked: boolean) {
+    setEnabled(checked);
+    const fd = new FormData();
+    fd.set("role", role);
+    fd.set("permissionKey", permission.key);
+    fd.set("allowed", String(checked));
+    startTransition(async () => {
+      try {
+        await togglePermissionAction(fd);
+      } catch (e) {
+        // Roll back UI on failure
+        setEnabled(!checked);
+        alert(e instanceof Error ? e.message : "Failed to save permission");
+      }
+    });
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-4 py-3">
+      <span className="text-sm font-medium">{permission.label}</span>
+      <Switch checked={enabled} onCheckedChange={handleToggle} disabled={pending} />
+    </div>
+  );
+}
+

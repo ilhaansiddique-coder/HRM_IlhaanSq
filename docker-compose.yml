@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rahedeen_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rahedeen
+      POSTGRES_PASSWORD: rahedeen_dev
+      POSTGRES_DB: rahedeen
+    ports:
+      # Host port 5433 → container port 5432 (avoids conflict with other Postgres instances)
+      - "5434:5432"
+    volumes:
+      - rahedeen_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rahedeen"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: rahedeen_redis
+    restart: unless-stopped
+    ports:
+      # Host port 6380 → container port 6379 (avoids conflict with sst-redis)
+      - "6381:6379"
+    volumes:
+      - rahedeen_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  rahedeen_pg_data:
+  rahedeen_redis_data:

@@ -1,0 +1,233 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Plus, Search, AlertTriangle, Boxes, Package, TrendingDown, TrendingUp } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useCurrency } from "../../_components/providers";
+import { ProductDialog } from "./product-dialog";
+import { ProductCard } from "./product-card";
+
+export type SerializedVariant = {
+  id: string;
+  attributes: Record<string, string>;
+  sku: string | null;
+  stockQuantity: number;
+  lowStockThreshold: number | null;
+  rate: number | null;
+  cost: number | null;
+  imageUrl: string | null;
+};
+
+export type SerializedAttribute = {
+  name: string;
+  values: string[];
+};
+
+export type SerializedProduct = {
+  id: string;
+  name: string;
+  sku: string | null;
+  rate: number;
+  cost: number | null;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  hasVariants: boolean;
+  imageUrl: string | null;
+  size: string | null;
+  color: string | null;
+  variants: SerializedVariant[];
+  attributeDefs: SerializedAttribute[];
+  totalStock: number;
+  totalValue: number;
+};
+
+export type ProductStats = {
+  totalItems: number;
+  totalStock: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  totalValue: number;
+};
+
+type StockFilter = "all" | "in" | "low" | "out";
+
+export function ProductList({
+  initialProducts,
+  stats,
+}: {
+  initialProducts: SerializedProduct[];
+  stats: ProductStats;
+}) {
+  const { formatAmount } = useCurrency();
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<StockFilter>("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<SerializedProduct | null>(null);
+
+  function openCreate() {
+    setEditingProduct(null);
+    setDialogOpen(true);
+  }
+  function openEdit(p: SerializedProduct) {
+    setEditingProduct(p);
+    setDialogOpen(true);
+  }
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return initialProducts.filter((p) => {
+      if (q) {
+        const hit =
+          p.name.toLowerCase().includes(q) ||
+          p.sku?.toLowerCase().includes(q);
+        if (!hit) return false;
+      }
+      if (filter === "all") return true;
+      if (filter === "out") return p.totalStock <= 0;
+      if (filter === "low")
+        return p.totalStock > 0 && p.totalStock <= p.lowStockThreshold;
+      if (filter === "in") return p.totalStock > p.lowStockThreshold;
+      return true;
+    });
+  }, [initialProducts, search, filter]);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <StatCard
+          label="Total Products"
+          value={stats.totalStock.toLocaleString()}
+          sublabel="Combined stock quantity"
+          icon={<Boxes className="h-4 w-4" />}
+        />
+        <StatCard
+          label="Total Items"
+          value={stats.totalItems.toLocaleString()}
+          sublabel="Parent products only"
+          icon={<Package className="h-4 w-4" />}
+        />
+        <StatCard
+          label="Low Stock Items"
+          value={stats.lowStockCount.toLocaleString()}
+          sublabel="Needs restocking"
+          icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
+          accent="warning"
+        />
+        <StatCard
+          label="Out of Stock"
+          value={stats.outOfStockCount.toLocaleString()}
+          sublabel="Urgent restocking"
+          icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
+          accent="danger"
+        />
+        <StatCard
+          label="Total Value"
+          value={formatAmount(stats.totalValue)}
+          sublabel="Current inventory value"
+          icon={<TrendingUp className="h-4 w-4 text-emerald-500" />}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            type="text"
+            placeholder="Search products, SKU, or..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as StockFilter)}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+        >
+          <option value="all">All Stock</option>
+          <option value="in">In Stock</option>
+          <option value="low">Low Stock</option>
+          <option value="out">Out of Stock</option>
+        </select>
+        <Button onClick={openCreate}>
+          <Plus className="h-4 w-4" />
+          Add Product
+        </Button>
+      </div>
+
+      {filtered.length === 0 ? (
+        <Card className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+          <Package className="h-8 w-8 opacity-40" />
+          <span className="text-sm">No products found</span>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          {filtered.map((p) => (
+            <ProductCard key={p.id} product={p} onEdit={openEdit} />
+          ))}
+        </div>
+      )}
+
+      <ProductDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        initial={
+          editingProduct
+            ? {
+                id: editingProduct.id,
+                name: editingProduct.name,
+                sku: editingProduct.sku,
+                rate: editingProduct.rate,
+                cost: editingProduct.cost,
+                stockQuantity: editingProduct.stockQuantity,
+                lowStockThreshold: editingProduct.lowStockThreshold,
+                imageUrl: editingProduct.imageUrl,
+                size: editingProduct.size,
+                color: editingProduct.color,
+                hasVariants: editingProduct.hasVariants,
+                variants: editingProduct.variants,
+                attributeDefs: editingProduct.attributeDefs,
+              }
+            : undefined
+        }
+      />
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  sublabel,
+  icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sublabel: string;
+  icon: React.ReactNode;
+  accent?: "warning" | "danger";
+}) {
+  const valueClass =
+    accent === "danger"
+      ? "text-destructive"
+      : accent === "warning"
+        ? "text-amber-500"
+        : "text-foreground";
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        {icon}
+      </div>
+      <div className={`mt-2 text-2xl font-bold ${valueClass}`}>{value}</div>
+      <div className="text-xs text-muted-foreground">{sublabel}</div>
+    </Card>
+  );
+}

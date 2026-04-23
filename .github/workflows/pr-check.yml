@@ -1,0 +1,49 @@
+name: 🔍 PR Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  pr-checks:
+    name: PR Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci --prefer-offline
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Security Assertions
+        run: npm run test:security
+
+      - name: Build check
+        env:
+          NEXT_PUBLIC_SUPABASE_URL:      ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL:           'https://preview.example.com'
+          NEXT_PUBLIC_GA4_ID:            'G-DUMMY'
+          NEXT_PUBLIC_FB_PIXEL_ID:       'DUMMY'
+          NEXT_PUBLIC_CLARITY_ID:        'DUMMY'
+          NODE_ENV:                      production
+        run: npm run build
+
+      - name: Check for large bundles (warn if page > 500KB)
+        run: |
+          LARGE=$(find .next/static/chunks -name "*.js" -size +500k 2>/dev/null || true)
+          if [ -n "$LARGE" ]; then
+            echo "⚠️  Warning: Large JS bundles detected:"
+            du -sh .next/static/chunks/*.js | sort -hr | head -10
+          else
+            echo "✅ Bundle sizes look good"
+          fi

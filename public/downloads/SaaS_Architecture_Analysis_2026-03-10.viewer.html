@@ -1,0 +1,57 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SaaS Architecture Analysis PDF Render</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 28px; color: #0f172a; }
+    h1,h2,h3 { color: #0b3a69; }
+    pre, code { font-family: Consolas, 'Courier New', monospace; }
+    pre { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; white-space: pre-wrap; }
+    code { background: #eff6ff; padding: 1px 4px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px; }
+    .mermaid { margin: 14px 0; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+    @page { size: A4; margin: 14mm; }
+  </style>
+</head>
+<body>
+  <main id="content">Loading...</main>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+    async function run() {
+      const res = await fetch('/downloads/SaaS_Architecture_Analysis_2026-03-10.md', { cache: 'no-store' });
+      const md = await res.text();
+      const html = marked.parse(md, { gfm: true, breaks: false });
+      const el = document.getElementById('content');
+      el.innerHTML = html;
+
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' });
+      await mermaid.run({ querySelector: '.language-mermaid' });
+
+      // Convert fenced mermaid <code> blocks to mermaid containers if parser kept code tags
+      const blocks = Array.from(document.querySelectorAll('pre > code.language-mermaid'));
+      for (const code of blocks) {
+        const pre = code.parentElement;
+        if (!pre || !pre.parentElement) continue;
+        const d = document.createElement('div');
+        d.className = 'mermaid';
+        d.textContent = code.textContent || '';
+        pre.parentElement.replaceChild(d, pre);
+      }
+      await mermaid.run({ querySelector: '.mermaid' });
+
+      document.body.setAttribute('data-ready', '1');
+    }
+
+    run().catch((err) => {
+      const el = document.getElementById('content');
+      el.innerHTML = '<h1>Render failed</h1><pre>' + String(err) + '</pre>';
+      document.body.setAttribute('data-ready', '1');
+    });
+  </script>
+</body>
+</html>

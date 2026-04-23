@@ -1,0 +1,318 @@
+name: 🚀 CI/CD → Auto Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs on the same branch (saves CI minutes)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+
+  # ════════════════════════════════════════════════
+  # JOB 1: Lint + Type Check (fast feedback ~2 min)
+  # ════════════════════════════════════════════════
+  quality:
+    name: 🔍 Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier format check
+        run: npx prettier --check "src/**/*.{ts,tsx}" || echo "⚠️  Format issues found (non-blocking)"
+
+  # ════════════════════════════════════════════════
+  # JOB 2: Security Audit
+  # ════════════════════════════════════════════════
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: npm audit (high severity only)
+        run: npm audit --audit-level=high --omit=dev
+
+  # ════════════════════════════════════════════════
+  # JOB 3: Build (only if quality passes)
+  # ════════════════════════════════════════════════
+  build:
+    name: 🏗️ Build Next.js
+    runs-on: ubuntu-latest
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL:      ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL:           ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_GA4_ID:            ${{ secrets.NEXT_PUBLIC_GA4_ID }}
+          NEXT_PUBLIC_FB_PIXEL_ID:       ${{ secrets.NEXT_PUBLIC_FB_PIXEL_ID }}
+          NEXT_PUBLIC_CLARITY_ID:        ${{ secrets.NEXT_PUBLIC_CLARITY_ID }}
+          NODE_ENV:                      production
+        run: npm run build
+
+  # ════════════════════════════════════════════════
+  # JOB 4: Deploy to VPS
+  # Only runs on push to main (not on PRs)
+  # ════════════════════════════════════════════════
+  deploy:
+    name: 🚢 Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: [build, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    environment:
+      name: production
+      url: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      # Build again with real public env vars for the actual deploy artifact
+      - name: Build production artifact
+        env:
+          NEXT_PUBLIC_SUPABASE_URL:      ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL:           ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_GA4_ID:            ${{ secrets.NEXT_PUBLIC_GA4_ID }}
+          NEXT_PUBLIC_FB_PIXEL_ID:       ${{ secrets.NEXT_PUBLIC_FB_PIXEL_ID }}
+          NEXT_PUBLIC_CLARITY_ID:        ${{ secrets.NEXT_PUBLIC_CLARITY_ID }}
+          NODE_ENV:                      production
+        run: npm run build
+
+      # Create a timestamped release tarball
+      - name: Package release
+        run: |
+          RELEASE_NAME=$(date +%Y%m%d_%H%M%S)_${GITHUB_SHA::8}
+          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+          tar -czf release.tar.gz \
+            .next/ \
+            public/ \
+            package.json \
+            package-lock.json \
+            next.config.ts \
+            ecosystem.config.js \
+            scripts/
+
+      # Setup SSH agent with the deploy private key
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to known hosts
+        run: ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      # Upload tarball to VPS /tmp
+      - name: Upload release to VPS
+        run: |
+          scp release.tar.gz deployer@${{ secrets.VPS_HOST }}:/tmp/release.tar.gz
+
+      # Execute the deploy sequence on VPS via SSH
+      - name: Execute deploy on VPS
+        env:
+          RELEASE_NAME: ${{ env.RELEASE_NAME }}
+          COMMIT_SHA:   ${{ github.sha }}
+          COMMIT_MSG:   ${{ github.event.head_commit.message }}
+          ACTOR:        ${{ github.actor }}
+        run: |
+          ssh deployer@${{ secrets.VPS_HOST }} \
+            RELEASE_NAME="$RELEASE_NAME" \
+            COMMIT_SHA="$COMMIT_SHA" \
+            COMMIT_MSG="$COMMIT_MSG" \
+            ACTOR="$ACTOR" \
+            bash << 'REMOTE_SCRIPT'
+
+            set -euo pipefail
+
+            DEPLOY_DIR="/var/www/saas"
+            RELEASE_DIR="$DEPLOY_DIR/releases/$RELEASE_NAME"
+            SHARED_DIR="$DEPLOY_DIR/shared"
+            CURRENT_LINK="$DEPLOY_DIR/current"
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  Deploying: $RELEASE_NAME"
+            echo "  Commit:    $COMMIT_SHA"
+            echo "  By:        $ACTOR"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # ── 1. Unpack release ────────────────────────────
+            mkdir -p "$RELEASE_DIR"
+            tar -xzf /tmp/release.tar.gz -C "$RELEASE_DIR"
+            rm /tmp/release.tar.gz
+
+            # ── 2. Link shared secrets (never in git) ────────
+            ln -sf "$SHARED_DIR/.env.local" "$RELEASE_DIR/.env.local"
+
+            # ── 3. Link shared Next.js build cache ───────────
+            mkdir -p "$RELEASE_DIR/.next"
+            ln -sfn "$SHARED_DIR/.next/cache" "$RELEASE_DIR/.next/cache"
+
+            # ── 4. Install production deps only ─────────────
+            echo "📦 Installing production dependencies..."
+            cd "$RELEASE_DIR"
+            npm ci --omit=dev --prefer-offline --quiet
+
+            # ── 5. Canary health check (new build, port 3001) ─
+            echo "🩺 Running canary health check..."
+            PORT=3001 pm2 start ecosystem.config.js \
+              --name saas-canary \
+              --env production \
+              --silent 2>/dev/null || true
+            sleep 8
+
+            HEALTH=$(curl -sf http://localhost:3001/api/health 2>/dev/null \
+              | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','fail'))" \
+              2>/dev/null || echo "fail")
+
+            pm2 delete saas-canary --silent 2>/dev/null || true
+
+            if [ "$HEALTH" != "ok" ]; then
+              echo "❌ Health check failed (got: $HEALTH). Aborting."
+              rm -rf "$RELEASE_DIR"
+              exit 1
+            fi
+            echo "✅ Health check passed"
+
+            # ── 6. Atomic symlink swap ────────────────────────
+            PREVIOUS=$(readlink "$CURRENT_LINK" 2>/dev/null || echo "")
+            ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
+            echo "🔗 Symlink updated → $RELEASE_DIR"
+
+            # ── 7. Zero-downtime reload via PM2 ──────────────
+            if pm2 describe saas > /dev/null 2>&1; then
+              pm2 reload saas --update-env
+              echo "♻️  PM2 reloaded (zero-downtime)"
+            else
+              pm2 start "$CURRENT_LINK/ecosystem.config.js" --env production
+              echo "▶️  PM2 started"
+            fi
+
+            # Save PM2 config so it survives VPS reboots
+            pm2 save --force
+
+            # ── 8. Reload nginx (picks up new static assets) ─
+            sudo systemctl reload nginx
+            echo "🔄 Nginx reloaded"
+
+            # ── 9. Cleanup old releases (keep last 3) ────────
+            cd "$DEPLOY_DIR/releases"
+            RELEASE_COUNT=$(ls | wc -l)
+            if [ "$RELEASE_COUNT" -gt 3 ]; then
+              ls -t | tail -n +4 | xargs -r rm -rf
+              echo "🧹 Cleaned up old releases (kept 3)"
+            fi
+
+            echo ""
+            echo "🚀 Deploy complete!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            pm2 ls
+
+          REMOTE_SCRIPT
+
+      # Verify from GitHub Actions side (external check)
+      - name: Post-deploy health check
+        run: |
+          echo "Waiting for app to stabilize..."
+          sleep 15
+          for attempt in 1 2 3; do
+            STATUS=$(curl -sf ${{ secrets.NEXT_PUBLIC_APP_URL }}/api/health \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','fail'))" \
+              2>/dev/null || echo "fail")
+            if [ "$STATUS" = "ok" ]; then
+              echo "✅ App is live at ${{ secrets.NEXT_PUBLIC_APP_URL }}"
+              exit 0
+            fi
+            echo "Attempt $attempt: status=$STATUS, retrying in 10s..."
+            sleep 10
+          done
+          echo "❌ App did not pass health check after 3 attempts"
+          exit 1
+
+      # ── Auto rollback if deploy failed ────────────────────
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Deploy failed — initiating automatic rollback..."
+          ssh deployer@${{ secrets.VPS_HOST }} bash << 'ROLLBACK'
+            DEPLOY_DIR="/var/www/saas"
+            RELEASES=( $(ls -t "$DEPLOY_DIR/releases" 2>/dev/null) )
+            if [ "${#RELEASES[@]}" -ge 2 ]; then
+              PREV="${RELEASES[1]}"
+              echo "↩️  Rolling back to: $PREV"
+              ln -sfn "$DEPLOY_DIR/releases/$PREV" "$DEPLOY_DIR/current"
+              pm2 reload saas --update-env || pm2 restart saas
+              sudo systemctl reload nginx
+              pm2 save --force
+              echo "✅ Rollback complete → $PREV"
+            else
+              echo "⚠️  No previous release found. Cannot rollback."
+            fi
+          ROLLBACK
+
+      # Notify Slack/Discord on success (optional — add SLACK_WEBHOOK secret)
+      - name: Notify success
+        if: success()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          if [ -n "${SLACK_WEBHOOK:-}" ]; then
+            curl -s -X POST "$SLACK_WEBHOOK" \
+              -H 'Content-type: application/json' \
+              -d "{
+                \"text\": \"✅ *Deployed successfully*\",
+                \"attachments\": [{
+                  \"color\": \"good\",
+                  \"fields\": [
+                    {\"title\": \"Commit\", \"value\": \"${{ github.event.head_commit.message }}\", \"short\": false},
+                    {\"title\": \"By\", \"value\": \"${{ github.actor }}\", \"short\": true},
+                    {\"title\": \"URL\", \"value\": \"${{ secrets.NEXT_PUBLIC_APP_URL }}\", \"short\": true}
+                  ]
+                }]
+              }"
+          fi

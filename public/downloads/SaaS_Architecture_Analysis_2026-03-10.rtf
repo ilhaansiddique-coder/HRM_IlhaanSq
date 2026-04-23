@@ -1,0 +1,361 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0 Segoe UI;}}\fs22 RAHEDEEN INVENTORY SAAS - ARCHITECTURE ANALYSIS REPORT\par
+Generated: 2026-03-10\par
+\par
+1) PROJECT OVERVIEW\par
+\par
+What this project is:\par
+- Multi-tenant SaaS inventory/sales platform.\par
+- Tenant app modules: products, sales, inventory, customers, reports, invoices, alerts, settings.\par
+- Super-admin control plane: tenant metrics, tenant requests, cross-tenant platform monitoring.\par
+- Hybrid backend model:\par
+  - Supabase Auth + Postgres + Edge Functions.\par
+  - Dedicated NestJS API for protected platform endpoints.\par
+\par
+Evidence:\par
+- src/App.tsx#L103\par
+- src/views/SuperAdminDashboard.tsx#L121\par
+- apps/api/src/modules/platform-super-admin/platform-super-admin.controller.ts#L8\par
+\par
+Tech stack and key dependencies:\par
+- Next.js 15 App Router shell: app/layout.tsx#L26\par
+- Legacy React app mounted via catch-all route: app/[[...slug]]/page.tsx#L5\par
+- React 18 + react-router-dom + @tanstack/react-query: src/App.tsx#L7, src/App.tsx#L40\par
+- Supabase JS client: src/integrations/supabase/client.ts#L2\par
+- NestJS + pg backend: apps/api/package.json#L13\par
+- Supabase Edge Functions (Deno): supabase/functions/*\par
+- CI/CD and process management: .github/workflows/deploy.yml#L95, Ecosystem.config.js#L4\par
+\par
+Folder/module structure:\par
+- app/ -> Next shell + middleware + health route\par
+- src/ -> React app domain code (views/hooks/components/utils/libs)\par
+- apps/api/ -> Nest API modules, guards, services, DB infra\par
+- supabase/ -> migrations, edge functions, config\par
+- scripts/ -> local dev orchestration, helpers\par
+- .github/workflows/ -> CI gates, deploy, migration, edge-function deploy\par
+\par
+2) CODE FLOW ANALYSIS\par
+\par
+Runtime entry points:\par
+1. Web shell:\par
+   - app/layout.tsx#L26\par
+   - app/[[...slug]]/page.tsx#L5\par
+2. React composition root:\par
+   - src/next/LegacyAppClient.tsx#L10\par
+   - src/App.tsx#L187\par
+3. Nest API:\par
+   - apps/api/src/main.ts#L8\par
+\par
+Execution path (web):\par
+1. Next catch-all route dynamically imports legacy app client (app/[[...slug]]/page.tsx#L10).\par
+2. LegacyAppClient initializes PWA/theme and mounts App in ErrorBoundary\par
+   (src/next/LegacyAppClient.tsx#L20, src/next/LegacyAppClient.tsx#L25).\par
+3. App wires providers (QueryClient, Theme, Auth, Settings, Router) (src/App.tsx#L188).\par
+4. ProtectedRoute enforces auth/role/tenant/permission checks\par
+   (src/App.tsx#L121, src/components/ProtectedRoute.tsx#L19).\par
+5. /super-admin mounts SuperAdminDashboard (src/App.tsx#L174).\par
+6. Dashboard calls invokeProtectedApi for overview/tenants/detail\par
+   (src/views/SuperAdminDashboard.tsx#L123, src/utils/invokeProtectedApi.ts#L97).\par
+\par
+Execution path (API):\par
+1. Nest bootstrap applies CORS + /api global prefix + ValidationPipe\par
+   (apps/api/src/main.ts#L19, apps/api/src/main.ts#L35).\par
+2. AppModule registers guards/controllers/services (apps/api/src/app.module.ts#L17).\par
+3. Super-admin routes pass JwtGuard + RolesGuard\par
+   (apps/api/src/modules/platform-super-admin/platform-super-admin.controller.ts#L9).\par
+4. Controller delegates to service\par
+   (apps/api/src/modules/platform-super-admin/platform-super-admin.controller.ts#L16).\par
+5. Service executes SQL through PlatformDbService\par
+   (apps/api/src/modules/platform-super-admin/platform-super-admin.service.ts#L31,\par
+    apps/api/src/infra/database/platform-db.service.ts#L121).\par
+\par
+Major modules:\par
+- AuthProvider: src/hooks/useAuth.tsx#L41\par
+- useUserRole: src/hooks/useUserRole.tsx#L8\par
+- ProtectedRoute: src/components/ProtectedRoute.tsx#L19\par
+- Next middleware: middleware.ts#L49\par
+- invokeProtectedApi + runtime URL adaptation:\par
+  src/utils/invokeProtectedApi.ts#L64, src/lib/runtimeUrls.ts#L27\par
+- Nest guards:\par
+  apps/api/src/common/guards/jwt.guard.ts#L19\par
+  apps/api/src/common/guards/roles.guard.ts#L36\par
+- Platform metrics service:\par
+  apps/api/src/modules/platform-super-admin/platform-super-admin.service.ts#L30\par
+- Edge orchestration examples:\par
+  supabase/functions/demo-signup/index.ts#L325\par
+  supabase/functions/stripe-webhook/index.ts#L27\par
+\par
+Background/scheduled/event paths:\par
+- Next middleware chain: middleware.ts\par
+- Client listeners:\par
+  src/hooks/useAuth.tsx#L90\par
+  src/hooks/useTenantRequestsRealtime.tsx#L71\par
+  src/pwa.ts#L23\par
+- DB scheduler via pg_cron migration:\par
+  supabase/migrations/20260211030000_auto_refresh_cron.sql#L120\par
+- Scheduled backup workflow:\par
+  .github/workflows/backup.yaml#L5\par
+\par
+3) DATA FLOW ANALYSIS\par
+\par
+Data entry points:\par
+- UI form inputs in views/hooks.\par
+- Nest API requests (/api/*): apps/api/src/main.ts#L35\par
+- Edge function HTTP calls: supabase/functions/demo-signup/index.ts#L325\par
+- Stripe webhook inbound: supabase/functions/stripe-webhook/index.ts#L32\par
+- External courier API through proxies: supabase/functions/pathao-proxy/index.ts#L110\par
+\par
+Transformation/validation:\par
+- Client validation example: src/views/Auth.tsx#L89\par
+- Global ValidationPipe: apps/api/src/main.ts#L36\par
+- Guard validation chain:\par
+  apps/api/src/common/guards/jwt.guard.ts#L40\par
+  apps/api/src/common/guards/roles.guard.ts#L60\par
+- Edge sanitization/validation:\par
+  supabase/functions/demo-signup/index.ts#L317\par
+  supabase/functions/demo-signup/index.ts#L373\par
+\par
+Persistence:\par
+- Supabase Postgres primary store (tenants/members/demo_requests/sales/etc.)\par
+  e.g., supabase/migrations/20260303000000_phase1_multi_tenant_foundation.sql#L5\par
+- API DB access via pg pool:\par
+  apps/api/src/infra/database/platform-db.service.ts#L37\par
+- Browser local storage (theme):\par
+  src/lib/themePreferences.ts#L93\par
+- Browser auth bridge cookies:\par
+  src/lib/authBridge.ts#L26\par
+\par
+Data exits:\par
+- JSON responses from Nest/Edge.\par
+- OTP/email notifications via Supabase Auth OTP:\par
+  supabase/functions/_shared/tenantApplicationNotification.ts#L64\par
+- External API calls to Stripe/Courier:\par
+  supabase/functions/stripe-webhook/index.ts#L41\par
+  supabase/functions/pathao-proxy/index.ts#L110\par
+\par
+Pipelines/queues:\par
+- No active BullMQ/Temporal runtime path in current code scan (inference).\par
+- pg_cron scheduled auto-refresh:\par
+  20260211030000_auto_refresh_cron.sql#L118\par
+- CI backup/migration pipelines in workflows.\par
+\par
+State management:\par
+- Server state: TanStack Query useQuery/useMutation.\par
+- Auth/session: useAuth context.\par
+- Role/tenant: useUserRole + useTenantMembership.\par
+- UI state: local useState.\par
+- Route state via query params:\par
+  src/views/SuperAdminDashboard.tsx#L113\par
+\par
+4) PROJECT LIFECYCLE\par
+\par
+Bootstrap:\par
+- Dev orchestrator:\par
+  scripts/dev-server.mjs#L217\par
+- Env loading:\par
+  scripts/dev-env.mjs#L5\par
+- API startup:\par
+  apps/api/src/main.ts#L13\par
+\par
+Request lifecycle:\par
+- Web:\par
+  - Next middleware auth/role/tenant cookie routing: middleware.ts#L64\par
+  - Client guard routing: src/components/ProtectedRoute.tsx#L69\par
+  - Data via Supabase SDK or invokeProtectedApi/invokeProtectedFunction\par
+- API:\par
+  CORS -> guards -> controller -> service -> DB -> response\par
+\par
+Errors/exceptions:\par
+- React fallback UI: src/components/ErrorBoundary.tsx#L74\par
+- API connectivity message mapping:\par
+  src/utils/invokeProtectedApi.ts#L88\par
+- DB 503 mapping:\par
+  apps/api/src/infra/database/platform-db.service.ts#L136\par
+- Edge try/catch JSON error handling:\par
+  supabase/functions/demo-signup/index.ts#L729\par
+\par
+Shutdown:\par
+- DB pool closure:\par
+  apps/api/src/infra/database/platform-db.service.ts#L105\par
+- Dev process teardown:\par
+  scripts/dev-server.mjs#L107\par
+\par
+Config:\par
+- Next env mapping:\par
+  next.config.ts#L11\par
+- API env schema:\par
+  apps/api/src/infra/config/env.ts#L3\par
+- Env contract:\par
+  .env.example#L1\par
+\par
+Build/deploy:\par
+- PR quality gate:\par
+  .github/workflows/pr-check.yml#L21\par
+- Main deployment pipeline:\par
+  .github/workflows/deploy.yml#L95\par
+- DB migration pipeline:\par
+  .github/workflows/migrate.yml#L16\par
+- Edge function deployment:\par
+  .github/workflows/supabase-functions.yml#L12\par
+\par
+5) INTEGRATION POINTS AND EXTENSION HOOKS\par
+\par
+Existing extension points:\par
+- React routes:\par
+  src/App.tsx#L103\par
+- Sidebar maps:\par
+  src/components/AppSidebar.tsx#L55\par
+- Role decorators/guards:\par
+  apps/api/src/common/decorators/roles.decorator.ts#L4\par
+- Controller/service/DB separation in Nest modules\par
+- Edge shared helpers:\par
+  supabase/functions/_shared/*\par
+\par
+Natural seams:\par
+- UI feature: src/views + src/App routes + sidebar links\par
+- API feature: apps/api/src/modules/<feature> + AppModule registration\par
+- Edge feature: supabase/functions/<feature>/index.ts (+ _shared helpers)\par
+- Schema feature: new supabase/migrations SQL\par
+\par
+Typical files touched:\par
+- src/App.tsx\par
+- src/views/*\par
+- src/components/AppSidebar.tsx\par
+- src/components/ProtectedRoute.tsx\par
+- src/hooks/useUserRole.tsx\par
+- apps/api/src/app.module.ts\par
+- apps/api/src/modules/<feature>/*\par
+- supabase/migrations/*.sql\par
+- supabase/functions/<feature>/index.ts\par
+- supabase/config.toml\par
+\par
+Patterns in use:\par
+- Controller-Service (Nest)\par
+- Guard + decorator authz (Nest)\par
+- Query/mutation hooks (TanStack Query)\par
+- Shared utility layer for cross-cutting concerns\par
+- SQL-centric data access via PlatformDbService\par
+\par
+6) HOW NEW MODULES FIT\par
+\par
+Placement:\par
+- UI: src/views/<Feature>.tsx + src/hooks/use<Feature>.tsx\par
+- API: apps/api/src/modules/<feature>/\par
+- Edge: supabase/functions/<feature>/index.ts\par
+- DB: supabase/migrations/<timestamp>_<feature>.sql\par
+\par
+Registration:\par
+- UI route registration in src/App.tsx#L105\par
+- API provider/controller registration in apps/api/src/app.module.ts#L24\par
+- Edge function auto-discovery in workflow + verify_jwt in supabase/config.toml\par
+- Migration picked by migration workflow\par
+\par
+Data contracts:\par
+- Protected API calls: invokeProtectedApi\par
+- Protected edge calls: invokeProtectedFunction\par
+- Keep typed response shapes and explicit error bodies\par
+- Reuse query keys + invalidations for cache coherence\par
+\par
+Reusable utilities:\par
+- useUserRole, useTenantMembership, ProtectedRoute\par
+- runtimeUrls\par
+- authBridge\par
+- Edge shared modules: _shared/cors.ts, _shared/authTenant.ts, _shared/rateLimiter.ts\par
+\par
+Conventions:\par
+- Hooks: useXxx\par
+- Views: PascalCase\par
+- Query keys: array literals\par
+- Errors: user-actionable Error messages + UI toast/card surfacing\par
+- Testing: current automation limited; RLS script exists at scripts/test-rls.js#L45\par
+\par
+Constraints/gotchas:\par
+- Hybrid Next + legacy Vite artifacts coexist:\par
+  src/main.tsx#L1, index.html#L28\par
+- Build currently tolerates type/lint issues:\par
+  next.config.ts#L5\par
+- Tenant DB secret decryption is stubbed:\par
+  apps/api/src/infra/database/tenant-db.manager.ts#L118\par
+- Some edge functions still use wildcard CORS/manual auth while secure shared CORS exists:\par
+  supabase/functions/pathao-proxy/index.ts#L5\par
+  supabase/functions/_shared/cors.ts#L1\par
+- Possible stale duplicate file:\par
+  Route.ts#L1\par
+- Super-admin metrics depend on external DB SSL/connectivity:\par
+  apps/api/src/infra/database/platform-db.service.ts#L63\par
+\par
+7) VISUAL SUMMARY\par
+\par
+Module dependency diagram (Mermaid):\par
+------------------------------------------------\par
+graph TD\par
+  Browser --> NextMiddleware[middleware.ts]\par
+  NextMiddleware --> CatchAll[app/[[...slug]]/page.tsx]\par
+  CatchAll --> LegacyClient[src/next/LegacyAppClient.tsx]\par
+  LegacyClient --> App[src/App.tsx]\par
+\par
+  App --> AuthProvider[src/hooks/useAuth.tsx]\par
+  App --> ProtectedRoute[src/components/ProtectedRoute.tsx]\par
+  App --> SuperAdminUI[src/views/SuperAdminDashboard.tsx]\par
+  App --> SupabaseClient[src/integrations/supabase/client.ts]\par
+\par
+  SuperAdminUI --> InvokeAPI[src/utils/invokeProtectedApi.ts]\par
+  InvokeAPI --> NestAPI[apps/api Nest API]\par
+\par
+  NestAPI --> JwtGuard[JwtGuard]\par
+  NestAPI --> RolesGuard[RolesGuard]\par
+  NestAPI --> SuperAdminController[PlatformSuperAdminController]\par
+  SuperAdminController --> SuperAdminService[PlatformSuperAdminService]\par
+  SuperAdminService --> PlatformDb[PlatformDbService]\par
+  PlatformDb --> Postgres[(Supabase Postgres)]\par
+\par
+  App --> InvokeFn[src/utils/invokeProtectedFunction.ts]\par
+  InvokeFn --> EdgeFns[supabase/functions/*]\par
+  EdgeFns --> Postgres\par
+  EdgeFns --> Stripe[Stripe/Courier APIs]\par
+------------------------------------------------\par
+\par
+Data flow diagram (Mermaid):\par
+------------------------------------------------\par
+flowchart LR\par
+  U[User Input/UI] --> RQ[React Query Hooks]\par
+  RQ --> S1[Supabase SDK direct table/RPC calls]\par
+  RQ --> S2[invokeProtectedApi -> Nest API]\par
+  RQ --> S3[invokeProtectedFunction -> Edge Functions]\par
+  S1 --> DB[(Supabase Postgres + RLS)]\par
+  S2 --> G[JWT + Role Guards]\par
+  G --> DB\par
+  S3 --> DB\par
+  S3 --> EXT[External services: Stripe/Courier]\par
+  DB --> S1\par
+  DB --> S2\par
+  DB --> S3\par
+  EXT --> S3\par
+  S1 --> UI[UI State Render]\par
+  S2 --> UI\par
+  S3 --> UI\par
+------------------------------------------------\par
+\par
+Lifecycle sequence diagram (Mermaid):\par
+------------------------------------------------\par
+sequenceDiagram\par
+  participant B as Browser\par
+  participant M as Next Middleware\par
+  participant C as React Client\par
+  participant A as Nest API\par
+  participant D as Platform DB\par
+\par
+  B->>M: GET /super-admin?tab=tenants\par
+  M-->>B: allow/redirect based on bridge cookies\par
+  B->>C: render App + ProtectedRoute\par
+  C->>C: useAuth/useUserRole resolve session+role\par
+  C->>A: GET /api/platform/super-admin/tenants (Bearer token)\par
+  A->>A: JwtGuard verify token\par
+  A->>A: RolesGuard verify superadmin\par
+  A->>D: SQL tenant metrics query\par
+  D-->>A: rows\par
+  A-->>C: JSON tenants data\par
+  C-->>B: render tenants table\par
+------------------------------------------------\par
+\par
+End of report.\par
+ }
