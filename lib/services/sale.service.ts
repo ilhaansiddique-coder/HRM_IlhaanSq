@@ -52,6 +52,37 @@ export type UpdateSaleStatusInput = {
   amountPaid?: number;
 };
 
+// ─── Catalog read (cross-tenant, super admin) ───────────────
+// Same payload shape as the per-tenant cached fetcher in lib/cache.ts
+// (sales + items + customer + creator + payments) but spans every
+// tenant and tags each row with the owning tenant's name. Not cached
+// — super admin reads are infrequent and per-tenant cache
+// invalidation wouldn't cover this key cleanly.
+export type SaleWithTenant = Prisma.SaleGetPayload<{
+  include: {
+    items: { include: { product: true; variant: true } };
+    customer: true;
+    creator: { select: { id: true; fullName: true; email: true } };
+    payments: true;
+    tenant: { select: { name: true } };
+  };
+}>;
+
+export async function getAllTenantsSales(): Promise<SaleWithTenant[]> {
+  return prisma.sale.findMany({
+    where: { isDeleted: false },
+    include: {
+      items: { include: { product: true, variant: true } },
+      customer: true,
+      creator: { select: { id: true, fullName: true, email: true } },
+      payments: true,
+      tenant: { select: { name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 500,
+  });
+}
+
 // ─── Invoice Number Generator ───────────────────────────────
 
 async function generateInvoiceNumber(
@@ -408,4 +439,48 @@ export async function cancelSale(
 
   await invalidateSaleCache(tenantId);
   await invalidateProductCache(tenantId);
+}
+
+// ─── Duplicate Sale ─────────────────────────────────────────
+// Re-runs createSale with the items + customer + payment shape of an
+// existing sale. The new row gets its own invoice number, default
+// "pending" payment status, and decrements stock again — so it acts
+// like a real new sale for inventory accounting. The duplicate copies
+// the original's discount/charge/method so the cashier can edit the
+// new draft and submit, without retyping line items.
+
+export async function duplicateSale(
+  tenantId: string,
+  userId: string,
+  saleId: string
+) {
+  const original = await prisma.sale.findFirst({
+    where: { id: saleId, tenantId, isDeleted: false },
+    include: { items: true, payments: true },
+  });
+  if (!original) throw new Error("Sale not found");
+
+  return createSale(tenantId, userId, {
+    customerName: original.customerName,
+    customerPhone: original.customerPhone ?? undefined,
+    customerAddress: original.customerAddress ?? undefined,
+    customerWhatsapp: original.customerWhatsapp ?? undefined,
+    customerId: original.customerId ?? undefined,
+    paymentMethod: original.paymentMethod,
+    discountAmount: Number(original.discountAmount ?? 0),
+    discountPercent: Number(original.discountPercent ?? 0),
+    charge: Number(original.charge ?? 0),
+    paymentTerms: (original.paymentTerms as PaymentTerms) ?? "immediate",
+    creditDays: original.creditDays ?? undefined,
+    paymentSplits: original.payments.map((p) => ({
+      method: p.method,
+      amount: Number(p.amount ?? 0),
+    })),
+    items: original.items.map((it) => ({
+      productId: it.productId!,
+      variantId: it.variantId ?? undefined,
+      quantity: it.quantity,
+      unitPrice: Number(it.unitPrice ?? 0),
+    })),
+  });
 }

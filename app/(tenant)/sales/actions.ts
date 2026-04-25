@@ -7,6 +7,7 @@ import {
   updateSaleStatus,
   deleteSale,
   cancelSale,
+  duplicateSale,
   type PaymentTerms,
   type SalePaymentSplit,
 } from "@/lib/services/sale.service";
@@ -244,6 +245,39 @@ export async function deleteSaleAction(formData: FormData) {
   revalidatePath("/sales");
   revalidatePath("/invoices");
   revalidatePath("/dashboard");
+}
+
+export async function duplicateSaleAction(formData: FormData) {
+  const session = await requireTenant();
+  const sale = await duplicateSale(
+    session.tenantId,
+    session.userId,
+    formData.get("saleId") as string
+  );
+  revalidatePath("/sales");
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+  return sale;
+}
+
+// Bulk-set the courier status for several sales in one round trip.
+// Used by the "Bulk Status" header control on the listing — the
+// cashier checks several rows, picks a status, and applies.
+export async function bulkUpdateCourierStatusAction(formData: FormData) {
+  const session = await requireTenant();
+  const idsRaw = (formData.get("saleIds") as string) ?? "";
+  const courierStatus = (formData.get("courierStatus") as string) ?? "";
+  if (!courierStatus) throw new Error("Courier status is required");
+  const ids = idsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (ids.length === 0) throw new Error("Select at least one sale");
+  for (const id of ids) {
+    await updateSaleStatus(session.tenantId, session.userId, {
+      saleId: id,
+      courierStatus,
+    });
+  }
+  revalidatePath("/sales");
+  revalidatePath("/packaging");
 }
 
 export async function cancelSaleAction(formData: FormData) {
