@@ -104,13 +104,14 @@ const menuItems = [
   { title: "Alerts", url: "/alerts", icon: Bell },
 ];
 
-const bottomNavItems = [
+// Always-visible mobile bottom-nav entries — shown to every authenticated
+// tenant user regardless of role.
+const baseBottomNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: Home },
   { label: "Products", to: "/products", icon: Package },
   { label: "Sales", to: "/sales", icon: ShoppingCart },
   { label: "Customers", to: "/customers", icon: Users },
   { label: "Reports", to: "/reports", icon: BarChart3 },
-  { label: "Admin", to: "/admin", icon: Shield },
 ];
 
 export function TenantShell({
@@ -155,7 +156,7 @@ export function TenantShell({
           </div>
         </div>
 
-        <MobileBottomNav />
+        <MobileBottomNav role={role} isSuperAdmin={isSuperAdmin} />
       </SidebarProvider>
     </OptimisticNavProvider>
   );
@@ -652,9 +653,27 @@ function ToolbarIconLink({
   );
 }
 
-function MobileBottomNav() {
+function MobileBottomNav({
+  role,
+  isSuperAdmin,
+}: {
+  role: string | null;
+  isSuperAdmin: boolean;
+}) {
   const { activePath: pathname } = useOptimisticNav();
   const [show, setShow] = useState(true);
+
+  // Build the visible nav set per role:
+  //   - everyone: Dashboard, Products, Sales, Customers, Reports
+  //   - super admin: + Tenants (cross-tenant management)
+  //   - any admin (owner / admin / super admin): + Admin
+  const isAdmin =
+    role === "owner" || role === "admin" || role === "superadmin" || isSuperAdmin;
+  const items = [
+    ...baseBottomNavItems,
+    ...(isSuperAdmin ? [{ label: "Tenants", to: "/tenants", icon: Building2 }] : []),
+    ...(isAdmin ? [{ label: "Admin", to: "/admin", icon: Shield }] : []),
+  ];
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -683,7 +702,7 @@ function MobileBottomNav() {
       }`}
     >
       <nav className="flex items-center gap-2 overflow-x-auto border-t border-border/70 bg-card/95 px-3 py-1.5 shadow-[0_-6px_20px_-16px_rgba(0,0,0,0.4)] backdrop-blur scrollbar-hide">
-        {bottomNavItems.map(({ label, to, icon: Icon }) => {
+        {items.map(({ label, to, icon: Icon }) => {
           const active = pathname === to || pathname.startsWith(`${to}/`);
           return (
             <NavLink
