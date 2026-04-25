@@ -4,6 +4,7 @@ import {
   getPlatformCounters,
 } from "@/lib/services/dashboard-analytics.service";
 import { KpiCardsRow } from "./_components/kpi-cards";
+import { MobileDashboardHeader } from "./_components/mobile-dashboard-header";
 import { VisitorInsightsChart } from "./_components/visitor-insights-chart";
 import { TotalRevenueChart } from "./_components/total-revenue-chart";
 import { RevenueTrendChart } from "./_components/revenue-trend-chart";
@@ -23,6 +24,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Mobile-only dashboard header — title + Today + 4 quick-action cards */}
+      <MobileDashboardHeader />
+
       {/* Row 1 — KPI cards (left, 2/3) + Visitor Insights (right, 1/3 on xl, stack below) */}
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">

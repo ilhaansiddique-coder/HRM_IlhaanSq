@@ -477,9 +477,15 @@ function TopBar({
   return (
     <TooltipProvider delayDuration={150}>
       <header className="sticky top-0 z-30 flex items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 py-3 pt-safe backdrop-blur md:px-6">
-        {/* Left — page-specific controls (currently dashboard date picker) */}
+        {/* Left — page-specific controls (currently dashboard date
+            picker). Hidden on mobile because the dashboard renders its
+            own mobile header (with the Today picker baked in) below. */}
         <div className="flex flex-1 items-center justify-start">
-          {isDashboard && <DateRangePicker />}
+          {isDashboard && (
+            <div className="hidden md:block">
+              <DateRangePicker />
+            </div>
+          )}
         </div>
 
         {/* Notifications bell — opens a dropdown of recent activity */}
