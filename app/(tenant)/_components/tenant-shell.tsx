@@ -485,7 +485,7 @@ function TopBar({
               variant="outline"
               size="icon"
               onClick={() => setNewSaleOpen(true)}
-              className="h-9 w-9 rounded-full border-border/60 bg-background/80"
+              className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
               aria-label="New Sale"
             >
               <ShoppingCart className="h-4 w-4" />
@@ -507,7 +507,7 @@ function TopBar({
               variant="outline"
               size="icon"
               onClick={() => setAddProductOpen(true)}
-              className="h-9 w-9 rounded-full border-border/60 bg-background/80"
+              className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
               aria-label="Add Product"
             >
               <Plus className="h-4 w-4" />
@@ -522,7 +522,7 @@ function TopBar({
           <button
             type="button"
             aria-label="Theme"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
           >
             <Palette className="h-4 w-4" />
           </button>
@@ -578,7 +578,7 @@ function TopBar({
         <Link
           href="/profile"
           title={userEmail}
-          className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm transition-colors hover:bg-muted"
+          className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm transition-colors hover:bg-muted"
         >
           <Avatar className="h-7 w-7 border border-border/60">
             <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
@@ -599,7 +599,7 @@ function TopBar({
           onClick={() => signOut({ callbackUrl: "/login" })}
           aria-label="Sign Out"
           title="Sign Out"
-          className="flex h-9 items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted md:w-9 md:justify-center md:px-0"
+          className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted md:w-9 md:justify-center md:px-0"
         >
           <LogOut className="h-4 w-4" />
           <span className="md:hidden">Sign Out</span>
@@ -646,7 +646,7 @@ function ToolbarIconLink({
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9 rounded-full border-border/60 bg-background/80"
+            className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
             aria-label={label}
           >
             {children}

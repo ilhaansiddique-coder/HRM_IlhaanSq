@@ -79,7 +79,7 @@ export function NotificationBell({
               variant="outline"
               size="icon"
               aria-label="Notifications"
-              className="relative h-9 w-9 rounded-full border-border/60 bg-background/80"
+              className="relative h-9 w-9 rounded-lg border-border/60 bg-background/80"
             >
               <Bell className="h-4 w-4" />
               {unreadCount > 0 && (
