@@ -22,18 +22,18 @@ export function SalesCancelledToggle() {
   return (
     <div
       className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3"
-      title="Show cancelled sales"
+      title="Include cancelled sales in history"
     >
       <Switch
-        id="topbar-show-cancelled"
+        id="topbar-sales-history"
         checked={checked}
         onCheckedChange={setChecked}
       />
       <label
-        htmlFor="topbar-show-cancelled"
+        htmlFor="topbar-sales-history"
         className="select-none text-xs text-muted-foreground"
       >
-        Cancelled
+        Sales History
       </label>
     </div>
   );
