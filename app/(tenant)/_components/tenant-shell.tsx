@@ -6,7 +6,6 @@ import Link from "next/link";
 import { NavLink } from "./nav-link";
 import { NewSaleDialog } from "./new-sale-dialog";
 import { NotificationBell } from "./notification-bell";
-import { ProductDialog } from "../products/_components/product-dialog";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { OptimisticNavProvider, useOptimisticNav } from "./optimistic-nav";
@@ -490,7 +489,6 @@ function TopBar({
   // navigating to /sales. The dialog is rendered alongside the header
   // so the Tooltip+Button composition stays clean.
   const [newSaleOpen, setNewSaleOpen] = useState(false);
-  const [addProductOpen, setAddProductOpen] = useState(false);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -527,51 +525,28 @@ function TopBar({
 
         {/* Page-aware action cluster:
               /products & /inventory → Import / Export / Adjust Stock
-              Elsewhere              → New Sale (cart) / Reports / Customers
-            The Add Product (+), theme, user pill and Sign Out below
-            are common to both branches. */}
+              Elsewhere              → New Sale (cart)
+            Reports / Customers / Add-Product shortcuts were removed —
+            those destinations are reachable from the sidebar, and the
+            global TopBar should stay focused on the current page. */}
         {showProductActions ? (
           <ProductsActionsCluster />
         ) : (
-          <>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setNewSaleOpen(true)}
-                  className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
-                  aria-label="New Sale"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">New Sale</TooltipContent>
-            </Tooltip>
-            <ToolbarIconLink href="/reports" label="Reports">
-              <BarChart3 className="h-4 w-4" />
-            </ToolbarIconLink>
-            <ToolbarIconLink href="/customers" label="Customers">
-              <Users className="h-4 w-4" />
-            </ToolbarIconLink>
-          </>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setNewSaleOpen(true)}
+                className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
+                aria-label="New Sale"
+              >
+                <ShoppingCart className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">New Sale</TooltipContent>
+          </Tooltip>
         )}
-
-        {/* + icon = Add Product trigger; dialog rendered below the header */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setAddProductOpen(true)}
-              className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
-              aria-label="Add Product"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Add Product</TooltipContent>
-        </Tooltip>
 
         {/* Theme picker */}
       <HoverCard openDelay={100} closeDelay={80}>
@@ -666,12 +641,6 @@ function TopBar({
       {/* New Sale dialog — controlled by the cart icon in the header */}
       <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
 
-      {/* Add Product dialog — controlled by the + icon in the header.
-          Reuses the same ProductDialog the products page uses. */}
-      <ProductDialog
-        open={addProductOpen}
-        onOpenChange={setAddProductOpen}
-      />
     </TooltipProvider>
   );
 }
@@ -686,34 +655,6 @@ function formatRole(role: string | null): string | null {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-// Pill-shaped icon link used in the TopBar's quick-shortcut group.
-function ToolbarIconLink({
-  href,
-  label,
-  children,
-}: {
-  href: string;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Link href={href}>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
-            aria-label={label}
-          >
-            {children}
-          </Button>
-        </Link>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 function MobileBottomNav({
   role,
