@@ -242,7 +242,8 @@ export function InventoryFilter({
         </div>
       )}
 
-      <Card className="overflow-hidden rounded-lg">
+      {/* Desktop: table view. Mobile uses the card list below. */}
+      <Card className="hidden md:block overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -351,6 +352,99 @@ export function InventoryFilter({
           </Table>
         </div>
       </Card>
+
+      {/* Mobile: same data as a card stack — no horizontal scroll, no
+          truncated text. Each card shows the product image + name, then
+          a small label/value grid for SKU / tenant / stock / threshold,
+          a status badge, and an Adjust button at the foot. */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <Package className="h-8 w-8 opacity-40" />
+            <span className="text-sm">No products found</span>
+          </Card>
+        ) : (
+          filtered.map((p) => {
+            const isOut = p.stockQuantity <= 0;
+            const isLow =
+              !isOut && p.stockQuantity <= p.lowStockThreshold;
+            return (
+              <Card key={p.id} className="rounded-lg p-3">
+                <div className="flex items-start gap-3">
+                  {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted">
+                      <Package className="h-5 w-5 text-muted-foreground/50" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium leading-tight">{p.name}</p>
+                    {p.sku && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {p.sku}
+                      </p>
+                    )}
+                  </div>
+                  {isOut ? (
+                    <Badge variant="destructive" className="rounded-lg">
+                      Out
+                    </Badge>
+                  ) : isLow ? (
+                    <Badge variant="secondary" className="rounded-lg">
+                      Low
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="rounded-lg">
+                      In Stock
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  {showTenantColumn && p.tenantName && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Tenant: </span>
+                      <span className="font-medium">{p.tenantName}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">In Stock: </span>
+                    <span className="font-semibold">{p.stockQuantity}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-muted-foreground">Threshold: </span>
+                    <span className="font-medium">{p.lowStockThreshold}</span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full rounded-lg"
+                  onClick={() =>
+                    setAdjusting({
+                      id: p.id,
+                      name: p.name,
+                      stockQuantity: p.stockQuantity,
+                      tenantName: p.tenantName,
+                    })
+                  }
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Adjust
+                </Button>
+              </Card>
+            );
+          })
+        )}
+      </div>
 
       <StockAdjustDialog
         open={!!adjusting}

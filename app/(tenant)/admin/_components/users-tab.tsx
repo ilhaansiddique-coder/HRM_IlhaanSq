@@ -74,7 +74,8 @@ export function UsersTab({
   return (
     <div className="space-y-6">
       {/* User Management Card */}
-      <Card className="border-border/70 bg-card/80">
+      {/* Desktop: table view. Mobile uses the card stack below. */}
+      <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>User Management</CardTitle>
@@ -161,6 +162,110 @@ export function UsersTab({
           </div>
         </CardContent>
       </Card>
+
+      {/* Mobile: same data as a card stack — name + role header, email and
+          phone, two-col joined/last-active grid, then action buttons. */}
+      <div className="md:hidden space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-base font-semibold">User Management</p>
+            <p className="text-xs text-muted-foreground">
+              Create and manage user accounts
+            </p>
+          </div>
+          <Button onClick={() => setAddOpen(true)} size="sm">
+            <Plus className="h-4 w-4" />
+            Add
+          </Button>
+        </div>
+        {users.map((m) => {
+          const isMe = m.userId === currentUserId;
+          return (
+            <Card key={m.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">
+                    {m.user.fullName}
+                    {isMe && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        (you)
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 break-all text-xs text-muted-foreground">
+                    {m.user.email}
+                  </p>
+                  {m.user.phone && (
+                    <p className="text-xs text-muted-foreground">
+                      {m.user.phone}
+                    </p>
+                  )}
+                </div>
+                <Badge
+                  variant={roleColors[m.role] ?? "outline"}
+                  className="rounded-lg"
+                >
+                  {m.role}
+                </Badge>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Joined: </span>
+                  <span className="font-medium">
+                    {new Date(m.user.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-muted-foreground">Last active: </span>
+                  <span className="font-medium">
+                    {m.user.lastSignInAt
+                      ? new Date(m.user.lastSignInAt).toLocaleDateString()
+                      : "Never"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 rounded-lg"
+                  title="View"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 rounded-lg"
+                  onClick={() => setEditing(m)}
+                  title="Edit"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </Button>
+                {!isMe && (
+                  <form action={deleteUserAction} className="flex-1">
+                    <input type="hidden" name="userId" value={m.userId} />
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-lg text-destructive hover:text-destructive"
+                      title="Remove"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove
+                    </Button>
+                  </form>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Permissions Matrix */}
       <Card className="border-border/70 bg-card/80">

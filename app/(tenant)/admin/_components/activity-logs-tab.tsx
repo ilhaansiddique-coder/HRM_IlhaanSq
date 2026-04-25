@@ -100,8 +100,8 @@ export function ActivityLogsTab({ logs }: { logs: any[] }) {
           </Select>
         </div>
 
-        {/* Table */}
-        <div className="rounded-lg border border-border/60 overflow-hidden">
+        {/* Desktop: table view. Mobile uses the card stack below. */}
+        <div className="hidden md:block rounded-lg border border-border/60 overflow-hidden">
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-card z-10">
@@ -152,6 +152,53 @@ export function ActivityLogsTab({ logs }: { logs: any[] }) {
               </TableBody>
             </Table>
           </div>
+        </div>
+
+        {/* Mobile: same data as a card stack — user + action header, date,
+            entity badge, description. No horizontal scroll, no truncation. */}
+        <div className="md:hidden space-y-3 max-h-[600px] overflow-y-auto">
+          {filtered.length === 0 ? (
+            <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+              <ScrollText className="h-8 w-8 opacity-40" />
+              <span className="text-sm">No activity logs found</span>
+            </Card>
+          ) : (
+            filtered.map((log) => {
+              const description =
+                (log.details as any)?.name ??
+                (log.details as any)?.customerName ??
+                (log.details as any)?.invoiceNumber ??
+                "—";
+              return (
+                <Card key={log.id} className="rounded-lg p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium leading-tight">
+                        {log.user?.fullName ?? "—"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={actionColors[log.action] ?? "outline"}
+                      className="rounded-lg"
+                    >
+                      {log.action}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <Badge variant="outline" className="rounded-lg capitalize">
+                      {log.entityType}
+                    </Badge>
+                    <span className="break-words text-muted-foreground">
+                      {description}
+                    </span>
+                  </div>
+                </Card>
+              );
+            })
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground text-right">

@@ -76,7 +76,8 @@ export function CustomerList({
         </Button>
       </div>
 
-      <Card className="overflow-hidden">
+      {/* Desktop: table view. Mobile uses the card stack below. */}
+      <Card className="hidden md:block overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -147,6 +148,82 @@ export function CustomerList({
           </Table>
         </div>
       </Card>
+
+      {/* Mobile: same data as a card stack — name + status header, two-col
+          grid for phone/email/orders/total, edit + delete actions at foot. */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <Users className="h-8 w-8 opacity-40" />
+            <span className="text-sm">No customers found</span>
+          </Card>
+        ) : (
+          filtered.map((customer) => (
+            <Card key={customer.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">{customer.name}</p>
+                </div>
+                <Badge
+                  variant={statusVariants[customer.status] ?? "outline"}
+                  className="rounded-lg"
+                >
+                  {customer.status}
+                </Badge>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                {customer.phone && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Phone: </span>
+                    <span className="font-medium">{customer.phone}</span>
+                  </div>
+                )}
+                {customer.email && (
+                  <div className="col-span-2 break-all">
+                    <span className="text-muted-foreground">Email: </span>
+                    <span className="font-medium">{customer.email}</span>
+                  </div>
+                )}
+                <div>
+                  <span className="text-muted-foreground">Orders: </span>
+                  <span className="font-semibold">{customer.orderCount}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-muted-foreground">Total: </span>
+                  <span className="font-semibold">
+                    {formatAmount(Number(customer.totalSpent))}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 rounded-lg"
+                  onClick={() => openEdit(customer)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </Button>
+                <form action={deleteCustomerAction} className="flex-1">
+                  <input type="hidden" name="customerId" value={customer.id} />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-lg text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </form>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
 
       <CustomerDialog
         open={dialogOpen}

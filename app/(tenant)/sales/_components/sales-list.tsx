@@ -80,7 +80,8 @@ export function SalesList({
         </Link>
       </div>
 
-      <Card className="overflow-hidden">
+      {/* Desktop: table view. Mobile uses the card stack below. */}
+      <Card className="hidden md:block overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -145,6 +146,61 @@ export function SalesList({
           </Table>
         </div>
       </Card>
+
+      {/* Mobile: same data as a card stack — invoice + customer header,
+          two-column grid for items / total / payment / courier, date at
+          the foot. No horizontal scroll, no truncation. */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <ShoppingCart className="h-8 w-8 opacity-40" />
+            <span className="text-sm">No sales found</span>
+          </Card>
+        ) : (
+          filtered.map((sale) => (
+            <Card key={sale.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">
+                    {sale.customerName}
+                  </p>
+                  {sale.customerPhone && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {sale.customerPhone}
+                    </p>
+                  )}
+                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    {sale.invoiceNumber}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-base font-semibold">
+                    {formatAmount(sale.grandTotal)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(sale.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <Badge
+                  variant={paymentVariants[sale.paymentStatus] ?? "outline"}
+                  className="rounded-lg"
+                >
+                  {sale.paymentStatus}
+                </Badge>
+                <Badge variant="outline" className="rounded-lg">
+                  {sale.courierStatus ?? "not_sent"}
+                </Badge>
+                <span className="ml-auto text-muted-foreground">
+                  {sale.itemCount} item{sale.itemCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }

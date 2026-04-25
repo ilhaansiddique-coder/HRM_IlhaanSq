@@ -76,7 +76,8 @@ export function InvoiceList({ initialSales }: { initialSales: SaleWithRelations[
         </div>
       </div>
 
-      <Card className="overflow-hidden">
+      {/* Desktop: table view. Mobile uses the card stack below. */}
+      <Card className="hidden md:block overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -142,6 +143,73 @@ export function InvoiceList({ initialSales }: { initialSales: SaleWithRelations[
           </Table>
         </div>
       </Card>
+
+      {/* Mobile: same data as a card stack — customer + total header,
+          invoice number + date below, two-col paid/due grid, status badge,
+          and a View & Print action at the foot. */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <FileText className="h-8 w-8 opacity-40" />
+            <span className="text-sm">No invoices found</span>
+          </Card>
+        ) : (
+          filtered.map((s) => (
+            <Card key={s.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">{s.customerName}</p>
+                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    {s.invoiceNumber}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-base font-semibold">
+                    {formatAmount(s.grandTotal)}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {new Date(s.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Paid: </span>
+                  <span className="font-semibold text-success">
+                    {formatAmount(s.amountPaid)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-muted-foreground">Due: </span>
+                  {s.amountDue > 0 ? (
+                    <span className="font-semibold text-warning">
+                      {formatAmount(s.amountDue)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2">
+                <Badge
+                  variant={paymentVariants[s.paymentStatus] ?? "outline"}
+                  className="rounded-lg"
+                >
+                  {s.paymentStatus}
+                </Badge>
+                <Link href={`/invoices/${s.id}`} className="ml-auto">
+                  <Button variant="outline" size="sm" className="rounded-lg">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    View & Print
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }

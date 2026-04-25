@@ -61,7 +61,8 @@ export default async function PackagingPage() {
         </Card>
       </div>
 
-      <Card className="overflow-hidden">
+      {/* Desktop: table view. Mobile uses the card stack below. */}
+      <Card className="hidden md:block overflow-hidden rounded-lg">
         <CardHeader>
           <CardTitle>Packaging Queue</CardTitle>
           <CardDescription>Oldest orders first</CardDescription>
@@ -137,6 +138,76 @@ export default async function PackagingPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile: same data as a card stack — customer + invoice header,
+          full item list, address, status badges, then PackagingActions
+          at the foot. No horizontal scroll, no truncation. */}
+      <div className="md:hidden space-y-3">
+        {pendingOrders.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <CheckCircle2 className="h-10 w-10 text-success" />
+            <p className="text-sm font-medium">All orders packaged</p>
+            <p className="text-xs">Nothing waiting to be shipped</p>
+          </Card>
+        ) : (
+          pendingOrders.map((o) => (
+            <Card key={o.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">{o.customerName}</p>
+                  {o.customerPhone && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {o.customerPhone}
+                    </p>
+                  )}
+                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    {o.invoiceNumber}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant="outline" className="rounded-lg text-xs">
+                    {o.orderStatus}
+                  </Badge>
+                  <Badge variant="outline" className="rounded-lg text-xs">
+                    {o.courierStatus ?? "not_sent"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Items:</span>
+                  <div className="mt-1 space-y-0.5">
+                    {o.items.slice(0, 3).map((i) => (
+                      <div key={i.id}>
+                        <span className="font-medium">{i.quantity}×</span>{" "}
+                        {i.product?.name ?? "Item"}
+                      </div>
+                    ))}
+                    {o.items.length > 3 && (
+                      <span className="text-muted-foreground">
+                        +{o.items.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Address: </span>
+                  <span className="break-words">{o.customerAddress ?? "-"}</span>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <PackagingActions
+                  saleId={o.id}
+                  orderStatus={o.orderStatus}
+                  courierStatus={o.courierStatus}
+                />
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }

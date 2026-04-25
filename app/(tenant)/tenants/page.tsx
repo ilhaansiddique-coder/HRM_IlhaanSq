@@ -49,7 +49,8 @@ export default async function AllTenantsPage() {
         <MetricCard label="Total Sales" value={totalSales} />
       </div>
 
-      <Card className="border-border/70 bg-card/80">
+      {/* Desktop: table view. Mobile uses the card stack below. */}
+      <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
         <CardHeader>
           <CardTitle>Tenants</CardTitle>
           <CardDescription>All workspaces on the platform</CardDescription>
@@ -125,6 +126,77 @@ export default async function AllTenantsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mobile: same data as a card stack — business + status header,
+          slug + plan, three-col counts grid, created date, then actions. */}
+      <div className="md:hidden space-y-3">
+        {tenants.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <Building2 className="h-8 w-8 opacity-40" />
+            <span className="text-sm">No tenants yet. Create one to get started.</span>
+          </Card>
+        ) : (
+          tenants.map((t) => (
+            <Card key={t.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">
+                    {t.businessSettings?.businessName ?? t.name}
+                  </p>
+                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                    {t.slug}
+                  </p>
+                </div>
+                <Badge
+                  variant={t.isActive ? "default" : "destructive"}
+                  className="rounded-lg"
+                >
+                  {t.isActive ? "Active" : "Disabled"}
+                </Badge>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <Badge variant="outline" className="rounded-lg capitalize">
+                  {t.plan}
+                </Badge>
+                <span className="ml-auto text-muted-foreground">
+                  Created {new Date(t.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Members: </span>
+                  <span className="font-semibold">{t._count.members}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Products: </span>
+                  <span className="font-semibold">{t._count.products}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Sales: </span>
+                  <span className="font-semibold">{t._count.sales}</span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-end gap-1">
+                <ToggleTenantButton tenantId={t.id} isActive={t.isActive} />
+                <DeleteTenantButton
+                  tenantId={t.id}
+                  tenantName={t.businessSettings?.businessName ?? t.name}
+                  tenantSlug={t.slug}
+                  counts={{
+                    members: t._count.members,
+                    products: t._count.products,
+                    sales: t._count.sales,
+                    customers: t._count.customers,
+                  }}
+                />
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }

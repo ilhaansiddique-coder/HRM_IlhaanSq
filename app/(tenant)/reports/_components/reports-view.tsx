@@ -99,7 +99,8 @@ export function ReportsView({
 
       {/* Two-column: top products + payment breakdown */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-border/70 bg-card/80">
+        {/* Desktop: table view. Mobile uses the card stack below. */}
+        <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
@@ -139,6 +140,52 @@ export function ReportsView({
             )}
           </CardContent>
         </Card>
+
+        {/* Mobile: top products card stack — rank + name header,
+            sold count + revenue row. */}
+        <div className="md:hidden space-y-3">
+          <div>
+            <p className="flex items-center gap-2 text-base font-semibold">
+              <Package className="h-5 w-5 text-primary" />
+              Top Products
+            </p>
+            <p className="text-xs text-muted-foreground">By revenue</p>
+          </div>
+          {topProducts.length === 0 ? (
+            <Card className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+              <Package className="h-8 w-8 opacity-40" />
+              <span className="text-sm">No sales data yet</span>
+            </Card>
+          ) : (
+            topProducts.map((item, i) => (
+              <Card
+                key={item.product?.id ?? i}
+                className="rounded-lg p-3"
+              >
+                <div className="flex items-start gap-2">
+                  <span className="w-5 shrink-0 text-xs text-muted-foreground">
+                    {i + 1}.
+                  </span>
+                  <span className="min-w-0 flex-1 break-words font-medium leading-tight">
+                    {item.product?.name ?? "Unknown"}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Sold: </span>
+                    <span className="font-semibold">{item.quantitySold}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-muted-foreground">Revenue: </span>
+                    <span className="font-semibold">
+                      {formatAmount(item.revenue)}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
 
         <Card className="border-border/70 bg-card/80">
           <CardHeader>

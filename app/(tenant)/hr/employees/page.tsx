@@ -45,7 +45,8 @@ export default async function EmployeesPage() {
         </Link>
       </div>
 
-      <Card className="border-border/70 bg-card/80">
+      {/* Desktop: table view. Mobile uses the card stack below. */}
+      <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
         <CardHeader>
           <CardTitle>All Employees</CardTitle>
           <CardDescription>Workforce master record</CardDescription>
@@ -119,6 +120,76 @@ export default async function EmployeesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile: same data as a card stack — name + status header, code,
+          email/phone contact, dept/position, hired date. */}
+      <div className="md:hidden space-y-3">
+        <div>
+          <p className="text-base font-semibold">All Employees</p>
+          <p className="text-xs text-muted-foreground">Workforce master record</p>
+        </div>
+        {employees.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <Users className="h-10 w-10 opacity-40" />
+            <p className="text-sm">No employees yet. Add your first one to get started.</p>
+            <Link href="/hr/employees/new">
+              <Button size="sm">
+                <Plus className="h-3.5 w-3.5" />
+                Add Employee
+              </Button>
+            </Link>
+          </Card>
+        ) : (
+          employees.map((e) => (
+            <Card key={e.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">{e.fullName}</p>
+                  <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                    {e.empCode}
+                  </p>
+                </div>
+                <Badge
+                  variant={statusVariants[e.status] ?? "outline"}
+                  className="rounded-lg capitalize"
+                >
+                  {e.status.replace("_", " ")}
+                </Badge>
+              </div>
+
+              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1 break-all">
+                  <Mail className="h-3 w-3 shrink-0" />
+                  <span>{e.email}</span>
+                </div>
+                {e.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="h-3 w-3 shrink-0" />
+                    <span>{e.phone}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Department: </span>
+                  <span className="font-medium">{e.department?.name ?? "—"}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Position: </span>
+                  <span className="font-medium">{e.position?.title ?? "—"}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Hired: </span>
+                  <span className="font-medium">
+                    {new Date(e.hireDate).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   );
 }

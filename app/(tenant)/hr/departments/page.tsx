@@ -33,67 +33,128 @@ export default async function DepartmentsPage() {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {/* List */}
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle>All Departments ({departments.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {departments.length === 0 ? (
-              <div className="text-center py-12">
-                <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  No departments yet. Create one to start organizing your team.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Cost Center</TableHead>
-                      <TableHead className="text-right">Employees</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {departments.map((d) => (
-                      <TableRow key={d.id}>
-                        <TableCell className="font-medium">{d.name}</TableCell>
-                        <TableCell className="text-xs font-mono text-muted-foreground">
-                          {d.code ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {d.costCenter ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline">{d._count.employees}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {d._count.employees === 0 && (
-                            <form action={deleteDepartmentAction} className="inline">
-                              <input type="hidden" name="id" value={d.id} />
-                              <Button
-                                type="submit"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </form>
-                          )}
-                        </TableCell>
+        {/* List wrapper — desktop table + mobile card stack */}
+        <div className="space-y-3">
+          {/* Desktop: table view. Mobile uses the card stack below. */}
+          <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
+            <CardHeader>
+              <CardTitle>All Departments ({departments.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {departments.length === 0 ? (
+                <div className="text-center py-12">
+                  <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    No departments yet. Create one to start organizing your team.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Cost Center</TableHead>
+                        <TableHead className="text-right">Employees</TableHead>
+                        <TableHead></TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {departments.map((d) => (
+                        <TableRow key={d.id}>
+                          <TableCell className="font-medium">{d.name}</TableCell>
+                          <TableCell className="text-xs font-mono text-muted-foreground">
+                            {d.code ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {d.costCenter ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="outline">{d._count.employees}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {d._count.employees === 0 && (
+                              <form action={deleteDepartmentAction} className="inline">
+                                <input type="hidden" name="id" value={d.id} />
+                                <Button
+                                  type="submit"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </form>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Mobile: department card stack — name + employee count header,
+              code + cost center, optional delete action. */}
+          <div className="md:hidden space-y-3">
+            <p className="text-base font-semibold">
+              All Departments ({departments.length})
+            </p>
+            {departments.length === 0 ? (
+              <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+                <Building2 className="h-10 w-10 opacity-40" />
+                <span className="text-sm">
+                  No departments yet. Create one to start organizing your team.
+                </span>
+              </Card>
+            ) : (
+              departments.map((d) => (
+                <Card key={d.id} className="rounded-lg p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium leading-tight">{d.name}</p>
+                    </div>
+                    <Badge variant="outline" className="rounded-lg">
+                      {d._count.employees} employee
+                      {d._count.employees !== 1 ? "s" : ""}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Code: </span>
+                      <span className="font-mono font-medium">
+                        {d.code ?? "—"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Cost Center: </span>
+                      <span className="font-medium">{d.costCenter ?? "—"}</span>
+                    </div>
+                  </div>
+
+                  {d._count.employees === 0 && (
+                    <form action={deleteDepartmentAction} className="mt-3">
+                      <input type="hidden" name="id" value={d.id} />
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        size="sm"
+                        className="w-full rounded-lg text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </Button>
+                    </form>
+                  )}
+                </Card>
+              ))
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Create form */}
         <Card className="border-border/70 bg-card/80">

@@ -40,8 +40,8 @@ export default async function AlertsPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Low stock */}
-      <Card className="border-warning/35 bg-card/80">
+      {/* Low stock — desktop: table view. Mobile uses the card stack below. */}
+      <Card className="hidden md:block border-warning/35 bg-card/80 rounded-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -92,6 +92,60 @@ export default async function AlertsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile: low-stock card stack — name + status header, SKU + stock
+          row below. No horizontal scroll, no truncation. */}
+      <div className="md:hidden space-y-3">
+        <Card className="border-warning/35 bg-card/80 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-base font-semibold">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Low Stock Products
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {lowStock.length} below threshold
+              </p>
+            </div>
+            <Link href="/inventory">
+              <Button variant="ghost" size="sm">View</Button>
+            </Link>
+          </div>
+        </Card>
+
+        {lowStock.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+            <CheckCircle2 className="h-10 w-10 text-success" />
+            <span className="text-sm">All products well-stocked</span>
+          </Card>
+        ) : (
+          lowStock.map((p) => (
+            <Card key={p.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-tight">{p.name}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {p.sku ?? "-"}
+                  </p>
+                </div>
+                {p.stockQuantity <= 0 ? (
+                  <Badge variant="destructive" className="rounded-lg">
+                    Out of Stock
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="rounded-lg">
+                    Low
+                  </Badge>
+                )}
+              </div>
+              <div className="mt-2 text-xs">
+                <span className="text-muted-foreground">In Stock: </span>
+                <span className="font-semibold">{p.stockQuantity}</span>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Pending orders */}
