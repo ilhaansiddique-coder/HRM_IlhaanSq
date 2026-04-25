@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Copy, Package, Pencil, Trash2 } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp, Copy, Package, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +12,9 @@ import type { SerializedProduct } from "./product-list";
 type Props = {
   product: SerializedProduct;
   onEdit: (product: SerializedProduct) => void;
+  // Super-admin view: render the owning tenant's name on the card so
+  // it is obvious which workspace each product belongs to.
+  showTenantBadge?: boolean;
 };
 
 type Status = "In Stock" | "Low Stock" | "Stock Out";
@@ -27,7 +30,7 @@ function variantLabel(attributes: Record<string, string>): string {
   return values[0] ?? "Variant";
 }
 
-export function ProductCard({ product, onEdit }: Props) {
+export function ProductCard({ product, onEdit, showTenantBadge = false }: Props) {
   const { formatAmount } = useCurrency();
   const [expanded, setExpanded] = useState(false);
   const status = statusOf(product);
@@ -69,6 +72,17 @@ export function ProductCard({ product, onEdit }: Props) {
             {status}
           </Badge>
         </div>
+        {showTenantBadge && product.tenantName && (
+          <div className="absolute left-2 top-2">
+            <Badge
+              variant="outline"
+              className="max-w-[60%] gap-1 truncate rounded-lg bg-background/90 px-2 py-0.5 text-[11px] font-medium shadow-sm backdrop-blur"
+            >
+              <Building2 className="h-3 w-3 shrink-0" />
+              <span className="truncate">{product.tenantName}</span>
+            </Badge>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-3">

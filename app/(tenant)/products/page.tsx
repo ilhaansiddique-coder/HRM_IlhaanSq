@@ -1,5 +1,6 @@
 import { requireTenant } from "@/lib/auth";
 import { getCachedProducts } from "@/lib/cache";
+import { getAllTenantsProducts } from "@/lib/services/product.service";
 import {
   ProductList,
   type ProductStats,
@@ -14,7 +15,12 @@ function toNumber(v: unknown): number | null {
 
 export default async function ProductsPage() {
   const session = await requireTenant();
-  const products = await getCachedProducts(session.tenantId);
+
+  // Super admin: cross-tenant catalog (each row tagged with tenant name).
+  // Tenant user: their own tenant's products only (cached).
+  const products = session.isSuperAdmin
+    ? await getAllTenantsProducts()
+    : await getCachedProducts(session.tenantId);
 
   const serialized: SerializedProduct[] = products.map((p) => {
     const rate = toNumber(p.rate) ?? 0;
@@ -47,6 +53,13 @@ export default async function ProductsPage() {
         }, 0)
       : p.stockQuantity * (cost ?? rate);
 
+    // Cross-tenant payload includes the tenant relation; tenant-scoped
+    // reads do not. Read it defensively so both paths typecheck.
+    const tenantName =
+      "tenant" in p && p.tenant && typeof p.tenant === "object"
+        ? (p.tenant as { name: string }).name
+        : null;
+
     return {
       id: p.id,
       name: p.name,
@@ -63,6 +76,8 @@ export default async function ProductsPage() {
       attributeDefs,
       totalStock,
       totalValue,
+      tenantId: p.tenantId,
+      tenantName,
     };
   });
 
@@ -78,7 +93,11 @@ export default async function ProductsPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <ProductList initialProducts={serialized} stats={stats} />
+      <ProductList
+        initialProducts={serialized}
+        stats={stats}
+        showTenantBadge={session.isSuperAdmin}
+      />
     </div>
   );
 }

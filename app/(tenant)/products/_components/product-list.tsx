@@ -54,6 +54,11 @@ export type SerializedProduct = {
   attributeDefs: SerializedAttribute[];
   totalStock: number;
   totalValue: number;
+  // Cross-tenant: tagged on every row when the viewer is a super
+  // admin so the card can show which workspace owns the product.
+  // Null on tenant-scoped reads.
+  tenantId: string;
+  tenantName: string | null;
 };
 
 export type ProductStats = {
@@ -69,9 +74,11 @@ type StockFilter = "all" | "in" | "low" | "out";
 export function ProductList({
   initialProducts,
   stats,
+  showTenantBadge = false,
 }: {
   initialProducts: SerializedProduct[];
   stats: ProductStats;
+  showTenantBadge?: boolean;
 }) {
   const { formatAmount } = useCurrency();
   const router = useRouter();
@@ -135,7 +142,8 @@ export function ProductList({
       if (q) {
         const hit =
           p.name.toLowerCase().includes(q) ||
-          p.sku?.toLowerCase().includes(q);
+          p.sku?.toLowerCase().includes(q) ||
+          p.tenantName?.toLowerCase().includes(q);
         if (!hit) return false;
       }
       if (filter === "all") return true;
@@ -261,7 +269,12 @@ export function ProductList({
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filtered.map((p) => (
-            <ProductCard key={p.id} product={p} onEdit={openEdit} />
+            <ProductCard
+              key={p.id}
+              product={p}
+              onEdit={openEdit}
+              showTenantBadge={showTenantBadge}
+            />
           ))}
         </div>
       )}

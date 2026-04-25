@@ -81,6 +81,33 @@ export async function getInventoryProducts(
   }));
 }
 
+// ─── Catalog read (cross-tenant, super admin) ───────────────
+// Full ProductWithVariants shape — same payload the cached
+// per-tenant fetcher returns — but spans every tenant and tags
+// each row with the owning tenant's name. Not cached: super
+// admin reads are infrequent, and per-tenant cache invalidation
+// would not cover this key cleanly.
+export type ProductWithTenant = Prisma.ProductGetPayload<{
+  include: {
+    variants: true;
+    attributes: { include: { values: true } };
+    tenant: { select: { name: true } };
+  };
+}>;
+
+export async function getAllTenantsProducts(): Promise<ProductWithTenant[]> {
+  return prisma.product.findMany({
+    where: { isDeleted: false },
+    include: {
+      variants: true,
+      attributes: { include: { values: true } },
+      tenant: { select: { name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 1000,
+  });
+}
+
 // ─── Create ─────────────────────────────────────────────────
 
 export async function createProduct(
