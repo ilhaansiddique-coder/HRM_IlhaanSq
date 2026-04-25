@@ -201,7 +201,7 @@ function AppSidebar({
       className="border-r border-sidebar-border/70 bg-sidebar/95"
       collapsible="icon"
     >
-      <SidebarHeader className="px-3 pt-3 pb-2 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
+      <SidebarHeader className="px-3 py-3 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
         <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
             {businessName.charAt(0).toUpperCase()}
