@@ -157,7 +157,7 @@ export function TenantShell({
               role={role}
               notifications={notifications}
             />
-            <main className="flex-1 p-4 pb-24 md:p-6 min-w-0">{children}</main>
+            <main className="flex-1 p-4 nav-mb-safe md:p-6 min-w-0">{children}</main>
           </div>
         </div>
 
@@ -468,7 +468,7 @@ function TopBar({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <header className="sticky top-0 z-30 flex items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 py-3 backdrop-blur md:px-6">
+      <header className="sticky top-0 z-30 flex items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 py-3 pt-safe backdrop-blur md:px-6">
         {/* Left — page-specific controls (currently dashboard date picker) */}
         <div className="flex flex-1 items-center justify-start">
           {isDashboard && <DateRangePicker />}
@@ -702,7 +702,7 @@ function MobileBottomNav({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-40 md:hidden transition-transform duration-200 ${
+      className={`fixed bottom-0 left-0 right-0 z-40 md:hidden transition-transform duration-200 gpu pb-safe ${
         show ? "translate-y-0" : "translate-y-full"
       }`}
     >
