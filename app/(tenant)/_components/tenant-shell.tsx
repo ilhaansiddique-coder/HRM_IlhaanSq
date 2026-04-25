@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { NavLink } from "./nav-link";
+import { NewSaleDialog } from "./new-sale-dialog";
 import { NotificationBell } from "./notification-bell";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -460,6 +461,11 @@ function TopBar({
   const { activePath } = useOptimisticNav();
   const isDashboard = activePath === "/dashboard";
 
+  // Cart icon in the TopBar opens the New Sale dialog rather than
+  // navigating to /sales. The dialog is rendered alongside the header
+  // so the Tooltip+Button composition stays clean.
+  const [newSaleOpen, setNewSaleOpen] = useState(false);
+
   return (
     <TooltipProvider delayDuration={150}>
       <header className="sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 backdrop-blur md:px-6">
@@ -472,9 +478,21 @@ function TopBar({
         <NotificationBell notifications={notifications} />
 
         {/* Quick navigation shortcuts */}
-        <ToolbarIconLink href="/sales" label="Sales">
-          <ShoppingCart className="h-4 w-4" />
-        </ToolbarIconLink>
+        {/* Cart icon = New Sale trigger; dialog is rendered after the header */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setNewSaleOpen(true)}
+              className="h-9 w-9 rounded-full border-border/60 bg-background/80"
+              aria-label="New Sale"
+            >
+              <ShoppingCart className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">New Sale</TooltipContent>
+        </Tooltip>
         <ToolbarIconLink href="/reports" label="Reports">
           <BarChart3 className="h-4 w-4" />
         </ToolbarIconLink>
@@ -614,6 +632,9 @@ function TopBar({
           <span className="md:hidden">Sign Out</span>
         </button>
       </header>
+
+      {/* New Sale dialog — controlled by the cart icon in the header */}
+      <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
     </TooltipProvider>
   );
 }

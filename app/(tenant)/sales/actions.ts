@@ -6,7 +6,40 @@ import {
   updateSaleStatus,
   deleteSale,
 } from "@/lib/services/sale.service";
+import {
+  getCachedProducts,
+  getCachedCustomers,
+  getCachedPaymentMethods,
+} from "@/lib/cache";
 import { revalidatePath } from "next/cache";
+
+// Fetched lazily by the New Sale dialog when it first opens — avoids
+// loading all products/customers on every page render.
+export async function getNewSaleFormData() {
+  const session = await requireTenant();
+  const [products, customers, paymentMethods] = await Promise.all([
+    getCachedProducts(session.tenantId),
+    getCachedCustomers(session.tenantId),
+    getCachedPaymentMethods(session.tenantId),
+  ]);
+  return {
+    products: products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      rate: Number(p.rate),
+      stockQuantity: p.stockQuantity,
+    })),
+    customers: customers.map((c) => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone,
+      address: c.address,
+      whatsapp: c.whatsapp,
+    })),
+    paymentMethods: paymentMethods.map((m) => ({ id: m.id, name: m.name })),
+  };
+}
 
 export async function createSaleAction(formData: FormData) {
   const session = await requireTenant();
