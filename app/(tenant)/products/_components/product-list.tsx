@@ -117,12 +117,21 @@ export function ProductList({
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as StockFilter)}
-            className="h-9 rounded-lg border-2 border-primary/70 bg-background px-3 pr-8 text-sm font-medium text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            style={{ color: "#AEAEAF", borderColor: "#AEAEAF" }}
+            className="h-9 w-28 rounded-lg border bg-background px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#AEAEAF]/30"
           >
-            <option value="all">All Stock</option>
-            <option value="in">In Stock</option>
-            <option value="low">Low Stock</option>
-            <option value="out">Out of Stock</option>
+            <option value="all" style={{ color: "#AEAEAF" }}>
+              All Stock
+            </option>
+            <option value="in" style={{ color: "#AEAEAF" }}>
+              In Stock
+            </option>
+            <option value="low" style={{ color: "#AEAEAF" }}>
+              Low Stock
+            </option>
+            <option value="out" style={{ color: "#AEAEAF" }}>
+              Out of Stock
+            </option>
           </select>
         </div>
         <div className="grid grid-cols-4 gap-2">
