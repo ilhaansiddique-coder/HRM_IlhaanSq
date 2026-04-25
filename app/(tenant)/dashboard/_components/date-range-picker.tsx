@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Calendar as CalendarIcon } from "lucide-react";
 import {
   endOfDay,
@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-type PresetKey =
+export type DateRangePresetKey =
   | "today"
   | "yesterday"
   | "last_7_days"
@@ -31,13 +31,16 @@ type PresetKey =
   | "this_year"
   | "all_time";
 
+// Backwards-compat alias for code in this file.
+type PresetKey = DateRangePresetKey;
+
 type Preset = {
   key: PresetKey;
   label: string;
   getRange: () => { from: Date; to: Date };
 };
 
-const PRESETS: Preset[] = [
+export const DATE_RANGE_PRESETS: Preset[] = [
   {
     key: "today",
     label: "Today",
@@ -105,7 +108,7 @@ function parseDateParam(raw: string | null): Date | undefined {
 
 function matchPreset(range: DateRange | undefined): PresetKey | null {
   if (!range?.from || !range?.to) return null;
-  for (const p of PRESETS) {
+  for (const p of DATE_RANGE_PRESETS) {
     const r = p.getRange();
     if (isSameDay(r.from, range.from) && isSameDay(r.to, range.to)) {
       return p.key;
@@ -119,9 +122,9 @@ function triggerLabel(
   preset: PresetKey | null
 ): string {
   const activePreset = preset
-    ? PRESETS.find((p) => p.key === preset)
+    ? DATE_RANGE_PRESETS.find((p) => p.key === preset)
     : matchPreset(range)
-      ? PRESETS.find((p) => p.key === matchPreset(range))
+      ? DATE_RANGE_PRESETS.find((p) => p.key === matchPreset(range))
       : null;
   if (activePreset) return activePreset.label;
   if (range?.from && range?.to) {
@@ -131,9 +134,18 @@ function triggerLabel(
   return "Today";
 }
 
-export function DateRangePicker() {
+export function DateRangePicker({
+  defaultPreset = "today",
+}: {
+  // Preset that represents "no filter applied" for the host page.
+  // The dashboard treats a missing URL param as "today" (its default).
+  // /sales treats it as "all_time" — that key is omitted from the URL
+  // when active, keeping the URL clean.
+  defaultPreset?: PresetKey;
+} = {}) {
   const router = useRouter();
   const params = useSearchParams();
+  const pathname = usePathname();
 
   // Committed state (from URL)
   const committed = useMemo<{ range: DateRange; preset: PresetKey | null }>(() => {
@@ -142,16 +154,18 @@ export function DateRangePicker() {
     const toParam = parseDateParam(params.get("to"));
 
     if (rangeParam) {
-      const preset = PRESETS.find((p) => p.key === rangeParam);
+      const preset = DATE_RANGE_PRESETS.find((p) => p.key === rangeParam);
       if (preset) return { range: preset.getRange(), preset: preset.key };
     }
     if (fromParam && toParam) {
       return { range: { from: fromParam, to: toParam }, preset: null };
     }
     // default
-    const today = PRESETS[0].getRange();
-    return { range: today, preset: "today" };
-  }, [params]);
+    const fallback =
+      DATE_RANGE_PRESETS.find((p) => p.key === defaultPreset) ??
+      DATE_RANGE_PRESETS[0];
+    return { range: fallback.getRange(), preset: fallback.key };
+  }, [params, defaultPreset]);
 
   // Staged (draft) state while popover is open
   const [open, setOpen] = useState(false);
@@ -187,14 +201,16 @@ export function DateRangePicker() {
     next.delete("to");
 
     if (draftPreset) {
-      if (draftPreset !== "today") next.set("range", draftPreset);
+      // Skip writing the param when it matches the host's default — the
+      // empty-URL state already represents that view.
+      if (draftPreset !== defaultPreset) next.set("range", draftPreset);
     } else if (draftRange?.from && draftRange?.to) {
       next.set("from", fmtDateISO(draftRange.from)!);
       next.set("to", fmtDateISO(draftRange.to)!);
     }
 
     const query = next.toString();
-    router.push(`/dashboard${query ? `?${query}` : ""}`);
+    router.push(`${pathname}${query ? `?${query}` : ""}`);
     setOpen(false);
   }
 
@@ -230,7 +246,7 @@ export function DateRangePicker() {
               Presets
             </p>
             <div className="flex flex-row gap-1 overflow-x-auto md:flex-col md:overflow-visible">
-              {PRESETS.map((p) => {
+              {DATE_RANGE_PRESETS.map((p) => {
                 const active = draftPreset === p.key;
                 return (
                   <button

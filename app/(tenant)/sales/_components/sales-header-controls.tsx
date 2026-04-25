@@ -2,13 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Calendar as CalendarIcon,
-  ChevronDown,
-  ListFilter,
-  Search,
-  User,
-} from "lucide-react";
+import { ChevronDown, ListFilter, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,36 +11,17 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { getSalesCreators } from "../actions";
+import { DateRangePicker } from "../../dashboard/_components/date-range-picker";
 
 // URL params (kept identical to what SalesList reads):
 //   q       — search
-//   d       — date preset key
-//   from/to — YYYY-MM-DD (custom range only)
+//   range   — date preset key (today, yesterday, last_7_days, …, all_time);
+//             omitted when "all_time" since that's the host default
+//   from/to — YYYY-MM-DD (custom calendar range; mutually exclusive with range)
 //   status  — comma-separated payment status keys
 //   terms   — comma-separated payment term keys
 //   courier — comma-separated courier status keys
 //   user    — created-by user id
-
-type DatePreset =
-  | "all"
-  | "today"
-  | "yesterday"
-  | "last7"
-  | "last30"
-  | "this_month"
-  | "last_month"
-  | "custom";
-
-const DATE_LABELS: Record<DatePreset, string> = {
-  all: "All time",
-  today: "Today",
-  yesterday: "Yesterday",
-  last7: "Last 7 days",
-  last30: "Last 30 days",
-  this_month: "This month",
-  last_month: "Last month",
-  custom: "Custom range",
-};
 
 const STATUS_KEYS = ["paid", "partial", "pending", "cancelled"] as const;
 const TERMS_KEYS = ["immediate", "cod", "credit"] as const;
@@ -71,9 +46,6 @@ export function SalesHeaderControls() {
   const params = useSearchParams();
 
   const urlQ = params.get("q") ?? "";
-  const urlD = (params.get("d") as DatePreset) ?? "all";
-  const urlFrom = params.get("from") ?? "";
-  const urlTo = params.get("to") ?? "";
   const urlStatuses = useMemo(() => parseSet(params.get("status")), [params]);
   const urlTerms = useMemo(() => parseSet(params.get("terms")), [params]);
   const urlCouriers = useMemo(() => parseSet(params.get("courier")), [params]);
@@ -108,15 +80,6 @@ export function SalesHeaderControls() {
     router.replace(`?${p.toString()}`, { scroll: false });
   }
 
-  function setPreset(preset: DatePreset) {
-    // Clearing from/to when leaving custom keeps the URL tidy.
-    if (preset === "custom") {
-      writeMany({ d: preset });
-    } else {
-      writeMany({ d: preset === "all" ? "" : preset, from: "", to: "" });
-    }
-  }
-
   function toggleInUrlSet(key: "status" | "terms" | "courier", value: string) {
     const current = parseSet(params.get(key));
     if (current.has(value)) current.delete(value);
@@ -130,13 +93,6 @@ export function SalesHeaderControls() {
 
   const activeFilterCount =
     urlStatuses.size + urlTerms.size + urlCouriers.size;
-
-  const dateLabel =
-    urlD === "custom"
-      ? urlFrom || urlTo
-        ? `${urlFrom || "…"} → ${urlTo || "…"}`
-        : "Custom range"
-      : DATE_LABELS[urlD];
 
   // "All Users" dropdown — fetched the first time the popover opens.
   const [users, setUsers] = useState<{ id: string; name: string }[] | null>(
@@ -173,67 +129,10 @@ export function SalesHeaderControls() {
         />
       </div>
 
-      {/* Date pill */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="h-9 gap-2 rounded-lg font-normal"
-          >
-            <CalendarIcon className="h-4 w-4" />
-            <span className="text-sm">{dateLabel}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-64 p-2">
-          <div className="grid grid-cols-2 gap-1">
-            {(
-              [
-                "all",
-                "today",
-                "yesterday",
-                "last7",
-                "last30",
-                "this_month",
-                "last_month",
-                "custom",
-              ] as DatePreset[]
-            ).map((k) => (
-              <Button
-                key={k}
-                variant={urlD === k ? "default" : "ghost"}
-                size="sm"
-                className="justify-start rounded-md"
-                onClick={() => setPreset(k)}
-              >
-                {DATE_LABELS[k]}
-              </Button>
-            ))}
-          </div>
-          {urlD === "custom" && (
-            <div className="mt-2 space-y-2 border-t border-border/60 pt-2">
-              <div>
-                <label className="text-[11px] text-muted-foreground">From</label>
-                <Input
-                  type="date"
-                  value={urlFrom}
-                  onChange={(e) => writeParam("from", e.target.value)}
-                  className="h-8"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-muted-foreground">To</label>
-                <Input
-                  type="date"
-                  value={urlTo}
-                  onChange={(e) => writeParam("to", e.target.value)}
-                  className="h-8"
-                />
-              </div>
-            </div>
-          )}
-        </PopoverContent>
-      </Popover>
+      {/* Shared date range picker (presets sidebar + dual-month
+          calendar). Default "all_time" so /sales loads unfiltered;
+          the picker writes `range`, `from`, `to` query params. */}
+      <DateRangePicker defaultPreset="all_time" />
 
       {/* All Filters */}
       <Popover>

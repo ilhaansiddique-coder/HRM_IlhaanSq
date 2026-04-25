@@ -31,8 +31,11 @@ import {
   type StatusKey,
   type TermsKey,
   type CourierKey,
-  type DatePreset,
 } from "./sales-toolbar";
+import {
+  DATE_RANGE_PRESETS,
+  type DateRangePresetKey,
+} from "../../dashboard/_components/date-range-picker";
 
 export type SerializedSaleRow = {
   id: string;
@@ -65,76 +68,33 @@ const paymentVariants: Record<
 };
 
 // Convert a date preset to absolute [start, end] bounds. Returns null
-// for "all" (no date constraint). Custom uses the explicit YYYY-MM-DD
-// strings the toolbar passes in.
-function presetRange(
-  preset: DatePreset,
-  startDate: string,
-  endDate: string
+// Resolve URL date params into absolute bounds.
+//   range=<preset>   → bounds from DATE_RANGE_PRESETS (the shared list).
+//   from + to        → custom calendar range (YYYY-MM-DD).
+//   neither          → no date constraint (the host's "all_time" default).
+function resolveDateBounds(
+  rangeParam: string | null,
+  fromParam: string | null,
+  toParam: string | null
 ): { start: Date | null; end: Date | null } {
-  const now = new Date();
-  const startOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
-
-  const endOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    23,
-    59,
-    59,
-    999
-  );
-
-  switch (preset) {
-    case "all":
-      return { start: null, end: null };
-    case "today":
-      return { start: startOfToday, end: endOfToday };
-    case "yesterday": {
-      const s = new Date(startOfToday);
-      s.setDate(s.getDate() - 1);
-      const e = new Date(endOfToday);
-      e.setDate(e.getDate() - 1);
-      return { start: s, end: e };
-    }
-    case "last7": {
-      const s = new Date(startOfToday);
-      s.setDate(s.getDate() - 6);
-      return { start: s, end: endOfToday };
-    }
-    case "last30": {
-      const s = new Date(startOfToday);
-      s.setDate(s.getDate() - 29);
-      return { start: s, end: endOfToday };
-    }
-    case "this_month": {
-      const s = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { start: s, end: endOfToday };
-    }
-    case "last_month": {
-      const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const e = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        0,
-        23,
-        59,
-        59,
-        999
-      );
-      return { start: s, end: e };
-    }
-    case "custom": {
-      return {
-        start: startDate ? new Date(`${startDate}T00:00:00`) : null,
-        end: endDate ? new Date(`${endDate}T23:59:59.999`) : null,
-      };
+  if (rangeParam) {
+    const preset = DATE_RANGE_PRESETS.find(
+      (p) => p.key === (rangeParam as DateRangePresetKey)
+    );
+    if (preset) {
+      // "all_time" is functionally "no constraint" for filtering.
+      if (preset.key === "all_time") return { start: null, end: null };
+      const r = preset.getRange();
+      return { start: r.from, end: r.to };
     }
   }
+  if (fromParam && toParam) {
+    return {
+      start: new Date(`${fromParam}T00:00:00`),
+      end: new Date(`${toParam}T23:59:59.999`),
+    };
+  }
+  return { start: null, end: null };
 }
 
 // Parse a comma-separated URL value into a Set, dropping empty strings.
@@ -154,14 +114,14 @@ export function SalesList({
   const [newSaleOpen, setNewSaleOpen] = useState(false);
 
   // ─── URL-driven filter state ────────────────────────────────
-  // These eight fields are mirrored to URL params so the TopBar's
-  // SalesHeaderControls (rendered above this tree) and the in-page
-  // toolbar stay in lockstep. Browser back/forward also restores the
-  // exact filter view.
+  // Mirrored to URL params so the TopBar's SalesHeaderControls
+  // (rendered above this tree) and the in-page toolbar stay in
+  // lockstep. Browser back/forward also restores the exact filter
+  // view. The shared DateRangePicker writes `range`/`from`/`to`.
   const urlQ = params.get("q") ?? "";
-  const urlD = (params.get("d") as DatePreset) ?? "all";
-  const urlFrom = params.get("from") ?? "";
-  const urlTo = params.get("to") ?? "";
+  const urlRange = params.get("range");
+  const urlFrom = params.get("from");
+  const urlTo = params.get("to");
   const urlStatuses = useMemo(() => parseSet<StatusKey>(params.get("status")), [params]);
   const urlTerms = useMemo(() => parseSet<TermsKey>(params.get("terms")), [params]);
   const urlCouriers = useMemo(() => parseSet<CourierKey>(params.get("courier")), [params]);
@@ -195,12 +155,10 @@ export function SalesList({
 
   // Compose into the unified ToolbarFilters shape SalesToolbar expects.
   // `showCancelled` is a no-op now (kept on the type for compatibility);
-  // the dispatcher ignores it.
+  // the dispatcher ignores it. Date params (`range`/`from`/`to`) are
+  // managed by the shared DateRangePicker, not the toolbar.
   const filters: ToolbarFilters = {
     search: searchBuffer,
-    datePreset: urlD,
-    startDate: urlFrom,
-    endDate: urlTo,
     statuses: urlStatuses,
     terms: urlTerms,
     couriers: urlCouriers,
@@ -217,19 +175,6 @@ export function SalesList({
     setDensity(next.density);
 
     const p = new URLSearchParams(params.toString());
-
-    if (next.datePreset === "all") p.delete("d");
-    else p.set("d", next.datePreset);
-
-    if (next.datePreset === "custom") {
-      if (next.startDate) p.set("from", next.startDate);
-      else p.delete("from");
-      if (next.endDate) p.set("to", next.endDate);
-      else p.delete("to");
-    } else {
-      p.delete("from");
-      p.delete("to");
-    }
 
     const statusStr = Array.from(next.statuses).join(",");
     if (statusStr) p.set("status", statusStr);
@@ -265,11 +210,7 @@ export function SalesList({
 
   const filtered = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
-    const { start, end } = presetRange(
-      filters.datePreset,
-      filters.startDate,
-      filters.endDate
-    );
+    const { start, end } = resolveDateBounds(urlRange, urlFrom, urlTo);
 
     return initialSales.filter((s) => {
       if (
@@ -309,7 +250,7 @@ export function SalesList({
 
       return true;
     });
-  }, [initialSales, filters]);
+  }, [initialSales, filters, urlRange, urlFrom, urlTo]);
 
   // KPIs reflect the filtered slice — what the user sees, not the
   // global total. Cancelled rows excluded from money columns so the

@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   AlertTriangle,
-  Calendar as CalendarIcon,
   ChevronDown,
   ListFilter,
   Plus,
@@ -18,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { DateRangePicker } from "../../dashboard/_components/date-range-picker";
 
 export type StatusKey = "paid" | "partial" | "pending" | "cancelled";
 export type TermsKey = "immediate" | "cod" | "credit";
@@ -30,40 +30,20 @@ export type CourierKey =
   | "cancelled"
   | "lost";
 
-export type DatePreset =
-  | "all"
-  | "today"
-  | "yesterday"
-  | "last7"
-  | "last30"
-  | "this_month"
-  | "last_month"
-  | "custom";
-
 export type Density = "comfortable" | "compact";
 
+// `datePreset` / `startDate` / `endDate` were retired when the shared
+// DateRangePicker (which writes `range`/`from`/`to` directly to the
+// URL) replaced the inline date Popover. SalesList still drives those
+// query params; the toolbar no longer participates in the date state.
 export type ToolbarFilters = {
   search: string;
-  datePreset: DatePreset;
-  startDate: string; // YYYY-MM-DD (only meaningful when datePreset === "custom")
-  endDate: string;
   statuses: Set<StatusKey>;
   terms: Set<TermsKey>;
   couriers: Set<CourierKey>;
   userId: string; // "" = all
   showCancelled: boolean;
   density: Density;
-};
-
-const DATE_LABELS: Record<DatePreset, string> = {
-  all: "All time",
-  today: "Today",
-  yesterday: "Yesterday",
-  last7: "Last 7 days",
-  last30: "Last 30 days",
-  this_month: "This month",
-  last_month: "Last month",
-  custom: "Custom range",
 };
 
 export function SalesToolbar({
@@ -94,13 +74,6 @@ export function SalesToolbar({
   const activeFilterCount =
     filters.statuses.size + filters.terms.size + filters.couriers.size;
 
-  const dateLabel =
-    filters.datePreset === "custom"
-      ? filters.startDate || filters.endDate
-        ? `${filters.startDate || "…"} → ${filters.endDate || "…"}`
-        : "Custom range"
-      : DATE_LABELS[filters.datePreset];
-
   const userLabel = useMemo(() => {
     if (!filters.userId) return "All Users";
     const u = users.find((x) => x.id === filters.userId);
@@ -129,67 +102,9 @@ export function SalesToolbar({
         />
       </div>
 
-      {/* Date pill */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="h-9 gap-2 rounded-lg font-normal"
-          >
-            <CalendarIcon className="h-4 w-4" />
-            <span className="text-sm">{dateLabel}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-64 p-2">
-          <div className="grid grid-cols-2 gap-1">
-            {(
-              [
-                "all",
-                "today",
-                "yesterday",
-                "last7",
-                "last30",
-                "this_month",
-                "last_month",
-                "custom",
-              ] as DatePreset[]
-            ).map((k) => (
-              <Button
-                key={k}
-                variant={filters.datePreset === k ? "default" : "ghost"}
-                size="sm"
-                className="justify-start rounded-md"
-                onClick={() => set("datePreset", k)}
-              >
-                {DATE_LABELS[k]}
-              </Button>
-            ))}
-          </div>
-          {filters.datePreset === "custom" && (
-            <div className="mt-2 space-y-2 border-t border-border/60 pt-2">
-              <div>
-                <label className="text-[11px] text-muted-foreground">From</label>
-                <Input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => set("startDate", e.target.value)}
-                  className="h-8"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-muted-foreground">To</label>
-                <Input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => set("endDate", e.target.value)}
-                  className="h-8"
-                />
-              </div>
-            </div>
-          )}
-        </PopoverContent>
-      </Popover>
+      {/* Shared date range picker — same component the dashboard /
+          TopBar uses. Writes `range` / `from` / `to` to the URL. */}
+      <DateRangePicker defaultPreset="all_time" />
 
       {/* All Filters */}
       <Popover>
