@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { NavLink } from "./nav-link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -65,6 +66,21 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   HoverCard,
   HoverCardContent,
@@ -425,8 +441,63 @@ function TopBar({
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-end gap-2 border-b border-border/60 bg-card/80 px-4 backdrop-blur md:px-6">
-      {/* Theme picker */}
+    <TooltipProvider delayDuration={150}>
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-end gap-1.5 border-b border-border/60 bg-card/80 px-4 backdrop-blur md:px-6">
+        {/* Quick navigation shortcuts */}
+        <ToolbarIconLink href="/sales" label="Sales">
+          <ShoppingCart className="h-4 w-4" />
+        </ToolbarIconLink>
+        <ToolbarIconLink href="/reports" label="Reports">
+          <BarChart3 className="h-4 w-4" />
+        </ToolbarIconLink>
+        <ToolbarIconLink href="/customers" label="Customers">
+          <Users className="h-4 w-4" />
+        </ToolbarIconLink>
+
+        {/* Quick-create dropdown */}
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 rounded-full border-border/60 bg-background/80"
+                  aria-label="Create new"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Create new</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Quick create
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/sales/new" className="flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                <span>New Sale</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/products" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                <span>New Product</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/customers" className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                <span>New Customer</span>
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Theme picker */}
       <HoverCard openDelay={100} closeDelay={80}>
         <HoverCardTrigger asChild>
           <button
@@ -496,17 +567,47 @@ function TopBar({
         </div>
       </div>
 
-      {/* Sign out */}
-      <button
-        type="button"
-        onClick={() => signOut({ callbackUrl: "/login" })}
-        aria-label="Sign Out"
-        className="flex h-9 items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted"
-      >
-        <LogOut className="h-4 w-4" />
-        <span className="hidden md:inline">Sign Out</span>
-      </button>
-    </header>
+        {/* Sign out */}
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          aria-label="Sign Out"
+          className="flex h-9 items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden md:inline">Sign Out</span>
+        </button>
+      </header>
+    </TooltipProvider>
+  );
+}
+
+// Pill-shaped icon link used in the TopBar's quick-shortcut group.
+function ToolbarIconLink({
+  href,
+  label,
+  children,
+}: {
+  href: string;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link href={href}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-full border-border/60 bg-background/80"
+            aria-label={label}
+          >
+            {children}
+          </Button>
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
