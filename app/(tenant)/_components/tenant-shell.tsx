@@ -76,6 +76,7 @@ import { ProductsHeaderControls } from "../products/_components/products-header-
 import { ProductsActionsCluster } from "../products/_components/products-actions-cluster";
 import { InventoryHeaderControls } from "../inventory/_components/inventory-header-controls";
 import { SalesHeaderControls } from "../sales/_components/sales-header-controls";
+import { SalesCancelledToggle } from "../sales/_components/sales-cancelled-toggle";
 import {
   Tooltip,
   TooltipContent,
@@ -522,6 +523,15 @@ function TopBar({
 
         {/* Notifications bell — opens a dropdown of recent activity */}
         <NotificationBell notifications={notifications} />
+
+        {/* Cancelled-rows toggle — only meaningful on /sales, sits
+            between the bell and the New Sale (+) button. URL-synced
+            with the in-page sales list via the `cancelled` query param. */}
+        {isSales && (
+          <div className="hidden md:block">
+            <SalesCancelledToggle />
+          </div>
+        )}
 
         {/* Page-aware action cluster:
               /products & /inventory → Import / Export / Adjust Stock

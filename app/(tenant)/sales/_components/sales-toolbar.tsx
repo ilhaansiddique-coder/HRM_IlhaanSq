@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Popover,
   PopoverContent,
@@ -352,24 +351,6 @@ export function SalesToolbar({
         >
           <Rows3 className="h-4 w-4" />
         </Button>
-
-        {/* Show cancelled */}
-        <div
-          className="flex h-9 items-center gap-2 rounded-lg border border-input px-3"
-          title="Show cancelled sales"
-        >
-          <Switch
-            checked={filters.showCancelled}
-            onCheckedChange={(v) => set("showCancelled", v)}
-            id="sales-show-cancelled"
-          />
-          <label
-            htmlFor="sales-show-cancelled"
-            className="text-xs text-muted-foreground select-none"
-          >
-            Cancelled
-          </label>
-        </div>
 
         {/* New sale */}
         <Button

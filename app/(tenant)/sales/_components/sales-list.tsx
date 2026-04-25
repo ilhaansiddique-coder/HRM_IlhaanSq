@@ -163,6 +163,7 @@ export function SalesList({
   const urlTerms = useMemo(() => parseSet<TermsKey>(params.get("terms")), [params]);
   const urlCouriers = useMemo(() => parseSet<CourierKey>(params.get("courier")), [params]);
   const urlUser = params.get("user") ?? "";
+  const urlCancelled = params.get("cancelled") === "1";
 
   // Search is buffered locally so typing stays instant; the buffer
   // syncs to the URL on a debounce. URL-side changes (back/forward,
@@ -181,10 +182,11 @@ export function SalesList({
   }, [searchBuffer, urlQ, params, router]);
 
   // ─── Local-only state ───────────────────────────────────────
-  // density and showCancelled are personal UI preferences, not part
-  // of the shareable URL view.
+  // density is a personal UI preference, not part of the shareable
+  // URL view. showCancelled used to live here too but moved to the
+  // `cancelled` URL param so the TopBar toggle and the in-page list
+  // share state.
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
-  const [showCancelled, setShowCancelled] = useState(false);
 
   // Compose into the unified ToolbarFilters shape SalesToolbar expects.
   const filters: ToolbarFilters = {
@@ -196,7 +198,7 @@ export function SalesList({
     terms: urlTerms,
     couriers: urlCouriers,
     userId: urlUser,
-    showCancelled,
+    showCancelled: urlCancelled,
     density,
   };
 
@@ -206,9 +208,11 @@ export function SalesList({
   function setFilters(next: ToolbarFilters) {
     setSearchBuffer(next.search);
     setDensity(next.density);
-    setShowCancelled(next.showCancelled);
 
     const p = new URLSearchParams(params.toString());
+
+    if (next.showCancelled) p.set("cancelled", "1");
+    else p.delete("cancelled");
 
     if (next.datePreset === "all") p.delete("d");
     else p.set("d", next.datePreset);
