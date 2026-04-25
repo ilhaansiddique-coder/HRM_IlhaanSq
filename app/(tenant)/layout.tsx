@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { requireTenant } from "@/lib/auth";
 import { getCachedBusinessSettings, getCachedSystemSettings } from "@/lib/cache";
 import { prisma } from "@/lib/db";
@@ -18,6 +19,17 @@ export default async function TenantLayout({
   children: React.ReactNode;
 }) {
   const session = await requireTenant();
+
+  // Source the sidebar's open/closed state from a per-user cookie, written
+  // by SidebarProvider's setOpen on every toggle. Reading it here means SSR
+  // and the client's first paint render the same tree — no post-hydration
+  // flip, no click-eating reconciliation window. Defaults to expanded
+  // (true) only when there's no cookie yet (first visit / fresh browser).
+  const sidebarCookieName = `sidebar:state:${session.userId}`;
+  const sidebarCookie = (await cookies()).get(sidebarCookieName)?.value;
+  const sidebarDefaultOpen = sidebarCookie === undefined
+    ? true
+    : sidebarCookie === "true";
 
   const [
     businessSettings,
@@ -59,6 +71,7 @@ export default async function TenantLayout({
         isSuperAdmin={session.isSuperAdmin}
         pendingTenantCount={pendingTenantCount}
         notifications={notifications}
+        sidebarDefaultOpen={sidebarDefaultOpen}
       >
         {children}
       </TenantShell>

@@ -123,6 +123,7 @@ export function TenantShell({
   isSuperAdmin,
   pendingTenantCount,
   notifications,
+  sidebarDefaultOpen,
   children,
 }: {
   businessName: string;
@@ -133,11 +134,15 @@ export function TenantShell({
   isSuperAdmin: boolean;
   pendingTenantCount: number;
   notifications: NotificationItem[];
+  sidebarDefaultOpen: boolean;
   children: ReactNode;
 }) {
   return (
     <OptimisticNavProvider>
-      <SidebarProvider persistKey={`sidebar:state:${userId}`}>
+      <SidebarProvider
+        persistKey={`sidebar:state:${userId}`}
+        defaultOpen={sidebarDefaultOpen}
+      >
         <div className="flex min-h-screen w-full">
           <AppSidebar
             businessName={businessName}

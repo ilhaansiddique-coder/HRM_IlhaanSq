@@ -96,6 +96,12 @@ const SidebarProvider = React.forwardRef<
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
+    //
+    // The initial value comes from the `defaultOpen` prop. The parent layout
+    // is expected to read the persisted cookie server-side and pass the
+    // resolved value here, so SSR and client first paint render the same
+    // tree (no post-hydration flip and the click-eating reconciliation that
+    // came with it).
     const [_open, _setOpen] = React.useState(defaultOpen)
     const open = openProp ?? _open
     const setOpen = React.useCallback(
@@ -107,24 +113,45 @@ const SidebarProvider = React.forwardRef<
           _setOpen(openState)
         }
 
+        // Always write the cookie — it's the SSR-readable source of truth.
+        // When persistKey is provided the cookie is namespaced per-user;
+        // otherwise it falls back to the shared default name.
+        if (typeof document !== "undefined") {
+          const cookieName = persistKey ?? SIDEBAR_COOKIE_NAME
+          document.cookie = `${cookieName}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; samesite=lax`
+        }
+        // Mirror to localStorage for resilience across cookie purges and
+        // for cross-tab sync (a future enhancement could listen on the
+        // "storage" event). Best-effort — failures are silently ignored.
         if (persistKey) {
           setStoredValue(persistKey, openState ? "true" : "false")
-        } else if (typeof document !== "undefined") {
-          // This sets the cookie to keep the sidebar state.
-          document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
         }
       },
       [setOpenProp, open, persistKey]
     )
 
+    // Cross-tab / private-browsing fallback: if the cookie wasn't sent on
+    // SSR (e.g. fresh session, deleted cookie, or a user upgrading from a
+    // pre-cookie build of this provider) but localStorage has a value,
+    // sync it on first client mount AND write the cookie so the next
+    // server render uses the right value. No-op when SSR already sourced
+    // truth from the cookie — so the common case does NOT trigger a
+    // re-render.
     React.useEffect(() => {
       if (openProp !== undefined) return
-      const stored = persistKey
-        ? getStoredValue(persistKey)
-        : getCookieValue(SIDEBAR_COOKIE_NAME)
-      if (stored === null) return
-      _setOpen(stored === "true")
-    }, [openProp, persistKey])
+      const cookieName = persistKey ?? SIDEBAR_COOKIE_NAME
+      const fromCookie = getCookieValue(cookieName)
+      if (fromCookie !== null) return // SSR already used the right value
+      const fromStorage = persistKey ? getStoredValue(persistKey) : null
+      if (fromStorage === null) return
+      const next = fromStorage === "true"
+      // Migrate the localStorage value to the cookie so SSR matches next time.
+      if (typeof document !== "undefined") {
+        document.cookie = `${cookieName}=${next}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; samesite=lax`
+      }
+      if (next === _open) return
+      _setOpen(next)
+    }, [openProp, persistKey, _open])
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
