@@ -63,9 +63,11 @@
     --sidebar-primary-foreground: var(--color-primary-content);
     /* Sidebar active-pill background. The shadcn SidebarMenuButton
        primitive bakes `data-[active=true]:bg-sidebar-accent` into its
-       CVA, so this — not --primary — controls the active-menu colour. */
-    --sidebar-accent: var(--color-primary);
-    --sidebar-accent-foreground: var(--color-primary-content);
+       CVA, so this — not --primary — controls the active-menu colour.
+       Hardcoded #5d60ef so the brand indigo applies on Light AND Night
+       themes (rather than tracking the per-theme --color-primary). */
+    --sidebar-accent: #5d60ef;
+    --sidebar-accent-foreground: #ffffff;
     --sidebar-border: var(--color-base-300);
     --sidebar-ring: var(--color-primary);
 
