@@ -72,17 +72,6 @@ export function ProductCard({ product, onEdit, showTenantBadge = false }: Props)
             {status}
           </Badge>
         </div>
-        {showTenantBadge && product.tenantName && (
-          <div className="absolute left-2 top-2">
-            <Badge
-              variant="outline"
-              className="max-w-[60%] gap-1 truncate rounded-lg bg-background/90 px-2 py-0.5 text-[11px] font-medium shadow-sm backdrop-blur"
-            >
-              <Building2 className="h-3 w-3 shrink-0" />
-              <span className="truncate">{product.tenantName}</span>
-            </Badge>
-          </div>
-        )}
       </div>
 
       <div className="flex flex-1 flex-col p-3">
@@ -92,6 +81,12 @@ export function ProductCard({ product, onEdit, showTenantBadge = false }: Props)
           </h3>
           {product.sku && (
             <p className="truncate text-xs text-muted-foreground">{product.sku}</p>
+          )}
+          {showTenantBadge && product.tenantName && (
+            <div className="mt-1.5 flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+              <Building2 className="h-3 w-3 shrink-0" />
+              <span className="truncate">{product.tenantName}</span>
+            </div>
           )}
         </div>
 
