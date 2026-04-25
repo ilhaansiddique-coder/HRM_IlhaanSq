@@ -79,6 +79,15 @@ export function NewSaleDialog({
   const [cnNumber, setCnNumber] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
 
+  // Sale date defaults to today; editable via input[type=date] in the header
+  const [saleDate, setSaleDate] = useState(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
+
   const [productSearch, setProductSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -117,6 +126,10 @@ export function NewSaleDialog({
     setDiscount("0");
     setDiscountIsPercent(true);
     setOrderStatus("pending");
+    const d = new Date();
+    setSaleDate(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+    );
     if (data?.paymentMethods[0]) setPaymentMethod(data.paymentMethods[0].name);
   }
 
@@ -218,6 +231,7 @@ export function NewSaleDialog({
     }
 
     const fd = new window.FormData();
+    if (saleDate) fd.set("saleDate", saleDate);
     fd.set("customerName", customerName.trim());
     if (customerPhone) fd.set("customerPhone", customerPhone);
     if (customerAddress) fd.set("customerAddress", customerAddress);
@@ -260,12 +274,20 @@ export function NewSaleDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="!max-w-5xl max-h-[92vh] overflow-y-auto p-0">
-        <DialogHeader className="flex flex-row items-center justify-between border-b border-border/60 px-6 py-4">
+        <DialogHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 px-6 py-4">
           <DialogTitle className="text-xl font-semibold">
             Create New Sale
           </DialogTitle>
-          <div className="text-sm font-medium text-foreground">
-            {new Date().toLocaleDateString("en-GB")}
+          {/* Editable date — input[type=date] gives native picker UI.
+              pr-8 leaves room for the auto-rendered Dialog close button. */}
+          <div className="pr-8">
+            <input
+              type="date"
+              value={saleDate}
+              onChange={(e) => setSaleDate(e.target.value)}
+              aria-label="Sale date"
+              className="h-9 rounded-md border border-border/60 bg-background px-3 text-sm font-medium tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
           </div>
         </DialogHeader>
 

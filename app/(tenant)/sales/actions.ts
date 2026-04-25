@@ -73,6 +73,24 @@ export async function createSaleAction(formData: FormData) {
 
   if (items.length === 0) throw new Error("Add at least one item to the sale");
 
+  // saleDate (yyyy-mm-dd) overrides createdAt — used by the New Sale
+  // dialog so back-dating / post-dating an entry works. Time-of-day is
+  // copied from the current moment so the order within a day is sane.
+  let saleDate: Date | undefined;
+  const rawSaleDate = formData.get("saleDate") as string | null;
+  if (rawSaleDate && /^\d{4}-\d{2}-\d{2}$/.test(rawSaleDate)) {
+    const [y, m, d] = rawSaleDate.split("-").map(Number);
+    const now = new Date();
+    saleDate = new Date(
+      y,
+      m - 1,
+      d,
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds()
+    );
+  }
+
   const sale = await createSale(session.tenantId, session.userId, {
     customerName: formData.get("customerName") as string,
     customerPhone: (formData.get("customerPhone") as string) || undefined,
@@ -88,6 +106,7 @@ export async function createSaleAction(formData: FormData) {
       ? parseFloat(formData.get("charge") as string)
       : 0,
     additionalInfo: (formData.get("additionalInfo") as string) || undefined,
+    saleDate,
     items,
   });
 

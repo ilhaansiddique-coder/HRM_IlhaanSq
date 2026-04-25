@@ -16,6 +16,8 @@ export type CreateSaleInput = {
   discountAmount?: number;
   charge?: number;
   additionalInfo?: string;
+  /** Optional override for the sale's createdAt; defaults to now(). */
+  saleDate?: Date;
   items: {
     productId: string;
     variantId?: string;
@@ -133,6 +135,7 @@ export async function createSale(
         paymentStatus: input.paymentStatus ?? "pending",
         additionalInfo: input.additionalInfo,
         createdBy: userId,
+        ...(input.saleDate ? { createdAt: input.saleDate } : {}),
         items: {
           create: input.items.map((item) => ({
             productId: item.productId,
