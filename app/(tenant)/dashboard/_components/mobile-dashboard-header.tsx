@@ -3,9 +3,12 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { BarChart3, Plus, ShoppingCart, Users } from "lucide-react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { DateRangePicker } from "./date-range-picker";
 import { NewSaleDialog } from "../../_components/new-sale-dialog";
+import { NotificationBell } from "../../_components/notification-bell";
 import { ProductDialog } from "../../products/_components/product-dialog";
+import type { NotificationItem } from "@/lib/services/notifications.service";
 
 // Mobile-only dashboard header. Matches the layout the user supplied:
 //   ┌──────────────────────────────────┐
@@ -17,16 +20,26 @@ import { ProductDialog } from "../../products/_components/product-dialog";
 // Wrapped in `md:hidden` so desktop keeps the existing TopBar layout.
 // The TopBar's own date picker is hidden on mobile so we don't show
 // the same control twice.
-export function MobileDashboardHeader() {
+export function MobileDashboardHeader({
+  notifications,
+}: {
+  notifications: NotificationItem[];
+}) {
   const [newSaleOpen, setNewSaleOpen] = useState(false);
   const [addProductOpen, setAddProductOpen] = useState(false);
 
   return (
-    <div className="md:hidden space-y-3">
-      {/* Title + Today picker */}
+    // TooltipProvider is needed because NotificationBell uses Tooltip;
+    // the global one in TenantShell only wraps the desktop TopBar.
+    <TooltipProvider delayDuration={150}>
+      <div className="md:hidden space-y-3">
+      {/* Title + Notification + Today picker */}
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <DateRangePicker />
+        <div className="flex items-center gap-2">
+          <NotificationBell notifications={notifications} />
+          <DateRangePicker />
+        </div>
       </div>
 
       {/* 4-card quick-action row */}
@@ -60,7 +73,8 @@ export function MobileDashboardHeader() {
         open={addProductOpen}
         onOpenChange={setAddProductOpen}
       />
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
 

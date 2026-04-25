@@ -3,6 +3,7 @@ import {
   getDashboardAnalytics,
   getPlatformCounters,
 } from "@/lib/services/dashboard-analytics.service";
+import { getRecentNotifications } from "@/lib/services/notifications.service";
 import { KpiCardsRow } from "./_components/kpi-cards";
 import { MobileDashboardHeader } from "./_components/mobile-dashboard-header";
 import { VisitorInsightsChart } from "./_components/visitor-insights-chart";
@@ -17,15 +18,19 @@ export default async function DashboardPage() {
   const session = await requireTenant();
   const scope = session.isSuperAdmin ? null : session.tenantId;
 
-  const [analytics, platform] = await Promise.all([
+  const [analytics, platform, notifications] = await Promise.all([
     getDashboardAnalytics(scope),
     session.isSuperAdmin ? getPlatformCounters() : Promise.resolve(null),
+    // The mobile dashboard header renders its own NotificationBell since
+    // the global TopBar is hidden on mobile — fetch the same set the
+    // TopBar uses so the bell shows accurate unread counts.
+    getRecentNotifications(scope, session.userId, 12),
   ]);
 
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Mobile-only dashboard header — title + Today + 4 quick-action cards */}
-      <MobileDashboardHeader />
+      <MobileDashboardHeader notifications={notifications} />
 
       {/* Row 1 — KPI cards (left, 2/3) + Visitor Insights (right, 1/3 on xl, stack below) */}
       <div className="grid gap-4 xl:grid-cols-3">

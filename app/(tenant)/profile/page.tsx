@@ -10,6 +10,7 @@ import { requireTenant } from "@/lib/auth";
 import { getProfile } from "@/lib/services/profile.service";
 import { ProfileForm } from "./_components/profile-form";
 import { SecurityForm } from "./_components/security-form";
+import { MobileSignOutButton } from "./_components/mobile-sign-out";
 
 function formatRole(role: string | null, isSuperAdmin: boolean): string {
   if (isSuperAdmin) return "Super Admin";
@@ -75,6 +76,8 @@ export default async function ProfilePage() {
           <SecurityForm />
         </TabsContent>
       </Tabs>
+
+      <MobileSignOutButton />
     </div>
   );
 }
