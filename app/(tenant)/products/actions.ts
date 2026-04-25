@@ -122,6 +122,7 @@ export async function hardDeleteProductAction(formData: FormData) {
 // ─── Inventory Stock Adjustment ─────────────────────────────
 
 import { adjustStock } from "@/lib/services/product.service";
+import { getCachedProducts } from "@/lib/cache";
 
 export async function adjustStockAction(formData: FormData) {
   const session = await requireTenant();
@@ -138,4 +139,64 @@ export async function adjustStockAction(formData: FormData) {
   revalidatePath("/inventory");
   revalidatePath("/products");
   revalidatePath("/dashboard");
+}
+
+// Lightweight product picker options for the AdjustStockDialog and
+// similar UI affordances. Fetched on demand so the data isn't shipped
+// to every page.
+export async function getProductPickerOptions(): Promise<
+  Array<{ id: string; name: string; sku: string | null; stockQuantity: number }>
+> {
+  const session = await requireTenant();
+  const products = await getCachedProducts(session.tenantId);
+  return products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    stockQuantity: p.stockQuantity,
+  }));
+}
+
+// CSV-string export of the tenant's catalogue. Returned to the client
+// where it's wrapped in a Blob and triggered as a download.
+function csvEscape(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+export async function exportProductsCsvAction(): Promise<{ csv: string }> {
+  const session = await requireTenant();
+  const products = await getCachedProducts(session.tenantId);
+
+  const header = [
+    "name",
+    "sku",
+    "rate",
+    "cost",
+    "stock_quantity",
+    "low_stock_threshold",
+    "size",
+    "color",
+    "image_url",
+    "has_variants",
+  ];
+  const rows = products.map((p) =>
+    [
+      csvEscape(p.name),
+      csvEscape(p.sku),
+      csvEscape(Number(p.rate)),
+      csvEscape(p.cost === null ? "" : Number(p.cost)),
+      csvEscape(p.stockQuantity),
+      csvEscape(p.lowStockThreshold),
+      csvEscape(p.size),
+      csvEscape(p.color),
+      csvEscape(p.imageUrl),
+      csvEscape(p.hasVariants ? "true" : "false"),
+    ].join(",")
+  );
+
+  const csv = [header.join(","), ...rows].join("\n");
+  return { csv };
 }

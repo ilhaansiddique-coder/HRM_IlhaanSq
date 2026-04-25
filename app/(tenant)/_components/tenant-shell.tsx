@@ -74,6 +74,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "../dashboard/_components/date-range-picker";
 import { ProductsHeaderControls } from "../products/_components/products-header-controls";
+import { ProductsActionsCluster } from "../products/_components/products-actions-cluster";
 import {
   Tooltip,
   TooltipContent,
@@ -502,28 +503,37 @@ function TopBar({
         {/* Notifications bell — opens a dropdown of recent activity */}
         <NotificationBell notifications={notifications} />
 
-        {/* Quick navigation shortcuts */}
-        {/* Cart icon = New Sale trigger; dialog is rendered after the header */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setNewSaleOpen(true)}
-              className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
-              aria-label="New Sale"
-            >
-              <ShoppingCart className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">New Sale</TooltipContent>
-        </Tooltip>
-        <ToolbarIconLink href="/reports" label="Reports">
-          <BarChart3 className="h-4 w-4" />
-        </ToolbarIconLink>
-        <ToolbarIconLink href="/customers" label="Customers">
-          <Users className="h-4 w-4" />
-        </ToolbarIconLink>
+        {/* Page-aware action cluster:
+              On /products → Import / Export / Adjust Stock
+              Elsewhere    → New Sale (cart) / Reports / Customers shortcuts
+            The Add Product (+), theme, user pill and Sign Out below
+            are common to both branches. */}
+        {isProducts ? (
+          <ProductsActionsCluster />
+        ) : (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setNewSaleOpen(true)}
+                  className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
+                  aria-label="New Sale"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">New Sale</TooltipContent>
+            </Tooltip>
+            <ToolbarIconLink href="/reports" label="Reports">
+              <BarChart3 className="h-4 w-4" />
+            </ToolbarIconLink>
+            <ToolbarIconLink href="/customers" label="Customers">
+              <Users className="h-4 w-4" />
+            </ToolbarIconLink>
+          </>
+        )}
 
         {/* + icon = Add Product trigger; dialog rendered below the header */}
         <Tooltip>

@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type StockFilter = "all" | "in" | "low" | "out";
 
@@ -47,9 +54,12 @@ export function ProductsHeaderControls() {
   return (
     <div className="flex items-center gap-2">
       <div className="relative">
+        {/* Search icon — explicit z-index so it always paints above the
+            input's background; foreground/60 colour so it's visible on
+            both light and night themes. */}
         <Search
           size={16}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-foreground/60"
         />
         <Input
           type="text"
@@ -59,16 +69,23 @@ export function ProductsHeaderControls() {
           className="h-9 w-72 rounded-lg pl-9"
         />
       </div>
-      <select
+      {/* shadcn Select uses Radix Popover under the hood — comes with a
+          nice fade+slide-in animation, full keyboard support, and looks
+          consistent with the rest of the app. */}
+      <Select
         value={urlStock}
-        onChange={(e) => setStock(e.target.value as StockFilter)}
-        className="h-9 rounded-lg border border-input bg-background px-3 pr-8 text-sm"
+        onValueChange={(v) => setStock(v as StockFilter)}
       >
-        <option value="all">All Stock</option>
-        <option value="in">In Stock</option>
-        <option value="low">Low Stock</option>
-        <option value="out">Out of Stock</option>
-      </select>
+        <SelectTrigger className="h-9 w-32 rounded-lg">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Stock</SelectItem>
+          <SelectItem value="in">In Stock</SelectItem>
+          <SelectItem value="low">Low Stock</SelectItem>
+          <SelectItem value="out">Out of Stock</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
