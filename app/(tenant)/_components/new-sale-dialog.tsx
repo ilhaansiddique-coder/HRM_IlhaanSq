@@ -2,13 +2,20 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, Search, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon, Minus, Plus, Search, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,14 +86,11 @@ export function NewSaleDialog({
   const [cnNumber, setCnNumber] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
 
-  // Sale date defaults to today; editable via input[type=date] in the header
-  const [saleDate, setSaleDate] = useState(() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  });
+  // Sale date defaults to today; edited via a Popover + Calendar so we
+  // can show the dd/MM/yyyy format the user expects regardless of browser
+  // locale (HTML date inputs honour the OS locale and can't be overridden).
+  const [saleDate, setSaleDate] = useState<Date>(() => new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const [productSearch, setProductSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -126,10 +130,7 @@ export function NewSaleDialog({
     setDiscount("0");
     setDiscountIsPercent(true);
     setOrderStatus("pending");
-    const d = new Date();
-    setSaleDate(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-    );
+    setSaleDate(new Date());
     if (data?.paymentMethods[0]) setPaymentMethod(data.paymentMethods[0].name);
   }
 
@@ -231,7 +232,8 @@ export function NewSaleDialog({
     }
 
     const fd = new window.FormData();
-    if (saleDate) fd.set("saleDate", saleDate);
+    // Always send saleDate as yyyy-MM-dd; the action parses that shape.
+    fd.set("saleDate", format(saleDate, "yyyy-MM-dd"));
     fd.set("customerName", customerName.trim());
     if (customerPhone) fd.set("customerPhone", customerPhone);
     if (customerAddress) fd.set("customerAddress", customerAddress);
@@ -278,16 +280,35 @@ export function NewSaleDialog({
           <DialogTitle className="text-xl font-semibold">
             Create New Sale
           </DialogTitle>
-          {/* Editable date — input[type=date] gives native picker UI.
-              pr-8 leaves room for the auto-rendered Dialog close button. */}
+          {/* Editable date — Popover + Calendar gives us full control
+              over the display format (dd/MM/yyyy) regardless of browser
+              locale. pr-8 leaves room for the auto-rendered Dialog × button. */}
           <div className="pr-8">
-            <input
-              type="date"
-              value={saleDate}
-              onChange={(e) => setSaleDate(e.target.value)}
-              aria-label="Sale date"
-              className="h-9 rounded-md border border-border/60 bg-background px-3 text-sm font-medium tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Sale date"
+                  className="flex h-9 items-center gap-2 rounded-md border border-border/60 bg-background px-3 text-sm font-medium tabular-nums hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  {format(saleDate, "dd/MM/yyyy")}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={saleDate}
+                  onSelect={(d) => {
+                    if (d) {
+                      setSaleDate(d);
+                      setDatePickerOpen(false);
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </DialogHeader>
 
