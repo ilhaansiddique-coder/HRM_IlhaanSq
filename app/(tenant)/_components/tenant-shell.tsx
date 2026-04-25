@@ -582,10 +582,12 @@ function TopBar({
         </HoverCardContent>
       </HoverCard>
 
-        {/* User identity pill — name + role; email kept on hover. */}
-        <div
-          className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm"
+        {/* User identity pill — clicking it opens the profile page.
+            Name + role on top, email kept on hover via title attribute. */}
+        <Link
+          href="/profile"
           title={userEmail}
+          className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm transition-colors hover:bg-muted"
         >
           <Avatar className="h-7 w-7 border border-border/60">
             <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
@@ -598,7 +600,7 @@ function TopBar({
               </p>
             )}
           </div>
-        </div>
+        </Link>
 
         {/* Sign out — icon-only on md+, icon + label on mobile. */}
         <button
