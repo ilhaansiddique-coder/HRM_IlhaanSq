@@ -269,7 +269,7 @@ export function SalesMapChart({ data }: { data: SalesByDistrictPoint[] }) {
                       key={p.key}
                       d={p.d}
                       fill={fillForPercent(pct)}
-                      stroke={isHovered ? "#ffffff" : "rgba(15, 23, 42, 0.55)"}
+                      stroke={isHovered ? "#f9f9f9" : "rgba(15, 23, 42, 0.55)"}
                       strokeWidth={isHovered ? 1.6 : 0.5}
                       className="cursor-pointer transition-[stroke-width,stroke]"
                       onMouseEnter={() => setHovered(p.key)}
