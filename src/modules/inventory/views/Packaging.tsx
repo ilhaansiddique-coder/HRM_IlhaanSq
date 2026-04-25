@@ -634,7 +634,7 @@ export default function Packaging() {
         </div>
       </div>
 
-      <Card className="overflow-hidden border-0 shadow-none md:border md:shadow-sm">
+      <Card className="overflow-hidden rounded-xl border-0 shadow-none md:border md:shadow-sm">
         {/* <CardHeader className="bg-muted/40">
           <CardTitle className="text-lg font-semibold">
             Completed Orders
@@ -646,11 +646,11 @@ export default function Packaging() {
             <div className="table-scroll-wrapper space-y-0">
               <div className="table-scroll-body">
                 <Table
-                  containerClassName="table-vertical-scroll table-inner-scrollbar h-[39rem] max-h-[39rem] rounded-t-2xl rounded-b-none border-0 border-r border-base-300 overflow-y-auto [clip-path:inset(0_round_1rem_1rem_0_0)]"
+                  containerClassName="table-vertical-scroll table-inner-scrollbar h-[39rem] max-h-[39rem] rounded-none border-0 overflow-y-auto"
                   className="border-separate border-spacing-y-0"
                 >
-                  <TableHeader className="sticky top-0 z-[6] overflow-hidden rounded-t-2xl bg-base-200">
-                    <TableRow className="sticky top-0 z-[6] bg-base-200 shadow-[0_1px_0_hsl(var(--border))] [&>th]:font-semibold [&>th]:text-foreground [&>th:first-child]:rounded-tl-2xl [&>th:last-child]:rounded-tr-2xl">
+                  <TableHeader className="sticky top-0 z-[6] bg-base-200">
+                    <TableRow className="sticky top-0 z-[6] bg-base-200 shadow-[0_1px_0_hsl(var(--border))] [&>th]:font-semibold [&>th]:text-foreground">
                       <TableHead className="w-10 whitespace-nowrap bg-base-200">
                         <Checkbox
                           className="h-4 w-4 rounded-[4px] border-base-content/70 bg-base-100 shadow-sm ring-1 ring-base-content/15"

@@ -167,8 +167,7 @@ export const ActivityLogs = () => {
           </div>
         )}
 
-        <div className="rounded-lg border">
-          <Table>
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -217,8 +216,7 @@ export const ActivityLogs = () => {
                 ))
               )}
             </TableBody>
-          </Table>
-        </div>
+        </Table>
 
         <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
           <DialogContent className="max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-6xl max-h-[80vh] overflow-hidden">

@@ -206,7 +206,7 @@ const PaymentHistoryDialog = ({ open, onOpenChange, customer }: PaymentHistoryDi
                   ))}
                 </div>
 
-                <div className="hidden overflow-hidden rounded-lg border md:block">
+                <div className="hidden md:block">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -600,7 +600,7 @@ export const CustomerPaymentManagementDialog = ({
                       ))}
                     </div>
 
-                    <div className="hidden overflow-hidden rounded-lg border md:block">
+                    <div className="hidden md:block">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/40 hover:bg-muted/40">

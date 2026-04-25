@@ -2617,7 +2617,7 @@ export default function Sales() {
       )}
 
 
-      <Card className="border-0 shadow-none md:border md:shadow-sm">
+      <Card className="overflow-hidden rounded-xl border-0 shadow-none md:border md:shadow-sm">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="space-y-3">
@@ -2872,11 +2872,11 @@ export default function Sales() {
                   <div className="table-scroll-body">
                     <Table
                       ref={tableRef}
-                        containerClassName="table-vertical-scroll table-inner-scrollbar h-[39rem] max-h-[39rem] rounded-t-2xl rounded-b-none border-0 border-r border-base-300 overflow-y-auto [clip-path:inset(0_round_1rem_1rem_0_0)]"
-                        className="border-separate border-spacing-y-0"
-                      >
-                      <TableHeader className="sticky top-0 z-[6] overflow-hidden rounded-t-2xl bg-base-200">
-                        <TableRow className="sticky top-0 z-[6] bg-base-200 shadow-[0_1px_0_hsl(var(--border))] [&>th]:font-semibold [&>th]:text-foreground [&>th:first-child]:rounded-tl-2xl [&>th:last-child]:rounded-tr-2xl">
+                      containerClassName="table-vertical-scroll table-inner-scrollbar h-[39rem] max-h-[39rem] rounded-none border-0 overflow-y-auto"
+                      className="border-separate border-spacing-y-0"
+                    >
+                      <TableHeader className="sticky top-0 z-[6] bg-base-200">
+                        <TableRow className="sticky top-0 z-[6] bg-base-200 shadow-[0_1px_0_hsl(var(--border))] [&>th]:font-semibold [&>th]:text-foreground">
                           {showSalesReview ? (
                             <>
                               <TableHead className="w-10 whitespace-nowrap bg-base-200">
@@ -3541,8 +3541,7 @@ export default function Sales() {
               No cancelled, returned, or lost orders in this range.
             </div>
           ) : (
-            <div className="max-h-[70vh] overflow-auto rounded-lg border">
-              <Table>
+            <Table containerClassName="max-h-[70vh] overflow-auto">
                 <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow>
                     <TableHead className="whitespace-nowrap">Status</TableHead>
@@ -3611,8 +3610,7 @@ export default function Sales() {
                     );
                   })}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </DialogContent>
       </Dialog>

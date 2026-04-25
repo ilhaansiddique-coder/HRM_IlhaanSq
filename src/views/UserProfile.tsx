@@ -378,8 +378,7 @@ export default function UserProfile() {
               {isPerformanceLoading ? (
                 <div className="text-center py-6 text-muted-foreground">Loading performance...</div>
               ) : (
-                <div className="overflow-x-auto rounded-lg border">
-                  <Table className="min-w-[700px]">
+                <Table className="min-w-[700px]">
                     <TableHeader>
                       <TableRow className="bg-muted/40">
                         <TableHead>User</TableHead>
@@ -422,8 +421,7 @@ export default function UserProfile() {
                         ))
                       )}
                     </TableBody>
-                  </Table>
-                </div>
+                </Table>
               )}
             </CardContent>
           </Card>

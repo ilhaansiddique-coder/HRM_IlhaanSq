@@ -479,9 +479,7 @@ export const CustomerHistoryDialog = ({
 
                   {/* Desktop Sales Table */}
                   <div className="hidden md:block">
-                    <Card className="border-primary/20">
-                      <div className="overflow-x-auto">
-                        <Table>
+                    <Table containerClassName="border-primary/20">
                           <TableHeader>
                             <TableRow className="bg-muted/40">
                               <TableHead className="whitespace-nowrap font-semibold">Invoice #</TableHead>
@@ -555,9 +553,7 @@ export const CustomerHistoryDialog = ({
                               );
                             })}
                           </TableBody>
-                        </Table>
-                      </div>
-                    </Card>
+                    </Table>
                   </div>
                 </>
               )}

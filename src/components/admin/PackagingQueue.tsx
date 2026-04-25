@@ -144,8 +144,7 @@ export function PackagingQueue() {
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
+          <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice</TableHead>
@@ -263,8 +262,7 @@ export function PackagingQueue() {
                   })
                 )}
               </TableBody>
-            </Table>
-          </div>
+          </Table>
         </CardContent>
       </Card>
 

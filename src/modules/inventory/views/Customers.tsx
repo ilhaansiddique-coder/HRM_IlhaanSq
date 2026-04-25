@@ -891,15 +891,15 @@ const Customers = () => {
               )}
             </div>
             <div className="hidden md:block">
-              <div className="table-scroll-wrapper space-y-0">
+              <div className="table-scroll-wrapper space-y-0 overflow-hidden rounded-xl border border-base-300 bg-base-100">
                 <div className="table-scroll-body">
                   <Table
                     ref={tableRef}
-                    containerClassName="table-vertical-scroll table-inner-scrollbar h-[39rem] max-h-[39rem] rounded-t-2xl rounded-b-none border-x border-base-300 overflow-y-auto [clip-path:inset(0_round_1rem_1rem_0_0)]"
+                    containerClassName="table-vertical-scroll table-inner-scrollbar h-[39rem] max-h-[39rem] rounded-none border-0 overflow-y-auto"
                     className="border-separate border-spacing-y-0"
                   >
-                    <TableHeader className="sticky top-0 z-[6] overflow-hidden rounded-t-2xl bg-base-200">
-                      <TableRow className="sticky top-0 z-[6] bg-base-200 shadow-[0_1px_0_hsl(var(--border))] [&>th]:font-semibold [&>th]:text-foreground [&>th:first-child]:rounded-tl-2xl [&>th:last-child]:rounded-tr-2xl">
+                    <TableHeader className="sticky top-0 z-[6] bg-base-200">
+                      <TableRow className="sticky top-0 z-[6] bg-base-200 shadow-[0_1px_0_hsl(var(--border))] [&>th]:font-semibold [&>th]:text-foreground">
                         <TableHead className="whitespace-nowrap">Name</TableHead>
                         <TableHead className="whitespace-nowrap">Additional Info</TableHead>
                         <TableHead className="whitespace-nowrap">Phone</TableHead>

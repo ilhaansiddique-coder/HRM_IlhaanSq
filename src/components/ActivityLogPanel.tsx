@@ -235,7 +235,7 @@ export const ActivityLogPanel = ({
               </div>
 
               {/* Desktop: Table Layout */}
-              <div className="hidden sm:block rounded-lg border overflow-hidden">
+              <div className="hidden sm:block">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
