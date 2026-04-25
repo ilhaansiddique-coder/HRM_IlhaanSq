@@ -6,6 +6,7 @@ import Link from "next/link";
 import { NavLink } from "./nav-link";
 import { NewSaleDialog } from "./new-sale-dialog";
 import { NotificationBell } from "./notification-bell";
+import { ProductDialog } from "../products/_components/product-dialog";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { OptimisticNavProvider, useOptimisticNav } from "./optimistic-nav";
@@ -71,14 +72,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "../dashboard/_components/date-range-picker";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -465,6 +458,7 @@ function TopBar({
   // navigating to /sales. The dialog is rendered alongside the header
   // so the Tooltip+Button composition stays clean.
   const [newSaleOpen, setNewSaleOpen] = useState(false);
+  const [addProductOpen, setAddProductOpen] = useState(false);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -500,48 +494,21 @@ function TopBar({
           <Users className="h-4 w-4" />
         </ToolbarIconLink>
 
-        {/* Quick-create dropdown */}
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-full border-border/60 bg-background/80"
-                  aria-label="Create new"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Create new</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Quick create
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/sales/new" className="flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                <span>New Sale</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/products" className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                <span>New Product</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/customers" className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                <span>New Customer</span>
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* + icon = Add Product trigger; dialog rendered below the header */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setAddProductOpen(true)}
+              className="h-9 w-9 rounded-full border-border/60 bg-background/80"
+              aria-label="Add Product"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Add Product</TooltipContent>
+        </Tooltip>
 
         {/* Theme picker */}
       <HoverCard openDelay={100} closeDelay={80}>
@@ -635,6 +602,13 @@ function TopBar({
 
       {/* New Sale dialog — controlled by the cart icon in the header */}
       <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
+
+      {/* Add Product dialog — controlled by the + icon in the header.
+          Reuses the same ProductDialog the products page uses. */}
+      <ProductDialog
+        open={addProductOpen}
+        onOpenChange={setAddProductOpen}
+      />
     </TooltipProvider>
   );
 }
