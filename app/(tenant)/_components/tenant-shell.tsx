@@ -73,6 +73,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "../dashboard/_components/date-range-picker";
+import { ProductsHeaderControls } from "../products/_components/products-header-controls";
 import {
   Tooltip,
   TooltipContent,
@@ -463,10 +464,14 @@ function TopBar({
     .join("")
     .toUpperCase();
 
-  // Show the dashboard's date range picker in the TopBar's left slot
-  // when we're on the dashboard route — keeps everything in one row.
+  // Show page-specific controls in the TopBar's left slot:
+  //   /dashboard → DateRangePicker
+  //   /products  → search input + stock filter (URL-synced with ProductList)
+  // Keeps the TopBar a single row of context-aware controls.
   const { activePath } = useOptimisticNav();
   const isDashboard = activePath === "/dashboard";
+  const isProducts =
+    activePath === "/products" || activePath.startsWith("/products/");
 
   // Cart icon in the TopBar opens the New Sale dialog rather than
   // navigating to /sales. The dialog is rendered alongside the header
@@ -477,13 +482,19 @@ function TopBar({
   return (
     <TooltipProvider delayDuration={150}>
       <header className="sticky top-0 z-30 hidden md:flex items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 py-3 backdrop-blur md:px-6">
-        {/* Left — page-specific controls (currently dashboard date
-            picker). Hidden on mobile because the dashboard renders its
-            own mobile header (with the Today picker baked in) below. */}
+        {/* Left — page-specific controls. Hidden on mobile because each
+            page renders its own mobile header below.
+              /dashboard → DateRangePicker
+              /products  → ProductsHeaderControls (search + stock filter) */}
         <div className="flex flex-1 items-center justify-start">
           {isDashboard && (
             <div className="hidden md:block">
               <DateRangePicker />
+            </div>
+          )}
+          {isProducts && (
+            <div className="hidden md:block">
+              <ProductsHeaderControls />
             </div>
           )}
         </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   Archive,
@@ -74,8 +75,49 @@ export function ProductList({
   stats: ProductStats;
 }) {
   const { formatAmount } = useCurrency();
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<StockFilter>("all");
+  const router = useRouter();
+  const params = useSearchParams();
+
+  // Search & filter live in the URL so they stay in sync with the
+  // ProductsHeaderControls in the TopBar (and survive browser back/forward).
+  // Search uses a local input buffer that pushes to the URL on a small
+  // debounce — typing stays instant; cross-component sync happens within ~250ms.
+  const urlQ = params.get("q") ?? "";
+  const urlStock = (params.get("stock") as StockFilter) ?? "all";
+
+  const [searchInput, setSearchInput] = useState(urlQ);
+  const filter = urlStock;
+
+  // Pull URL changes back into the input (e.g. when the TopBar
+  // search input is what the user typed into).
+  useEffect(() => {
+    setSearchInput(urlQ);
+  }, [urlQ]);
+
+  // Push the input value to the URL on a debounce so other consumers
+  // (e.g. the TopBar header controls) reflect the same value.
+  useEffect(() => {
+    if (searchInput === urlQ) return;
+    const id = setTimeout(() => {
+      const p = new URLSearchParams(params.toString());
+      if (searchInput) p.set("q", searchInput);
+      else p.delete("q");
+      router.replace(`?${p.toString()}`, { scroll: false });
+    }, 250);
+    return () => clearTimeout(id);
+  }, [searchInput, urlQ, params, router]);
+
+  function setFilter(next: StockFilter) {
+    const p = new URLSearchParams(params.toString());
+    if (next === "all") p.delete("stock");
+    else p.set("stock", next);
+    router.replace(`?${p.toString()}`, { scroll: false });
+  }
+
+  // Aliases so the rest of the component reads the same names as before.
+  const search = searchInput;
+  const setSearch = setSearchInput;
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<SerializedProduct | null>(null);
 
