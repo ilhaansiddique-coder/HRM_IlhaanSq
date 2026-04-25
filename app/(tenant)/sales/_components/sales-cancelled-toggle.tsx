@@ -4,24 +4,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Activity, History } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
-// URL-driven sales history toggle. Lives in the TopBar between the
-// notification bell and the New Sale (+) button. The presence of the
-// `cancelled=1` query param (mirrored back to SalesList) means
-// cancelled sales are visible; absent means hidden.
+// Sales History toggle. Lives in the TopBar between the notification
+// bell and the New Sale (+) button. Toggling it on sets `history=1`
+// in the URL, which SalesList watches to open the SalesHistoryDialog
+// (a per-sale payment-bucket breakdown across the current filters).
 //
-// The trailing icon swaps with state so a glance reveals which mode
-// the list is in:
-//   on  → History icon (full history visible, including cancelled)
-//   off → Activity icon (active sales only)
+// Icon swaps with state so the mode reads at a glance:
+//   on  → History icon (history view open)
+//   off → Activity icon (active list only)
 export function SalesCancelledToggle() {
   const router = useRouter();
   const params = useSearchParams();
-  const checked = params.get("cancelled") === "1";
+  const checked = params.get("history") === "1";
 
   function setChecked(next: boolean) {
     const p = new URLSearchParams(params.toString());
-    if (next) p.set("cancelled", "1");
-    else p.delete("cancelled");
+    if (next) p.set("history", "1");
+    else p.delete("history");
     router.replace(`?${p.toString()}`, { scroll: false });
   }
 
@@ -30,8 +29,8 @@ export function SalesCancelledToggle() {
       className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3"
       title={
         checked
-          ? "Showing full sales history (including cancelled)"
-          : "Showing active sales only"
+          ? "Sales history view open"
+          : "Open the per-sale payment breakdown"
       }
     >
       <Switch
@@ -45,9 +44,7 @@ export function SalesCancelledToggle() {
         <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
       )}
       <span className="sr-only">
-        {checked
-          ? "Showing full sales history"
-          : "Showing active sales only"}
+        {checked ? "Sales history view open" : "Open sales history view"}
       </span>
     </div>
   );

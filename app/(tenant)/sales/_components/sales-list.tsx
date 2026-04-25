@@ -24,6 +24,7 @@ import {
 import { toast } from "@/lib/toast";
 import { cancelSaleAction } from "../actions";
 import { NewSaleDialog } from "./new-sale-dialog";
+import { SalesHistoryDialog } from "./sales-history-dialog";
 import {
   SalesToolbar,
   type ToolbarFilters,
@@ -42,6 +43,7 @@ export type SerializedSaleRow = {
   amountPaid: number;
   amountDue: number;
   paymentStatus: string;
+  paymentMethod: string;
   paymentTerms: string;
   courierStatus: string | null;
   dueDate: string | null;
@@ -49,6 +51,7 @@ export type SerializedSaleRow = {
   createdById: string | null;
   createdByName: string | null;
   itemCount: number;
+  payments: { method: string; amount: number }[];
 };
 
 const paymentVariants: Record<
@@ -163,7 +166,7 @@ export function SalesList({
   const urlTerms = useMemo(() => parseSet<TermsKey>(params.get("terms")), [params]);
   const urlCouriers = useMemo(() => parseSet<CourierKey>(params.get("courier")), [params]);
   const urlUser = params.get("user") ?? "";
-  const urlCancelled = params.get("cancelled") === "1";
+  const urlHistory = params.get("history") === "1";
 
   // Search is buffered locally so typing stays instant; the buffer
   // syncs to the URL on a debounce. URL-side changes (back/forward,
@@ -183,12 +186,16 @@ export function SalesList({
 
   // ─── Local-only state ───────────────────────────────────────
   // density is a personal UI preference, not part of the shareable
-  // URL view. showCancelled used to live here too but moved to the
-  // `cancelled` URL param so the TopBar toggle and the in-page list
-  // share state.
+  // URL view. The legacy showCancelled local-state was retired when
+  // the TopBar toggle started opening the Sales History dialog
+  // (`history=1`) instead of filtering cancelled rows. Cancelled
+  // rows are now always visible in the main list — they carry the
+  // cancelled badge so they don't get confused with active sales.
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
   // Compose into the unified ToolbarFilters shape SalesToolbar expects.
+  // `showCancelled` is a no-op now (kept on the type for compatibility);
+  // the dispatcher ignores it.
   const filters: ToolbarFilters = {
     search: searchBuffer,
     datePreset: urlD,
@@ -198,7 +205,7 @@ export function SalesList({
     terms: urlTerms,
     couriers: urlCouriers,
     userId: urlUser,
-    showCancelled: urlCancelled,
+    showCancelled: true,
     density,
   };
 
@@ -210,9 +217,6 @@ export function SalesList({
     setDensity(next.density);
 
     const p = new URLSearchParams(params.toString());
-
-    if (next.showCancelled) p.set("cancelled", "1");
-    else p.delete("cancelled");
 
     if (next.datePreset === "all") p.delete("d");
     else p.set("d", next.datePreset);
@@ -268,11 +272,6 @@ export function SalesList({
     );
 
     return initialSales.filter((s) => {
-      // Cancelled rows are hidden by default; the toolbar Switch opts them in.
-      if (!filters.showCancelled && s.paymentStatus === "cancelled") {
-        return false;
-      }
-
       if (
         filters.statuses.size > 0 &&
         !filters.statuses.has(s.paymentStatus as StatusKey)
@@ -341,12 +340,17 @@ export function SalesList({
   }, [initialSales]);
 
   function handleAlertClick() {
-    // Surface the outstanding subset: pending + partial, hide cancelled.
+    // Surface the outstanding subset: pending + partial.
     setFilters({
       ...filters,
       statuses: new Set<StatusKey>(["pending", "partial"]),
-      showCancelled: false,
     });
+  }
+
+  function closeHistory() {
+    const p = new URLSearchParams(params.toString());
+    p.delete("history");
+    router.replace(`?${p.toString()}`, { scroll: false });
   }
 
   function handleCancel(saleId: string, invoice: string) {
@@ -538,6 +542,14 @@ export function SalesList({
       </Card>
 
       <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
+
+      <SalesHistoryDialog
+        open={urlHistory}
+        onOpenChange={(o) => {
+          if (!o) closeHistory();
+        }}
+        sales={filtered}
+      />
 
       {/* Mobile card stack. */}
       <div className="md:hidden space-y-3">

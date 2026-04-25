@@ -107,6 +107,7 @@ type SaleWithItems = Prisma.SaleGetPayload<{
     items: { include: { product: true; variant: true } };
     customer: true;
     creator: { select: { id: true; fullName: true; email: true } };
+    payments: true;
   };
 }>;
 
@@ -122,6 +123,7 @@ export async function getCachedSales(tenantId: string): Promise<SaleWithItems[]>
       items: { include: { product: true, variant: true } },
       customer: true,
       creator: { select: { id: true, fullName: true, email: true } },
+      payments: true,
     },
     orderBy: { createdAt: "desc" },
     take: 200,

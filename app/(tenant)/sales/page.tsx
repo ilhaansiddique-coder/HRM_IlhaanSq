@@ -15,6 +15,7 @@ export default async function SalesPage() {
     amountPaid: Number(s.amountPaid ?? 0),
     amountDue: Number(s.amountDue ?? 0),
     paymentStatus: s.paymentStatus,
+    paymentMethod: s.paymentMethod ?? "Cash",
     paymentTerms: s.paymentTerms ?? "immediate",
     courierStatus: s.courierStatus ?? null,
     dueDate: s.dueDate
@@ -30,6 +31,10 @@ export default async function SalesPage() {
     createdById: s.creator?.id ?? null,
     createdByName: s.creator?.fullName ?? null,
     itemCount: s.items.length,
+    payments: (s.payments ?? []).map((p) => ({
+      method: p.method,
+      amount: Number(p.amount ?? 0),
+    })),
   }));
 
   return (
