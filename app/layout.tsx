@@ -4,6 +4,7 @@ import Script from "next/script";
 import "../src/index.css";
 import "lenis/dist/lenis.css";
 import { LenisProvider } from "./_components/lenis-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 // All typography — body and headings — uses Bricolage Grotesque, which
 // is self-hosted via @font-face declarations in src/index.css pointing at
@@ -90,6 +91,7 @@ export default function RootLayout({
           {themeBootstrapScript}
         </Script>
         <LenisProvider>{children}</LenisProvider>
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );

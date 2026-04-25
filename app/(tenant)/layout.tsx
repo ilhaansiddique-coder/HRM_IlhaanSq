@@ -2,6 +2,7 @@ import { cache } from "react";
 import { requireTenant } from "@/lib/auth";
 import { getCachedBusinessSettings, getCachedSystemSettings } from "@/lib/cache";
 import { prisma } from "@/lib/db";
+import { getRecentNotifications } from "@/lib/services/notifications.service";
 import { TenantShell } from "./_components/tenant-shell";
 import { TenantProviders } from "./_components/providers";
 
@@ -18,11 +19,16 @@ export default async function TenantLayout({
 }) {
   const session = await requireTenant();
 
-  const [businessSettings, systemSettings, pendingTenantCount] = await Promise.all([
-    getCachedBusinessSettings(session.tenantId),
-    getCachedSystemSettings(session.tenantId),
-    getPendingTenantCount(session.isSuperAdmin),
-  ]);
+  const [businessSettings, systemSettings, pendingTenantCount, notifications] =
+    await Promise.all([
+      getCachedBusinessSettings(session.tenantId),
+      getCachedSystemSettings(session.tenantId),
+      getPendingTenantCount(session.isSuperAdmin),
+      getRecentNotifications(
+        session.isSuperAdmin ? null : session.tenantId,
+        12
+      ),
+    ]);
 
   return (
     <TenantProviders
@@ -38,6 +44,7 @@ export default async function TenantLayout({
         role={session.role}
         isSuperAdmin={session.isSuperAdmin}
         pendingTenantCount={pendingTenantCount}
+        notifications={notifications}
       >
         {children}
       </TenantShell>

@@ -4,9 +4,11 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { NavLink } from "./nav-link";
+import { NotificationBell } from "./notification-bell";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { OptimisticNavProvider, useOptimisticNav } from "./optimistic-nav";
+import type { NotificationItem } from "@/lib/services/notifications.service";
 import {
   Home,
   Package,
@@ -125,6 +127,7 @@ export function TenantShell({
   role,
   isSuperAdmin,
   pendingTenantCount,
+  notifications,
   children,
 }: {
   businessName: string;
@@ -134,6 +137,7 @@ export function TenantShell({
   role: string | null;
   isSuperAdmin: boolean;
   pendingTenantCount: number;
+  notifications: NotificationItem[];
   children: ReactNode;
 }) {
   return (
@@ -147,7 +151,12 @@ export function TenantShell({
             pendingTenantCount={pendingTenantCount}
           />
           <div className="flex-1 flex flex-col min-w-0 bg-card">
-            <TopBar userName={userName} userEmail={userEmail} role={role} />
+            <TopBar
+              userName={userName}
+              userEmail={userEmail}
+              role={role}
+              notifications={notifications}
+            />
             <main className="flex-1 p-4 pb-24 md:p-6 min-w-0">{children}</main>
           </div>
         </div>
@@ -418,10 +427,12 @@ function TopBar({
   userName,
   userEmail,
   role,
+  notifications,
 }: {
   userName: string;
   userEmail: string;
   role: string | null;
+  notifications: NotificationItem[];
 }) {
   const roleLabel = formatRole(role);
   const [selectedTheme, setSelectedTheme] = useState<DaisyThemeName>("light");
@@ -456,6 +467,9 @@ function TopBar({
         <div className="flex flex-1 items-center justify-start">
           {isDashboard && <DateRangePicker />}
         </div>
+
+        {/* Notifications bell — opens a dropdown of recent activity */}
+        <NotificationBell notifications={notifications} />
 
         {/* Quick navigation shortcuts */}
         <ToolbarIconLink href="/sales" label="Sales">
