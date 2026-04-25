@@ -130,9 +130,9 @@ export function SalesHeaderControls() {
       </div>
 
       {/* Shared date range picker (presets sidebar + dual-month
-          calendar). Default "all_time" so /sales loads unfiltered;
-          the picker writes `range`, `from`, `to` query params. */}
-      <DateRangePicker defaultPreset="all_time" />
+          calendar). Default "today" so the page lands on today's
+          sales; the picker writes `range`, `from`, `to` query params. */}
+      <DateRangePicker defaultPreset="today" />
 
       {/* All Filters */}
       <Popover>

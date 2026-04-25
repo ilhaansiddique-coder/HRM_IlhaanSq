@@ -71,7 +71,8 @@ const paymentVariants: Record<
 // Resolve URL date params into absolute bounds.
 //   range=<preset>   → bounds from DATE_RANGE_PRESETS (the shared list).
 //   from + to        → custom calendar range (YYYY-MM-DD).
-//   neither          → no date constraint (the host's "all_time" default).
+//   neither          → today's bounds (matches the picker's "today"
+//                      default on /sales — empty URL = today's view).
 function resolveDateBounds(
   rangeParam: string | null,
   fromParam: string | null,
@@ -94,7 +95,11 @@ function resolveDateBounds(
       end: new Date(`${toParam}T23:59:59.999`),
     };
   }
-  return { start: null, end: null };
+  // No URL params → fall back to "today" (the picker's default).
+  const today = DATE_RANGE_PRESETS.find((p) => p.key === "today");
+  if (!today) return { start: null, end: null };
+  const r = today.getRange();
+  return { start: r.from, end: r.to };
 }
 
 // Parse a comma-separated URL value into a Set, dropping empty strings.

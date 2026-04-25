@@ -104,7 +104,7 @@ export function SalesToolbar({
 
       {/* Shared date range picker — same component the dashboard /
           TopBar uses. Writes `range` / `from` / `to` to the URL. */}
-      <DateRangePicker defaultPreset="all_time" />
+      <DateRangePicker defaultPreset="today" />
 
       {/* All Filters */}
       <Popover>
