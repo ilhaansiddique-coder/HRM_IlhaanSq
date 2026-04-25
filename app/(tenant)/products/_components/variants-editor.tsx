@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ImageDropzone } from "./image-dropzone";
 
 export type AttributeDef = { name: string; values: string[] };
 
@@ -330,8 +331,9 @@ export function VariantsEditor({
                 Total stock: <span className="font-semibold">{totalStock}</span>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <Table className="min-w-[960px]">
+            {/* Desktop table view (sm+) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <Table className="min-w-[1080px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Variant</TableHead>
@@ -340,6 +342,7 @@ export function VariantsEditor({
                     <TableHead>Cost</TableHead>
                     <TableHead>Qty</TableHead>
                     <TableHead>Low Stock</TableHead>
+                    <TableHead className="w-[120px]">Image</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -414,11 +417,111 @@ export function VariantsEditor({
                             placeholder={parentLowStock}
                           />
                         </TableCell>
+                        <TableCell>
+                          <ImageDropzone
+                            name={`variant_image_${key}`}
+                            defaultValue={row.imageUrl}
+                            onChangeUrl={(url) =>
+                              setRow(key, { imageUrl: url })
+                            }
+                          />
+                        </TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
+            </div>
+
+            {/* Mobile card view (<sm) — same fields, stacked */}
+            <div className="sm:hidden divide-y">
+              {combos.map((attrs, i) => {
+                const key = sortedKey(attrs);
+                const row = rows[key] ?? emptyRow();
+                const skuPlaceholder = parentSkuPreview
+                  ? `${parentSkuPreview}-${i + 1}`
+                  : `Variant-${i + 1}`;
+                return (
+                  <div key={key} className="p-3 space-y-3">
+                    <div className="flex flex-wrap gap-1">
+                      {Object.entries(attrs).map(([k, v]) => (
+                        <Badge key={k} variant="secondary">
+                          {v}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">SKU</Label>
+                        <Input
+                          value={row.sku}
+                          onChange={(e) =>
+                            setRow(key, { sku: e.target.value })
+                          }
+                          placeholder={skuPlaceholder}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Price</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={row.rate}
+                          onChange={(e) =>
+                            setRow(key, { rate: e.target.value })
+                          }
+                          placeholder={parentRate || "0"}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Cost</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={row.cost}
+                          onChange={(e) =>
+                            setRow(key, { cost: e.target.value })
+                          }
+                          placeholder={parentCost || "0"}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Qty</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={row.stockQuantity}
+                          onChange={(e) =>
+                            setRow(key, { stockQuantity: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Low Stock</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={row.lowStockThreshold}
+                          onChange={(e) =>
+                            setRow(key, { lowStockThreshold: e.target.value })
+                          }
+                          placeholder={parentLowStock}
+                        />
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Image</Label>
+                        <ImageDropzone
+                          name={`variant_image_mob_${key}`}
+                          defaultValue={row.imageUrl}
+                          onChangeUrl={(url) =>
+                            setRow(key, { imageUrl: url })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </>

@@ -227,6 +227,57 @@ export async function deleteProduct(
   return product;
 }
 
+// ─── Restore (undo soft delete) ─────────────────────────────
+
+export async function restoreProduct(
+  tenantId: string,
+  userId: string,
+  productId: string
+) {
+  const existing = await prisma.product.findFirst({
+    where: { id: productId, tenantId, isDeleted: true },
+  });
+  if (!existing) throw new Error("Product not found in trash");
+
+  const product = await prisma.product.update({
+    where: { id: productId },
+    data: { isDeleted: false, deletedAt: null },
+  });
+
+  await logActivity(tenantId, userId, "restore", "product", productId, {
+    name: product.name,
+  });
+
+  await invalidateProductCache(tenantId, productId);
+  return product;
+}
+
+// ─── Hard delete (permanent) ────────────────────────────────
+// Cascade is handled by Prisma's onDelete: Cascade on the variants
+// relation. SaleItem rows reference productId nullable (no cascade) so
+// historical sales still resolve their snapshots; the product row itself
+// disappears for good.
+
+export async function hardDeleteProduct(
+  tenantId: string,
+  userId: string,
+  productId: string
+) {
+  const existing = await prisma.product.findFirst({
+    where: { id: productId, tenantId },
+    select: { id: true, name: true },
+  });
+  if (!existing) throw new Error("Product not found");
+
+  await prisma.product.delete({ where: { id: productId } });
+
+  await logActivity(tenantId, userId, "hard_delete", "product", productId, {
+    name: existing.name,
+  });
+
+  await invalidateProductCache(tenantId, productId);
+}
+
 // ─── Stock Adjustment ───────────────────────────────────────
 
 export async function adjustStock(

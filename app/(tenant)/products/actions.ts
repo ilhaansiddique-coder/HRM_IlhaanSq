@@ -1,7 +1,14 @@
 "use server";
 
 import { requireTenant } from "@/lib/auth";
-import { createProduct, updateProduct, deleteProduct, duplicateProduct } from "@/lib/services/product.service";
+import {
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  duplicateProduct,
+  restoreProduct,
+  hardDeleteProduct,
+} from "@/lib/services/product.service";
 import { ensureCategory } from "@/lib/services/product-category.service";
 import { buildSku, parseStyleFromSku } from "@/lib/sku";
 import {
@@ -89,6 +96,24 @@ export async function duplicateProductAction(formData: FormData) {
   const session = await requireTenant();
   const { productId } = duplicateProductSchema.parse(formToObject(formData));
   await duplicateProduct(session.tenantId, session.userId, productId);
+  revalidatePath("/products");
+  revalidatePath("/inventory");
+  revalidatePath("/dashboard");
+}
+
+export async function restoreProductAction(formData: FormData) {
+  const session = await requireTenant();
+  const { productId } = deleteProductSchema.parse(formToObject(formData));
+  await restoreProduct(session.tenantId, session.userId, productId);
+  revalidatePath("/products");
+  revalidatePath("/inventory");
+  revalidatePath("/dashboard");
+}
+
+export async function hardDeleteProductAction(formData: FormData) {
+  const session = await requireTenant();
+  const { productId } = deleteProductSchema.parse(formToObject(formData));
+  await hardDeleteProduct(session.tenantId, session.userId, productId);
   revalidatePath("/products");
   revalidatePath("/inventory");
   revalidatePath("/dashboard");
