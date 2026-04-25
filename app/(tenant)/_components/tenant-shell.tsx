@@ -76,6 +76,7 @@ import { DateRangePicker } from "../dashboard/_components/date-range-picker";
 import { ProductsHeaderControls } from "../products/_components/products-header-controls";
 import { ProductsActionsCluster } from "../products/_components/products-actions-cluster";
 import { InventoryHeaderControls } from "../inventory/_components/inventory-header-controls";
+import { SalesHeaderControls } from "../sales/_components/sales-header-controls";
 import {
   Tooltip,
   TooltipContent,
@@ -478,6 +479,8 @@ function TopBar({
     activePath === "/products" || activePath.startsWith("/products/");
   const isInventory =
     activePath === "/inventory" || activePath.startsWith("/inventory/");
+  const isSales =
+    activePath === "/sales" || activePath.startsWith("/sales/");
   // /products and /inventory share the same right-side actions cluster
   // (Import, Export, Adjust Stock). Both pages care about the same product
   // operations.
@@ -510,6 +513,11 @@ function TopBar({
           {isInventory && (
             <div className="hidden md:block">
               <InventoryHeaderControls />
+            </div>
+          )}
+          {isSales && (
+            <div className="hidden md:block">
+              <SalesHeaderControls />
             </div>
           )}
         </div>

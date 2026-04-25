@@ -1,6 +1,7 @@
 "use server";
 
 import { requireTenant } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import {
   createSale,
   updateSaleStatus,
@@ -16,6 +17,24 @@ import {
   getCachedPaymentMethods,
 } from "@/lib/cache";
 import { revalidatePath } from "next/cache";
+
+// Distinct creators of sales in the current tenant. Drives the
+// "All Users" dropdown in the TopBar — fetched lazily on first open
+// of the popover to keep the layout server-render cheap.
+export async function getSalesCreators() {
+  const session = await requireTenant();
+  const rows = await prisma.sale.findMany({
+    where: { tenantId: session.tenantId, isDeleted: false, createdBy: { not: null } },
+    distinct: ["createdBy"],
+    select: { creator: { select: { id: true, fullName: true } } },
+    take: 100,
+  });
+  return rows
+    .map((r) => r.creator)
+    .filter((c): c is { id: string; fullName: string } => !!c)
+    .map((c) => ({ id: c.id, name: c.fullName }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
 
 // Fetched lazily by the New Sale dialog when it first opens — avoids
 // loading all products/customers on every page render.

@@ -110,6 +110,11 @@ export function SalesToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {/* Search + Date + All Filters + All Users.
+          On desktop these live in the TopBar (SalesHeaderControls) so
+          we hide this block above md to avoid duplication. URL params
+          keep both copies in sync. */}
+      <div className="contents md:hidden">
       {/* Search */}
       <div className="relative min-w-[180px] flex-1">
         <Search
@@ -307,7 +312,10 @@ export function SalesToolbar({
         </PopoverContent>
       </Popover>
 
-      {/* Right cluster */}
+      </div>
+      {/* End mobile-only shared filters wrapper. */}
+
+      {/* Right cluster — always visible. */}
       <div className="ml-auto flex items-center gap-2">
         {/* Alert / outstanding */}
         <Button

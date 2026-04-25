@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCurrency } from "../../_components/providers";
 import {
   Ban,
@@ -133,28 +134,112 @@ function presetRange(
   }
 }
 
+// Parse a comma-separated URL value into a Set, dropping empty strings.
+const parseSet = <T extends string>(raw: string | null): Set<T> =>
+  new Set(((raw ?? "").split(",").filter(Boolean) as T[]));
+
 export function SalesList({
   initialSales,
 }: {
   initialSales: SerializedSaleRow[];
 }) {
   const { formatAmount } = useCurrency();
+  const router = useRouter();
+  const params = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [newSaleOpen, setNewSaleOpen] = useState(false);
 
-  const [filters, setFilters] = useState<ToolbarFilters>({
-    search: "",
-    datePreset: "all",
-    startDate: "",
-    endDate: "",
-    statuses: new Set(),
-    terms: new Set(),
-    couriers: new Set(),
-    userId: "",
-    showCancelled: false,
-    density: "comfortable",
-  });
+  // ─── URL-driven filter state ────────────────────────────────
+  // These eight fields are mirrored to URL params so the TopBar's
+  // SalesHeaderControls (rendered above this tree) and the in-page
+  // toolbar stay in lockstep. Browser back/forward also restores the
+  // exact filter view.
+  const urlQ = params.get("q") ?? "";
+  const urlD = (params.get("d") as DatePreset) ?? "all";
+  const urlFrom = params.get("from") ?? "";
+  const urlTo = params.get("to") ?? "";
+  const urlStatuses = useMemo(() => parseSet<StatusKey>(params.get("status")), [params]);
+  const urlTerms = useMemo(() => parseSet<TermsKey>(params.get("terms")), [params]);
+  const urlCouriers = useMemo(() => parseSet<CourierKey>(params.get("courier")), [params]);
+  const urlUser = params.get("user") ?? "";
+
+  // Search is buffered locally so typing stays instant; the buffer
+  // syncs to the URL on a debounce. URL-side changes (back/forward,
+  // TopBar input) hydrate back into the buffer.
+  const [searchBuffer, setSearchBuffer] = useState(urlQ);
+  useEffect(() => setSearchBuffer(urlQ), [urlQ]);
+  useEffect(() => {
+    if (searchBuffer === urlQ) return;
+    const id = setTimeout(() => {
+      const p = new URLSearchParams(params.toString());
+      if (searchBuffer) p.set("q", searchBuffer);
+      else p.delete("q");
+      router.replace(`?${p.toString()}`, { scroll: false });
+    }, 250);
+    return () => clearTimeout(id);
+  }, [searchBuffer, urlQ, params, router]);
+
+  // ─── Local-only state ───────────────────────────────────────
+  // density and showCancelled are personal UI preferences, not part
+  // of the shareable URL view.
+  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
+  const [showCancelled, setShowCancelled] = useState(false);
+
+  // Compose into the unified ToolbarFilters shape SalesToolbar expects.
+  const filters: ToolbarFilters = {
+    search: searchBuffer,
+    datePreset: urlD,
+    startDate: urlFrom,
+    endDate: urlTo,
+    statuses: urlStatuses,
+    terms: urlTerms,
+    couriers: urlCouriers,
+    userId: urlUser,
+    showCancelled,
+    density,
+  };
+
+  // Single dispatcher: routes URL-driven fields to the URL and
+  // local-only fields to React state. Search goes through the buffer
+  // (debounced URL write).
+  function setFilters(next: ToolbarFilters) {
+    setSearchBuffer(next.search);
+    setDensity(next.density);
+    setShowCancelled(next.showCancelled);
+
+    const p = new URLSearchParams(params.toString());
+
+    if (next.datePreset === "all") p.delete("d");
+    else p.set("d", next.datePreset);
+
+    if (next.datePreset === "custom") {
+      if (next.startDate) p.set("from", next.startDate);
+      else p.delete("from");
+      if (next.endDate) p.set("to", next.endDate);
+      else p.delete("to");
+    } else {
+      p.delete("from");
+      p.delete("to");
+    }
+
+    const statusStr = Array.from(next.statuses).join(",");
+    if (statusStr) p.set("status", statusStr);
+    else p.delete("status");
+
+    const termsStr = Array.from(next.terms).join(",");
+    if (termsStr) p.set("terms", termsStr);
+    else p.delete("terms");
+
+    const courierStr = Array.from(next.couriers).join(",");
+    if (courierStr) p.set("courier", courierStr);
+    else p.delete("courier");
+
+    if (next.userId) p.set("user", next.userId);
+    else p.delete("user");
+
+    router.replace(`?${p.toString()}`, { scroll: false });
+  }
 
   // Distinct users present in the loaded sales — drives the "All Users"
   // dropdown so it only lists creators the viewer can actually filter to.
@@ -253,11 +338,11 @@ export function SalesList({
 
   function handleAlertClick() {
     // Surface the outstanding subset: pending + partial, hide cancelled.
-    setFilters((prev) => ({
-      ...prev,
+    setFilters({
+      ...filters,
       statuses: new Set<StatusKey>(["pending", "partial"]),
       showCancelled: false,
-    }));
+    });
   }
 
   function handleCancel(saleId: string, invoice: string) {
