@@ -31,7 +31,12 @@ export function StockAdjustDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product: { id: string; name: string; stockQuantity: number } | null;
+  product: {
+    id: string;
+    name: string;
+    stockQuantity: number;
+    tenantName?: string | null;
+  } | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -60,7 +65,17 @@ export function StockAdjustDialog({
         <DialogHeader>
           <DialogTitle>Adjust Stock</DialogTitle>
           <DialogDescription>
-            {product?.name} — current stock: <strong>{product?.stockQuantity}</strong>
+            {product?.name} — current stock:{" "}
+            <strong>{product?.stockQuantity}</strong>
+            {product?.tenantName ? (
+              <>
+                <br />
+                Tenant:{" "}
+                <strong className="text-foreground">
+                  {product.tenantName}
+                </strong>
+              </>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
 

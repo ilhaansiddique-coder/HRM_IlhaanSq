@@ -1,5 +1,5 @@
 import { requireTenant } from "@/lib/auth";
-import { getCachedProducts } from "@/lib/cache";
+import { getInventoryProducts } from "@/lib/services/product.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, AlertTriangle } from "lucide-react";
 import {
@@ -9,7 +9,11 @@ import {
 
 export default async function InventoryPage() {
   const session = await requireTenant();
-  const products = await getCachedProducts(session.tenantId);
+
+  // Super admin: cross-tenant inventory (tenantName populated per row).
+  // Tenant user: their own tenant's products only.
+  const scope = session.isSuperAdmin ? null : session.tenantId;
+  const products = await getInventoryProducts(scope);
 
   const serialized: SerializedInventoryProduct[] = products.map((p) => ({
     id: p.id,
@@ -18,6 +22,8 @@ export default async function InventoryPage() {
     stockQuantity: p.stockQuantity,
     lowStockThreshold: p.lowStockThreshold,
     imageUrl: p.imageUrl,
+    tenantId: p.tenantId,
+    tenantName: p.tenantName,
   }));
 
   const totalUnits = serialized.reduce((sum, p) => sum + p.stockQuantity, 0);
@@ -56,7 +62,10 @@ export default async function InventoryPage() {
         </Card>
       </div>
 
-      <InventoryFilter products={serialized} />
+      <InventoryFilter
+        products={serialized}
+        showTenantColumn={session.isSuperAdmin}
+      />
     </div>
   );
 }

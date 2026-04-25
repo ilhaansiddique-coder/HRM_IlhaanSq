@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { invalidateProductCache } from "../cache";
 
@@ -25,6 +26,60 @@ export type CreateProductInput = {
 };
 
 export type UpdateProductInput = Partial<CreateProductInput> & { id: string };
+
+// ─── Inventory read (cross-tenant aware) ─────────────────────
+//   tenantId === null  → platform-wide list (super admin path).
+//                        Each row carries its tenant's name so the UI
+//                        can show which workspace the product belongs to.
+//   tenantId === uuid  → tenant-scoped list. tenantName stays null.
+export type InventoryRow = {
+  id: string;
+  name: string;
+  sku: string | null;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  imageUrl: string | null;
+  tenantId: string;
+  tenantName: string | null;
+};
+
+export async function getInventoryProducts(
+  tenantId: string | null
+): Promise<InventoryRow[]> {
+  const where: Prisma.ProductWhereInput = { isDeleted: false };
+  if (tenantId) where.tenantId = tenantId;
+
+  const products = await prisma.product.findMany({
+    where,
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      stockQuantity: true,
+      lowStockThreshold: true,
+      imageUrl: true,
+      tenantId: true,
+      // Only include the tenant relation for cross-tenant reads.
+      tenant: tenantId ? false : { select: { name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 1000,
+  });
+
+  return products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    stockQuantity: p.stockQuantity,
+    lowStockThreshold: p.lowStockThreshold,
+    imageUrl: p.imageUrl,
+    tenantId: p.tenantId,
+    tenantName:
+      "tenant" in p && p.tenant && typeof p.tenant === "object"
+        ? (p.tenant as { name: string }).name
+        : null,
+  }));
+}
 
 // ─── Create ─────────────────────────────────────────────────
 

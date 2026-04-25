@@ -123,13 +123,28 @@ export async function hardDeleteProductAction(formData: FormData) {
 
 import { adjustStock } from "@/lib/services/product.service";
 import { getCachedProducts } from "@/lib/cache";
+import { prisma } from "@/lib/db";
 
 export async function adjustStockAction(formData: FormData) {
   const session = await requireTenant();
   const parsed = adjustStockSchema.parse(formToObject(formData));
 
+  // Super admin: resolve the product's actual tenantId so cross-tenant
+  // adjustments work. The adjustStock service validates the product
+  // belongs to the tenantId we pass; using session.tenantId for a super
+  // admin acting on another workspace would fail that check.
+  let actingTenantId = session.tenantId;
+  if (session.isSuperAdmin) {
+    const product = await prisma.product.findUnique({
+      where: { id: parsed.productId },
+      select: { tenantId: true },
+    });
+    if (!product) throw new Error("Product not found");
+    actingTenantId = product.tenantId;
+  }
+
   await adjustStock(
-    session.tenantId,
+    actingTenantId,
     session.userId,
     parsed.productId,
     parsed.quantity,
