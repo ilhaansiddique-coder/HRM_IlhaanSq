@@ -75,6 +75,7 @@ import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "../dashboard/_components/date-range-picker";
 import { ProductsHeaderControls } from "../products/_components/products-header-controls";
 import { ProductsActionsCluster } from "../products/_components/products-actions-cluster";
+import { InventoryHeaderControls } from "../inventory/_components/inventory-header-controls";
 import {
   Tooltip,
   TooltipContent,
@@ -468,11 +469,18 @@ function TopBar({
   // Show page-specific controls in the TopBar's left slot:
   //   /dashboard → DateRangePicker
   //   /products  → search input + stock filter (URL-synced with ProductList)
-  // Keeps the TopBar a single row of context-aware controls.
+  //   /inventory → search input + stock filter (URL-synced with InventoryFilter)
+  // Right cluster on /products and /inventory: Import / Export / Adjust Stock.
   const { activePath } = useOptimisticNav();
   const isDashboard = activePath === "/dashboard";
   const isProducts =
     activePath === "/products" || activePath.startsWith("/products/");
+  const isInventory =
+    activePath === "/inventory" || activePath.startsWith("/inventory/");
+  // /products and /inventory share the same right-side actions cluster
+  // (Import, Export, Adjust Stock). Both pages care about the same product
+  // operations.
+  const showProductActions = isProducts || isInventory;
 
   // Cart icon in the TopBar opens the New Sale dialog rather than
   // navigating to /sales. The dialog is rendered alongside the header
@@ -498,17 +506,22 @@ function TopBar({
               <ProductsHeaderControls />
             </div>
           )}
+          {isInventory && (
+            <div className="hidden md:block">
+              <InventoryHeaderControls />
+            </div>
+          )}
         </div>
 
         {/* Notifications bell — opens a dropdown of recent activity */}
         <NotificationBell notifications={notifications} />
 
         {/* Page-aware action cluster:
-              On /products → Import / Export / Adjust Stock
-              Elsewhere    → New Sale (cart) / Reports / Customers shortcuts
+              /products & /inventory → Import / Export / Adjust Stock
+              Elsewhere              → New Sale (cart) / Reports / Customers
             The Add Product (+), theme, user pill and Sign Out below
             are common to both branches. */}
-        {isProducts ? (
+        {showProductActions ? (
           <ProductsActionsCluster />
         ) : (
           <>

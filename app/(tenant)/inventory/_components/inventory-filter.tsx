@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -21,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Package, Settings2 } from "lucide-react";
+import { Package, Settings2 } from "lucide-react";
 import { StockAdjustDialog } from "./stock-adjust-dialog";
+import { MobileInventoryHeader } from "./mobile-inventory-header";
 
 export type SerializedInventoryProduct = {
   id: string;
@@ -44,33 +44,29 @@ export function InventoryFilter({
   products: SerializedInventoryProduct[];
   showTenantColumn: boolean;
 }) {
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<StockFilter>("all");
-  const [tenantFilter, setTenantFilter] = useState<string>("all");
+  const router = useRouter();
+  const params = useSearchParams();
+
+  // URL is the source of truth for search, stock filter, and tenant
+  // filter — keeps this component synced with the InventoryHeaderControls
+  // mounted in the global TopBar (and with MobileInventoryHeader).
+  const search = params.get("q") ?? "";
+  const filter = (params.get("stock") as StockFilter) ?? "all";
+  const tenantFilter = params.get("tenant") ?? "all";
+
+  function setTenantFilter(next: string) {
+    const p = new URLSearchParams(params.toString());
+    if (next === "all") p.delete("tenant");
+    else p.set("tenant", next);
+    router.replace(`?${p.toString()}`, { scroll: false });
+  }
+
   const [adjusting, setAdjusting] = useState<{
     id: string;
     name: string;
     stockQuantity: number;
     tenantName: string | null;
   } | null>(null);
-
-  // Auto-complete state
-  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
-  const inputWrapRef = useRef<HTMLDivElement | null>(null);
-
-  // Close suggestions on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        inputWrapRef.current &&
-        !inputWrapRef.current.contains(e.target as Node)
-      ) {
-        setSuggestionsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   // Distinct tenant list for the tenant-filter dropdown (super-admin view).
   const tenantOptions = useMemo(() => {
@@ -107,84 +103,18 @@ export function InventoryFilter({
     });
   }, [products, search, filter, tenantFilter, showTenantColumn]);
 
-  // Auto-complete suggestions: top 8 product matches by current input
-  const suggestions = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return [];
-    return products
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.sku?.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [products, search]);
-
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        {/* Search with auto-complete dropdown */}
-        <div ref={inputWrapRef} className="relative flex-1">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-foreground/60"
-          />
-          <Input
-            type="text"
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setSuggestionsOpen(true);
-            }}
-            onFocus={() => setSuggestionsOpen(true)}
-            className="pl-9"
-          />
-          {suggestionsOpen && suggestions.length > 0 && (
-            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-lg border border-border/60 bg-popover shadow-lg">
-              {suggestions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setSearch(s.name);
-                    setSuggestionsOpen(false);
-                  }}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
-                >
-                  {s.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={s.imageUrl}
-                      alt=""
-                      className="h-8 w-8 rounded-lg object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                      <Package className="h-4 w-4 text-muted-foreground/50" />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{s.name}</div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {s.sku ?? "—"}
-                      {showTenantColumn && s.tenantName
-                        ? ` · ${s.tenantName}`
-                        : ""}
-                    </div>
-                  </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {s.stockQuantity} in stock
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Mobile-only header — title + Stock filter + 4 quick cards.
+          Desktop uses the global TopBar (InventoryHeaderControls +
+          ProductsActionsCluster) for the equivalent affordances. */}
+      <MobileInventoryHeader />
 
-        {showTenantColumn && tenantOptions.length > 0 && (
+      {/* Tenant filter — extra control for super admins. Visible on
+          every breakpoint since the TopBar mirror only carries
+          search + stock filter (matching the products page header). */}
+      {showTenantColumn && tenantOptions.length > 0 && (
+        <div className="flex justify-end">
           <Select value={tenantFilter} onValueChange={setTenantFilter}>
             <SelectTrigger className="h-9 w-full sm:w-48 rounded-lg">
               <SelectValue placeholder="All Tenants" />
@@ -200,16 +130,8 @@ export function InventoryFilter({
               ))}
             </SelectContent>
           </Select>
-        )}
-
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as StockFilter)}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="low">Low Stock</TabsTrigger>
-            <TabsTrigger value="out">Out</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+        </div>
+      )}
 
       <Card className="overflow-hidden rounded-lg">
         <div className="overflow-x-auto">

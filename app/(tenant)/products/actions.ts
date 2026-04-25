@@ -159,16 +159,47 @@ export async function adjustStockAction(formData: FormData) {
 // Lightweight product picker options for the AdjustStockDialog and
 // similar UI affordances. Fetched on demand so the data isn't shipped
 // to every page.
+//
+// Super admin gets a cross-tenant list (each row tagged with its tenant
+// name); regular tenant users get just their own tenant's products.
 export async function getProductPickerOptions(): Promise<
-  Array<{ id: string; name: string; sku: string | null; stockQuantity: number }>
+  Array<{
+    id: string;
+    name: string;
+    sku: string | null;
+    stockQuantity: number;
+    tenantName: string | null;
+  }>
 > {
   const session = await requireTenant();
+  if (session.isSuperAdmin) {
+    const rows = await prisma.product.findMany({
+      where: { isDeleted: false },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        stockQuantity: true,
+        tenant: { select: { name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    });
+    return rows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      stockQuantity: p.stockQuantity,
+      tenantName: p.tenant?.name ?? null,
+    }));
+  }
   const products = await getCachedProducts(session.tenantId);
   return products.map((p) => ({
     id: p.id,
     name: p.name,
     sku: p.sku,
     stockQuantity: p.stockQuantity,
+    tenantName: null,
   }));
 }
 

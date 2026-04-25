@@ -30,6 +30,7 @@ type PickerProduct = {
   name: string;
   sku: string | null;
   stockQuantity: number;
+  tenantName: string | null;
 };
 
 type AdjustmentType = "in" | "out" | "adjustment";
@@ -141,6 +142,11 @@ export function AdjustStockDialog({
                       {p.sku ? (
                         <span className="ml-2 text-xs text-muted-foreground">
                           {p.sku}
+                        </span>
+                      ) : null}
+                      {p.tenantName ? (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          · {p.tenantName}
                         </span>
                       ) : null}
                       <span className="ml-2 text-xs text-muted-foreground">
