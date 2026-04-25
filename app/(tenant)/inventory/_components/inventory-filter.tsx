@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -20,9 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, Settings2 } from "lucide-react";
+import { Package, Search, Settings2 } from "lucide-react";
 import { StockAdjustDialog } from "./stock-adjust-dialog";
-import { MobileInventoryHeader } from "./mobile-inventory-header";
 
 export type SerializedInventoryProduct = {
   id: string;
@@ -68,6 +68,56 @@ export function InventoryFilter({
     tenantName: string | null;
   } | null>(null);
 
+  // ─── Mobile auto-complete ─────────────────────────────────
+  // Local input buffer (debounces to URL ?q so URL stays canonical).
+  // Suggestion popover opens on focus + while typing.
+  const [searchInput, setSearchInput] = useState(search);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const inputWrapRef = useRef<HTMLDivElement | null>(null);
+
+  // URL → input mirror (back/forward, TopBar typing on desktop)
+  useEffect(() => {
+    setSearchInput(search);
+  }, [search]);
+
+  // input → URL (debounced)
+  useEffect(() => {
+    if (searchInput === search) return;
+    const id = setTimeout(() => {
+      const p = new URLSearchParams(params.toString());
+      if (searchInput) p.set("q", searchInput);
+      else p.delete("q");
+      router.replace(`?${p.toString()}`, { scroll: false });
+    }, 250);
+    return () => clearTimeout(id);
+  }, [searchInput, search, params, router]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (
+        inputWrapRef.current &&
+        !inputWrapRef.current.contains(e.target as Node)
+      ) {
+        setSuggestionsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const suggestions = useMemo(() => {
+    const q = searchInput.trim().toLowerCase();
+    if (!q) return [];
+    return products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.sku?.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+  }, [products, searchInput]);
+
   // Distinct tenant list for the tenant-filter dropdown (super-admin view).
   const tenantOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -105,10 +155,69 @@ export function InventoryFilter({
 
   return (
     <div className="space-y-4">
-      {/* Mobile-only header — title + Stock filter + 4 quick cards.
-          Desktop uses the global TopBar (InventoryHeaderControls +
-          ProductsActionsCluster) for the equivalent affordances. */}
-      <MobileInventoryHeader />
+      {/* Mobile-only auto-complete search. The MobileInventoryHeader
+          itself now lives at the top of page.tsx; this input sits below
+          it as the page heading's search affordance. Desktop uses the
+          TopBar's InventoryHeaderControls for the same purpose. */}
+      <div ref={inputWrapRef} className="md:hidden relative">
+        <Search
+          size={16}
+          className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-foreground/60"
+        />
+        <Input
+          type="text"
+          placeholder="Search products..."
+          value={searchInput}
+          onChange={(e) => {
+            setSearchInput(e.target.value);
+            setSuggestionsOpen(true);
+          }}
+          onFocus={() => setSuggestionsOpen(true)}
+          className="pl-9 rounded-lg"
+        />
+        {suggestionsOpen && suggestions.length > 0 && (
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-lg border border-border/60 bg-popover shadow-lg">
+            {suggestions.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setSearchInput(s.name);
+                  setSuggestionsOpen(false);
+                }}
+                className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
+              >
+                {s.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={s.imageUrl}
+                    alt=""
+                    className="h-8 w-8 rounded-lg object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                    <Package className="h-4 w-4 text-muted-foreground/50" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{s.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {s.sku ?? "—"}
+                    {showTenantColumn && s.tenantName
+                      ? ` · ${s.tenantName}`
+                      : ""}
+                  </div>
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {s.stockQuantity} in stock
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Tenant filter — extra control for super admins. Visible on
           every breakpoint since the TopBar mirror only carries

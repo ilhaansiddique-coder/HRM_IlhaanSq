@@ -6,6 +6,7 @@ import {
   InventoryFilter,
   type SerializedInventoryProduct,
 } from "./_components/inventory-filter";
+import { MobileInventoryHeader } from "./_components/mobile-inventory-header";
 
 export default async function InventoryPage() {
   const session = await requireTenant();
@@ -32,6 +33,11 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Mobile-only header — title + Stock filter + 4 quick cards.
+          Sits at the top of the page, above the StatCards, mirroring
+          how MobileProductsHeader is positioned on /products. */}
+      <MobileInventoryHeader />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border/70 bg-card/80">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

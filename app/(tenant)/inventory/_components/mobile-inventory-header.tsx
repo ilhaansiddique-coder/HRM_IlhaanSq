@@ -63,7 +63,7 @@ export function MobileInventoryHeader() {
         >
           <SelectTrigger
             style={{ color: "#AEAEAF", borderColor: "#AEAEAF" }}
-            className="h-9 w-28 rounded-lg border bg-background pl-3 pr-6 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#AEAEAF]/30"
+            className="h-9 w-36 rounded-lg border bg-background pl-3 pr-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#AEAEAF]/30"
           >
             <SelectValue />
           </SelectTrigger>
