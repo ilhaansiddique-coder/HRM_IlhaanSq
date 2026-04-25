@@ -455,6 +455,14 @@ export function SalesList({
   const cellPad = compact ? "py-1.5" : "py-3";
   const cardPad = compact ? "p-2" : "p-3";
 
+  // Render the Tenant column whenever the prop says so OR whenever the
+  // payload actually carries tenant info. The OR fallback covers the
+  // edge case where a stale JWT lacks the isSuperAdmin flag — if the
+  // page already loaded cross-tenant data, the column should still
+  // appear so super admins can tell tenants apart at a glance.
+  const showTenant =
+    showTenantColumn || initialSales.some((s) => !!s.tenantName);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -582,7 +590,7 @@ export function SalesList({
                     aria-label="Select all"
                   />
                 </TableHead>
-                {showTenantColumn && <TableHead>Tenant</TableHead>}
+                {showTenant && <TableHead>Tenant</TableHead>}
                 <TableHead>Customer</TableHead>
                 <TableHead>Phone Number</TableHead>
                 <TableHead className="text-right">Total</TableHead>
@@ -599,7 +607,7 @@ export function SalesList({
               {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={showTenantColumn ? 12 : 11}
+                    colSpan={showTenant ? 12 : 11}
                     className="text-center py-12 text-muted-foreground"
                   >
                     <ShoppingCart className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -635,7 +643,7 @@ export function SalesList({
                           aria-label={`Select ${sale.invoiceNumber}`}
                         />
                       </TableCell>
-                      {showTenantColumn && (
+                      {showTenant && (
                         <TableCell className={`text-xs ${cellPad}`}>
                           {sale.tenantName ? (
                             <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
@@ -871,7 +879,7 @@ export function SalesList({
                   </div>
                 </div>
 
-                {showTenantColumn && sale.tenantName && (
+                {showTenant && sale.tenantName && (
                   <div className="mt-2">
                     <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
                       {sale.tenantName}
