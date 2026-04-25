@@ -5,7 +5,6 @@ import {
   BarChart3,
   Briefcase,
   Building2,
-  Check,
   Package,
   PackageCheck,
   Palette,
@@ -26,7 +25,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
-  SidebarMenuBadge,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -143,25 +141,137 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-sidebar-border/70 bg-sidebar/95" collapsible="icon">
       <SidebarHeader className="px-3 pt-3 pb-2 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
-        <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
-          {businessSettings?.logo_url && !logoError ? (
-            <img
-              src={businessSettings.logo_url}
-              alt={businessSettings.business_name || "Rahestock"}
-              className="h-10 w-10 rounded-full border border-border/60 bg-base-100 object-cover"
-              onError={() => setLogoError(true)}
-            />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-              {(businessSettings?.business_name || "Rahestock").charAt(0)}
-            </div>
-          )}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
+            {businessSettings?.logo_url && !logoError ? (
+              <img
+                src={businessSettings.logo_url}
+                alt={businessSettings.business_name || "Rahestock"}
+                className="h-10 w-10 rounded-full border border-border/60 bg-base-100 object-cover"
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                {(businessSettings?.business_name || "Rahestock").charAt(0)}
+              </div>
+            )}
+            {!isCollapsed && (
+              <div className="leading-tight">
+                <p className="text-[1rem] font-semibold text-sidebar-foreground leading-tight">
+                  {businessSettings?.business_name || "Rahestock"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">Inventory Suite</p>
+              </div>
+            )}
+          </div>
           {!isCollapsed && (
-            <div className="leading-tight">
-              <p className="text-[1rem] font-semibold text-sidebar-foreground leading-tight">
-                {businessSettings?.business_name || "Rahestock"}
-              </p>
-              <p className="text-[11px] text-muted-foreground">Inventory Suite</p>
+            <div className="flex items-center gap-1">
+              {/* Theme Picker */}
+              <HoverCard openDelay={100} closeDelay={80}>
+                <HoverCardTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80 transition-colors hover:bg-sidebar-accent/70"
+                    aria-label="Change theme"
+                    title="Theme"
+                  >
+                    <Palette className="h-4 w-4" />
+                  </button>
+                </HoverCardTrigger>
+                <HoverCardContent side="right" align="end" className="w-[320px] max-w-[80vw] p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Themes</p>
+                    <span className="text-xs text-muted-foreground">
+                      {DAISY_THEMES.find((theme) => theme.name === selectedTheme)?.label || selectedTheme}
+                    </span>
+                  </div>
+                  <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                    {DAISY_THEMES.map((themeOption) => {
+                      const isActive = selectedTheme === themeOption.name;
+                      return (
+                        <button
+                          key={themeOption.name}
+                          type="button"
+                          onClick={() => handleThemeChange(themeOption.name)}
+                          className={`flex items-center justify-between rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${
+                            isActive
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-base-300 bg-base-100 text-base-content hover:border-primary/40"
+                          }`}
+                        >
+                          <span className="truncate pr-2">{themeOption.label}</span>
+                          <span className="flex items-center gap-1">
+                            {themeOption.swatch.slice(0, 2).map((color) => (
+                              <span
+                                key={`${themeOption.name}-${color}`}
+                                className="h-2.5 w-2.5 rounded-full border border-base-300/70"
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                            {isActive && <Check className="h-3 w-3" />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+
+              {/* Super Admin Menu */}
+              {!isLoading && isSuperAdmin && (
+                <>
+                  <NavLink
+                    to="/super-admin?tab=settings"
+                    className={`flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80 transition-colors hover:bg-sidebar-accent/70 ${
+                      isActive("/super-admin?tab=settings") ? "bg-primary text-primary-foreground" : ""
+                    }`}
+                    onClick={handleMobileNavClick}
+                    title="Settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </NavLink>
+                  <NavLink
+                    to="/super-admin?tab=administration"
+                    className={`flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80 transition-colors hover:bg-sidebar-accent/70 ${
+                      isActive("/super-admin?tab=administration") ? "bg-primary text-primary-foreground" : ""
+                    }`}
+                    onClick={handleMobileNavClick}
+                    title="Administration"
+                  >
+                    <Shield className="h-4 w-4" />
+                  </NavLink>
+                </>
+              )}
+
+              {/* Admin Menu for non-super-admin */}
+              {!isLoading && !isSuperAdmin && (
+                hasPermission('admin.manage_roles') ||
+                hasPermission('admin.manage_permissions') ||
+                hasPermission('admin.full_backup') ||
+                hasPermission('admin.data_restore') ||
+                hasPermission('logs.view')
+              ) && (
+                <NavLink
+                  to="/admin"
+                  className={`flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80 transition-colors hover:bg-sidebar-accent/70 ${
+                    isActive("/admin") ? "bg-primary text-primary-foreground" : ""
+                  }`}
+                  onClick={handleMobileNavClick}
+                  title="Administration"
+                >
+                  <Shield className="h-4 w-4" />
+                </NavLink>
+              )}
+
+              {/* Sign Out */}
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-background/80 transition-colors hover:bg-sidebar-accent/70"
+                onClick={signOut}
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
           )}
         </div>
@@ -292,61 +402,10 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <HoverCard openDelay={100} closeDelay={80}>
-          <HoverCardTrigger asChild>
-            <button
-              type="button"
-              className={`mt-1 flex w-full items-center gap-2 rounded-xl border border-border/60 bg-background/80 px-2.5 py-2 text-sm transition-colors hover:bg-sidebar-accent/70 ${isCollapsed ? "justify-center px-0" : ""}`}
-              aria-label="Change theme"
-              title="Theme"
-            >
-              <Palette className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span className="truncate font-medium">Theme</span>}
-            </button>
-          </HoverCardTrigger>
-          <HoverCardContent side="right" align="end" className="w-[320px] max-w-[80vw] p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Themes</p>
-              <span className="text-xs text-muted-foreground">
-                {DAISY_THEMES.find((theme) => theme.name === selectedTheme)?.label || selectedTheme}
-              </span>
-            </div>
-            <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1">
-              {DAISY_THEMES.map((themeOption) => {
-                const isActive = selectedTheme === themeOption.name;
-                return (
-                  <button
-                    key={themeOption.name}
-                    type="button"
-                    onClick={() => handleThemeChange(themeOption.name)}
-                    className={`flex items-center justify-between rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${
-                      isActive
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-base-300 bg-base-100 text-base-content hover:border-primary/40"
-                    }`}
-                  >
-                    <span className="truncate pr-2">{themeOption.label}</span>
-                    <span className="flex items-center gap-1">
-                      {themeOption.swatch.slice(0, 2).map((color) => (
-                        <span
-                          key={`${themeOption.name}-${color}`}
-                          className="h-2.5 w-2.5 rounded-full border border-base-300/70"
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                      {isActive && <Check className="h-3 w-3" />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </HoverCardContent>
-        </HoverCard>
-
         <NavLink
           to={isSuperAdmin ? "/super-admin?tab=profile" : "/profile"}
           onClick={handleMobileNavClick}
-          className={`mt-2 flex w-full items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm transition-colors hover:bg-sidebar-accent/70 ${isCollapsed ? "justify-center px-0 py-1" : ""}`}
+          className={`flex w-full items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm transition-colors hover:bg-sidebar-accent/70 ${isCollapsed ? "justify-center px-0 py-1" : ""}`}
         >
           <Avatar className="h-8 w-8 border border-border/60">
             <AvatarImage src={profileAvatarUrl} alt={userName} />

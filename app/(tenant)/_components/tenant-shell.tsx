@@ -125,13 +125,12 @@ export function TenantShell({
         <div className="flex min-h-screen w-full">
           <AppSidebar
             businessName={businessName}
-            userName={userName}
-            userEmail={userEmail}
             role={role}
             isSuperAdmin={isSuperAdmin}
             pendingTenantCount={pendingTenantCount}
           />
           <div className="flex-1 flex flex-col min-w-0 bg-card">
+            <TopBar userName={userName} userEmail={userEmail} />
             <main className="flex-1 p-4 pb-24 md:p-6 min-w-0">{children}</main>
           </div>
         </div>
@@ -144,15 +143,11 @@ export function TenantShell({
 
 function AppSidebar({
   businessName,
-  userName,
-  userEmail,
   role,
   isSuperAdmin,
   pendingTenantCount,
 }: {
   businessName: string;
-  userName: string;
-  userEmail: string;
   role: string | null;
   isSuperAdmin: boolean;
   pendingTenantCount: number;
@@ -160,17 +155,6 @@ function AppSidebar({
   const { state, toggleSidebar } = useSidebar();
   const { activePath: pathname } = useOptimisticNav();
   const isCollapsed = state === "collapsed";
-  const [selectedTheme, setSelectedTheme] = useState<DaisyThemeName>("light");
-
-  useEffect(() => {
-    setSelectedTheme(resolveTheme(getStoredTheme()));
-  }, []);
-
-  const handleThemeChange = (name: DaisyThemeName) => {
-    setSelectedTheme(name);
-    applyThemeToDocument(name);
-    setStoredTheme(name);
-  };
 
   const isAdmin = role === "owner" || role === "admin" || role === "superadmin";
   const isRouteActive = (path: string) =>
@@ -184,14 +168,6 @@ function AppSidebar({
     active
       ? "bg-primary text-primary-foreground shadow-sm"
       : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground";
-
-  const initials = userName
-    .split(" ")
-    .map((p) => p[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 
   return (
     <Sidebar
@@ -400,93 +376,7 @@ function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter>
-        {/* Theme picker */}
-        <HoverCard openDelay={100} closeDelay={80}>
-          <HoverCardTrigger asChild>
-            <button
-              type="button"
-              className={`mt-1 flex w-full items-center gap-2 rounded-xl border border-border/60 bg-background/80 px-2.5 py-2 text-sm transition-colors hover:bg-sidebar-accent/70 ${
-                isCollapsed ? "justify-center px-0" : ""
-              }`}
-            >
-              <Palette className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span className="truncate font-medium">Theme</span>}
-            </button>
-          </HoverCardTrigger>
-          <HoverCardContent
-            side="right"
-            align="end"
-            className="w-[320px] max-w-[80vw] p-3"
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Themes
-              </p>
-              <span className="text-xs text-muted-foreground">
-                {DAISY_THEMES.find((t) => t.name === selectedTheme)?.label ??
-                  selectedTheme}
-              </span>
-            </div>
-            <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1">
-              {DAISY_THEMES.map((t) => {
-                const active = selectedTheme === t.name;
-                return (
-                  <button
-                    key={t.name}
-                    type="button"
-                    onClick={() => handleThemeChange(t.name)}
-                    className={`flex items-center justify-between rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-base-300 bg-base-100 text-base-content hover:border-primary/40"
-                    }`}
-                  >
-                    <span className="truncate pr-2">{t.label}</span>
-                    <span className="flex items-center gap-1">
-                      {t.swatch.slice(0, 2).map((c) => (
-                        <span
-                          key={c}
-                          className="h-2.5 w-2.5 rounded-full border border-base-300/70"
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
-                      {active && <Check className="h-3 w-3" />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </HoverCardContent>
-        </HoverCard>
-
-        {/* Avatar pill */}
-        <div
-          className={`mt-2 flex w-full items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm ${
-            isCollapsed ? "justify-center px-0 py-1" : ""
-          }`}
-        >
-          <Avatar className="h-8 w-8 border border-border/60">
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-          </Avatar>
-          {!isCollapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium leading-tight">{userName}</p>
-              <p className="truncate text-[10px] text-muted-foreground">{userEmail}</p>
-            </div>
-          )}
-        </div>
-
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              tooltip={isCollapsed ? "Sign Out" : undefined}
-              className="flex items-center gap-3 rounded-md px-3 py-2"
-            >
-              <LogOut className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span>Sign Out</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggleSidebar}
@@ -500,6 +390,123 @@ function AppSidebar({
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+// ─── TopBar ─────────────────────────────────────────────────
+// Global header above page content. Shows on every tenant page.
+// Holds the user-account controls that used to live in the
+// SidebarFooter: theme picker, identity pill, sign-out button.
+function TopBar({
+  userName,
+  userEmail,
+}: {
+  userName: string;
+  userEmail: string;
+}) {
+  const [selectedTheme, setSelectedTheme] = useState<DaisyThemeName>("light");
+
+  useEffect(() => {
+    setSelectedTheme(resolveTheme(getStoredTheme()));
+  }, []);
+
+  const handleThemeChange = (name: DaisyThemeName) => {
+    setSelectedTheme(name);
+    applyThemeToDocument(name);
+    setStoredTheme(name);
+  };
+
+  const initials = userName
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  return (
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-end gap-2 border-b border-border/60 bg-card/80 px-4 backdrop-blur md:px-6">
+      {/* Theme picker */}
+      <HoverCard openDelay={100} closeDelay={80}>
+        <HoverCardTrigger asChild>
+          <button
+            type="button"
+            aria-label="Theme"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
+          >
+            <Palette className="h-4 w-4" />
+          </button>
+        </HoverCardTrigger>
+        <HoverCardContent
+          side="bottom"
+          align="end"
+          className="w-[320px] max-w-[80vw] p-3"
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Themes
+            </p>
+            <span className="text-xs text-muted-foreground">
+              {DAISY_THEMES.find((t) => t.name === selectedTheme)?.label ??
+                selectedTheme}
+            </span>
+          </div>
+          <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1">
+            {DAISY_THEMES.map((t) => {
+              const active = selectedTheme === t.name;
+              return (
+                <button
+                  key={t.name}
+                  type="button"
+                  onClick={() => handleThemeChange(t.name)}
+                  className={`flex items-center justify-between rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${
+                    active
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-base-300 bg-base-100 text-base-content hover:border-primary/40"
+                  }`}
+                >
+                  <span className="truncate pr-2">{t.label}</span>
+                  <span className="flex items-center gap-1">
+                    {t.swatch.slice(0, 2).map((c) => (
+                      <span
+                        key={c}
+                        className="h-2.5 w-2.5 rounded-full border border-base-300/70"
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                    {active && <Check className="h-3 w-3" />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </HoverCardContent>
+      </HoverCard>
+
+      {/* User identity pill */}
+      <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm">
+        <Avatar className="h-7 w-7 border border-border/60">
+          <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
+        </Avatar>
+        <div className="hidden min-w-0 leading-tight md:block">
+          <p className="truncate text-xs font-medium">{userName}</p>
+          <p className="truncate text-[10px] text-muted-foreground">
+            {userEmail}
+          </p>
+        </div>
+      </div>
+
+      {/* Sign out */}
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: "/login" })}
+        aria-label="Sign Out"
+        className="flex h-9 items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted"
+      >
+        <LogOut className="h-4 w-4" />
+        <span className="hidden md:inline">Sign Out</span>
+      </button>
+    </header>
   );
 }
 
