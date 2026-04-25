@@ -86,7 +86,7 @@
     --color-base-content: #0f172a;      /* Body text */
 
     /* Accents */
-    --color-primary: #6366f1;           /* Indigo-500 — buttons, links, active nav */
+    --color-primary: #5d60ef;           /* Brand indigo — sidebar active pill, buttons, links */
     --color-primary-content: #ffffff;
     --color-secondary: #8b5cf6;         /* Violet-500 */
     --color-secondary-content: #ffffff;
