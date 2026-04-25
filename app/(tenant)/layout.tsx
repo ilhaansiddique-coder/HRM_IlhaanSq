@@ -19,17 +19,30 @@ export default async function TenantLayout({
 }) {
   const session = await requireTenant();
 
-  const [businessSettings, systemSettings, pendingTenantCount, notifications] =
-    await Promise.all([
-      getCachedBusinessSettings(session.tenantId),
-      getCachedSystemSettings(session.tenantId),
-      getPendingTenantCount(session.isSuperAdmin),
-      getRecentNotifications(
-        session.isSuperAdmin ? null : session.tenantId,
-        session.userId,
-        12
-      ),
-    ]);
+  const [
+    businessSettings,
+    systemSettings,
+    pendingTenantCount,
+    notifications,
+    freshUser,
+  ] = await Promise.all([
+    getCachedBusinessSettings(session.tenantId),
+    getCachedSystemSettings(session.tenantId),
+    getPendingTenantCount(session.isSuperAdmin),
+    getRecentNotifications(
+      session.isSuperAdmin ? null : session.tenantId,
+      session.userId,
+      12
+    ),
+    // Read fullName/email fresh from the DB on every render — the
+    // NextAuth JWT carries these but they're frozen at login. Without
+    // this re-read, the TopBar would keep showing the old name even
+    // after the user updates their profile.
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { fullName: true, email: true },
+    }),
+  ]);
 
   return (
     <TenantProviders
@@ -40,8 +53,8 @@ export default async function TenantLayout({
       <TenantShell
         businessName={businessSettings?.businessName ?? "My Business"}
         userId={session.userId}
-        userName={session.name}
-        userEmail={session.email}
+        userName={freshUser?.fullName ?? session.name}
+        userEmail={freshUser?.email ?? session.email}
         role={session.role}
         isSuperAdmin={session.isSuperAdmin}
         pendingTenantCount={pendingTenantCount}

@@ -14,7 +14,9 @@ export async function updateProfileAction(
   const session = await requireAuth();
   const result = await updateProfile(session.userId, updates);
   if (result.ok) {
-    revalidatePath("/profile");
+    // "/", "layout" invalidates every route — needed so the TopBar
+    // pill (rendered in the (tenant) layout) re-fetches the new name.
+    revalidatePath("/", "layout");
   }
   return result;
 }
