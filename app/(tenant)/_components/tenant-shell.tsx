@@ -147,7 +147,7 @@ export function TenantShell({
             pendingTenantCount={pendingTenantCount}
           />
           <div className="flex-1 flex flex-col min-w-0 bg-card">
-            <TopBar userName={userName} userEmail={userEmail} />
+            <TopBar userName={userName} userEmail={userEmail} role={role} />
             <main className="flex-1 p-4 pb-24 md:p-6 min-w-0">{children}</main>
           </div>
         </div>
@@ -417,10 +417,13 @@ function AppSidebar({
 function TopBar({
   userName,
   userEmail,
+  role,
 }: {
   userName: string;
   userEmail: string;
+  role: string | null;
 }) {
+  const roleLabel = formatRole(role);
   const [selectedTheme, setSelectedTheme] = useState<DaisyThemeName>("light");
 
   useEffect(() => {
@@ -565,32 +568,48 @@ function TopBar({
         </HoverCardContent>
       </HoverCard>
 
-      {/* User identity pill */}
-      <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm">
-        <Avatar className="h-7 w-7 border border-border/60">
-          <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
-        </Avatar>
-        <div className="hidden min-w-0 leading-tight md:block">
-          <p className="truncate text-xs font-medium">{userName}</p>
-          <p className="truncate text-[10px] text-muted-foreground">
-            {userEmail}
-          </p>
+        {/* User identity pill — name + role; email kept on hover. */}
+        <div
+          className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm"
+          title={userEmail}
+        >
+          <Avatar className="h-7 w-7 border border-border/60">
+            <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="hidden min-w-0 leading-tight md:block">
+            <p className="truncate text-xs font-medium">{userName}</p>
+            {roleLabel && (
+              <p className="truncate text-[10px] text-muted-foreground">
+                {roleLabel}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
 
-        {/* Sign out */}
+        {/* Sign out — icon-only on md+, icon + label on mobile. */}
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
           aria-label="Sign Out"
-          className="flex h-9 items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted"
+          title="Sign Out"
+          className="flex h-9 items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted md:w-9 md:justify-center md:px-0"
         >
           <LogOut className="h-4 w-4" />
-          <span className="hidden md:inline">Sign Out</span>
+          <span className="md:hidden">Sign Out</span>
         </button>
       </header>
     </TooltipProvider>
   );
+}
+
+// Format a role string for display under the user's name in the TopBar.
+//   "superadmin" → "Super Admin"
+//   "owner"      → "Owner"
+//   null / ""    → null  (caller skips rendering)
+function formatRole(role: string | null): string | null {
+  if (!role) return null;
+  if (role === "superadmin") return "Super Admin";
+  return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
 // Pill-shaped icon link used in the TopBar's quick-shortcut group.
