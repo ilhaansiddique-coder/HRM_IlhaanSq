@@ -1,10 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search, AlertTriangle, Boxes, Package, TrendingDown, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  Archive,
+  Boxes,
+  Download,
+  Package,
+  Plus,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  Upload,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/lib/toast";
 import { useCurrency } from "../../_components/providers";
 import { ProductDialog } from "./product-dialog";
 import { ProductCard } from "./product-card";
@@ -95,6 +108,47 @@ export function ProductList({
 
   return (
     <div className="space-y-4">
+      {/* Mobile-only Products header — title + filter + 4 quick cards.
+          Hidden on md+ where the existing toolbar below covers the
+          same controls. */}
+      <div className="md:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">Products</h1>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as StockFilter)}
+            className="h-9 rounded-lg border-2 border-primary/70 bg-background px-3 pr-8 text-sm font-medium text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="all">All Stock</option>
+            <option value="in">In Stock</option>
+            <option value="low">Low Stock</option>
+            <option value="out">Out of Stock</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          <ActionCard
+            icon={<Download className="h-4 w-4" />}
+            label="Import"
+            onClick={() => toast.info("Import is coming soon.")}
+          />
+          <ActionCard
+            icon={<Upload className="h-4 w-4" />}
+            label="Export"
+            onClick={() => toast.info("Export is coming soon.")}
+          />
+          <ActionCardLink
+            icon={<Archive className="h-4 w-4" />}
+            label="Stock"
+            href="/inventory"
+          />
+          <ActionCard
+            icon={<Plus className="h-4 w-4" />}
+            label="Add"
+            onClick={openCreate}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard
           label="Total Products"
@@ -147,14 +201,14 @@ export function ProductList({
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as StockFilter)}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          className="hidden md:block h-9 rounded-md border border-input bg-background px-3 text-sm"
         >
           <option value="all">All Stock</option>
           <option value="in">In Stock</option>
           <option value="low">Low Stock</option>
           <option value="out">Out of Stock</option>
         </select>
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} className="hidden md:inline-flex">
           <Plus className="h-4 w-4" />
           Add Product
         </Button>
@@ -229,5 +283,43 @@ function StatCard({
       <div className={`mt-2 text-2xl font-bold ${valueClass}`}>{value}</div>
       <div className="text-xs text-muted-foreground">{sublabel}</div>
     </Card>
+  );
+}
+
+// ─── Mobile-only quick-action card helpers ───
+const cardClasses =
+  "flex flex-col items-center justify-center gap-1 rounded-lg border border-border/60 bg-card px-2 py-3 text-foreground transition-colors active:bg-muted/40 hover:bg-muted/30";
+
+function ActionCard({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" onClick={onClick} className={cardClasses}>
+      <span className="text-foreground">{icon}</span>
+      <span className="text-xs font-medium">{label}</span>
+    </button>
+  );
+}
+
+function ActionCardLink({
+  icon,
+  label,
+  href,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  href: string;
+}) {
+  return (
+    <Link href={href} className={cardClasses}>
+      <span className="text-foreground">{icon}</span>
+      <span className="text-xs font-medium">{label}</span>
+    </Link>
   );
 }
