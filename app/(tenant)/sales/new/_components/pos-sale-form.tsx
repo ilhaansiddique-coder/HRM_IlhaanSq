@@ -82,10 +82,15 @@ export function POSSaleForm({
   products,
   customers,
   paymentMethods,
+  onSuccess,
 }: {
   products: Product[];
   customers: Customer[];
   paymentMethods: { id: string; name: string }[];
+  // When provided (dialog usage), the form notifies its parent on
+  // successful submit instead of navigating to /sales itself. Always
+  // calls router.refresh() so the listing reflects the new sale.
+  onSuccess?: () => void;
 }) {
   const router = useRouter();
   const { formatAmount, symbol } = useCurrency();
@@ -396,8 +401,12 @@ export function POSSaleForm({
         } catch {
           // ignore
         }
-        router.push("/sales");
         router.refresh();
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push("/sales");
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to create sale");
       }

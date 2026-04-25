@@ -11,7 +11,6 @@ import {
   ShoppingCart,
   Wallet,
 } from "lucide-react";
-import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/lib/toast";
 import { cancelSaleAction } from "../actions";
+import { NewSaleDialog } from "./new-sale-dialog";
 
 export type SerializedSaleRow = {
   id: string;
@@ -70,6 +70,7 @@ export function SalesList({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [startDate, setStartDate] = useState<string>(""); // YYYY-MM-DD
   const [endDate, setEndDate] = useState<string>(""); // YYYY-MM-DD
+  const [newSaleOpen, setNewSaleOpen] = useState(false);
   const { formatAmount } = useCurrency();
   const [pending, startTransition] = useTransition();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -181,12 +182,13 @@ export function SalesList({
             className="pl-9"
           />
         </div>
-        <Link href="/sales/new">
-          <Button className="w-full sm:w-auto">
-            <Plus className="h-4 w-4" />
-            New Sale
-          </Button>
-        </Link>
+        <Button
+          className="w-full sm:w-auto"
+          onClick={() => setNewSaleOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          New Sale
+        </Button>
       </div>
 
       {/* Status filter chips + date range. */}
@@ -324,6 +326,8 @@ export function SalesList({
           </Table>
         </div>
       </Card>
+
+      <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
 
       {/* Mobile card stack. */}
       <div className="md:hidden space-y-3">
