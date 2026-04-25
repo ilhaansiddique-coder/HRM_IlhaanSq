@@ -128,9 +128,16 @@ export function NotificationBell({
                     }`}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium capitalize">
-                      {describe(n)}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate font-medium capitalize">
+                        {describe(n)}
+                      </p>
+                      {n.tenantName && (
+                        <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                          {n.tenantName}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-muted-foreground">
                       {n.actorName ?? "System"} · {timeAgo(n.createdAt)}
                     </p>

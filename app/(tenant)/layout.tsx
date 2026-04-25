@@ -26,6 +26,7 @@ export default async function TenantLayout({
       getPendingTenantCount(session.isSuperAdmin),
       getRecentNotifications(
         session.isSuperAdmin ? null : session.tenantId,
+        session.userId,
         12
       ),
     ]);
