@@ -115,6 +115,7 @@ const menuItems = [
 const baseBottomNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: Home },
   { label: "Products", to: "/products", icon: Package },
+  { label: "Inventory", to: "/inventory", icon: Warehouse },
   { label: "Sales", to: "/sales", icon: ShoppingCart },
   { label: "Packaging", to: "/packaging", icon: PackageCheck },
   { label: "Customers", to: "/customers", icon: Users },
