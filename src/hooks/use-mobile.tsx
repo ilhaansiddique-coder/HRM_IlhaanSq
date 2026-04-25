@@ -3,44 +3,38 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const getIsMobile = React.useCallback(() => {
-    if (typeof window === "undefined") {
-      return false
-    }
-    return window.innerWidth < MOBILE_BREAKPOINT
-  }, [])
-
-  const [isMobile, setIsMobile] = React.useState<boolean>(getIsMobile)
+  // Always start false on both SSR and the FIRST client render —
+  // identical to what the server emitted. If we read window.innerWidth
+  // here via a lazy useState init, the client can resolve to true
+  // before hydration commits, producing a tree mismatch (sidebar
+  // primitive renders <Sheet> on mobile vs. <div ...> on desktop).
+  // The useEffect below flips the value AFTER hydration, which is a
+  // normal re-render — no warning, no React DOM hydration error.
+  const [isMobile, setIsMobile] = React.useState<boolean>(false)
 
   React.useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
+    if (typeof window === 'undefined') return
 
     try {
       const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-      const onChange = () => {
-        try {
-          setIsMobile(getIsMobile())
-        } catch (error) {
-          console.warn('Failed to update mobile state:', error)
-        }
-      }
+      const update = () =>
+        setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
 
       if (mql.addEventListener) {
-        mql.addEventListener("change", onChange)
+        mql.addEventListener("change", update)
       } else if (mql.addListener) {
-        mql.addListener(onChange)
+        mql.addListener(update)
       }
 
-      onChange()
+      // Initial sync — sets the real value on the post-hydration render.
+      update()
 
       return () => {
         try {
           if (mql.removeEventListener) {
-            mql.removeEventListener("change", onChange)
+            mql.removeEventListener("change", update)
           } else if (mql.removeListener) {
-            mql.removeListener(onChange)
+            mql.removeListener(update)
           }
         } catch (error) {
           console.warn('Failed to remove media query listener:', error)
@@ -48,10 +42,8 @@ export function useIsMobile() {
       }
     } catch (error) {
       console.warn('Failed to set up media query listener:', error)
-      setIsMobile(false)
-      return
     }
-  }, [getIsMobile])
+  }, [])
 
   return isMobile
 }
