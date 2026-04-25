@@ -12,6 +12,8 @@ export default async function SalesPage() {
     customerName: s.customerName,
     customerPhone: s.customerPhone,
     grandTotal: Number(s.grandTotal ?? 0),
+    amountPaid: Number(s.amountPaid ?? 0),
+    amountDue: Number(s.amountDue ?? 0),
     paymentStatus: s.paymentStatus,
     courierStatus: s.courierStatus ?? null,
     createdAt: (s.createdAt instanceof Date
