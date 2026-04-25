@@ -4,6 +4,13 @@ import { invalidateSaleCache, invalidateProductCache } from "../cache";
 
 // ─── Types ──────────────────────────────────────────────────
 
+export type PaymentTerms = "immediate" | "cod" | "credit";
+
+export type SalePaymentSplit = {
+  method: string;
+  amount: number;
+};
+
 export type CreateSaleInput = {
   customerName: string;
   customerPhone?: string;
@@ -18,6 +25,14 @@ export type CreateSaleInput = {
   additionalInfo?: string;
   /** Optional override for the sale's createdAt; defaults to now(). */
   saleDate?: Date;
+  /** Optional explicit amountPaid; otherwise inferred from splits or terms. */
+  amountPaid?: number;
+  /** Payment terms: immediate (default), cod (collect on delivery), credit (pay later). */
+  paymentTerms?: PaymentTerms;
+  /** Days from sale date until payment is due (only meaningful when paymentTerms === "credit"). */
+  creditDays?: number;
+  /** Split payments — multiple methods can pay portions of one sale. */
+  paymentSplits?: SalePaymentSplit[];
   items: {
     productId: string;
     variantId?: string;
@@ -112,6 +127,38 @@ export async function createSale(
   const charge = input.charge ?? 0;
   const grandTotal = subtotal - discountAmount + charge;
 
+  const paymentTerms: PaymentTerms = input.paymentTerms ?? "immediate";
+
+  // Splits drive amountPaid when present. Otherwise fall back to the
+  // explicit amountPaid input, then to the term default:
+  //   immediate → fully paid
+  //   cod / credit → unpaid (collected later)
+  const splits = (input.paymentSplits ?? [])
+    .map((s) => ({ method: s.method || "cash", amount: Number(s.amount) || 0 }))
+    .filter((s) => s.amount > 0);
+  const splitsTotal = splits.reduce((s, x) => s + x.amount, 0);
+
+  let amountPaid: number;
+  if (splitsTotal > 0) {
+    amountPaid = splitsTotal;
+  } else if (typeof input.amountPaid === "number") {
+    amountPaid = input.amountPaid;
+  } else {
+    amountPaid = paymentTerms === "immediate" ? grandTotal : 0;
+  }
+  amountPaid = Math.min(Math.max(0, amountPaid), grandTotal);
+  const amountDue = Math.max(0, grandTotal - amountPaid);
+
+  const paymentStatus =
+    input.paymentStatus ??
+    (amountDue === 0 ? "paid" : amountPaid > 0 ? "partial" : "pending");
+
+  const baseDate = input.saleDate ?? new Date();
+  const dueDate =
+    paymentTerms === "credit" && input.creditDays && input.creditDays > 0
+      ? new Date(baseDate.getTime() + input.creditDays * 24 * 60 * 60 * 1000)
+      : null;
+
   const sale = await prisma.$transaction(async (tx) => {
     const invoiceNumber = await generateInvoiceNumberTx(tx, tenantId);
 
@@ -130,9 +177,13 @@ export async function createSale(
         charge,
         grandTotal,
         totalAmount: grandTotal,
-        amountDue: grandTotal,
+        amountPaid,
+        amountDue,
         paymentMethod: input.paymentMethod,
-        paymentStatus: input.paymentStatus ?? "pending",
+        paymentStatus,
+        paymentTerms,
+        creditDays: paymentTerms === "credit" ? input.creditDays ?? null : null,
+        dueDate,
         additionalInfo: input.additionalInfo,
         createdBy: userId,
         ...(input.saleDate ? { createdAt: input.saleDate } : {}),
@@ -145,10 +196,21 @@ export async function createSale(
             totalPrice: item.quantity * item.unitPrice,
           })),
         },
+        ...(splits.length > 0
+          ? {
+              payments: {
+                create: splits.map((s) => ({
+                  method: s.method,
+                  amount: s.amount,
+                })),
+              },
+            }
+          : {}),
       },
       include: {
         items: { include: { product: true, variant: true } },
         customer: true,
+        payments: true,
       },
     });
 
@@ -276,6 +338,71 @@ export async function deleteSale(
     await tx.sale.update({
       where: { id: saleId },
       data: { isDeleted: true, deletedAt: new Date() },
+    });
+  });
+
+  await invalidateSaleCache(tenantId);
+  await invalidateProductCache(tenantId);
+}
+
+// ─── Cancel Sale (keeps row visible, restores stock once) ───
+// Different from deleteSale: the sale row stays in the listing with
+// paymentStatus = "cancelled" so revenue/customer history reflect the
+// cancellation. Inventory is restored exactly once — the
+// `inventoryRestored` flag guards against double-restoration if cancel
+// is invoked twice (e.g. by a webhook race or repeated admin clicks).
+
+export async function cancelSale(
+  tenantId: string,
+  userId: string,
+  saleId: string
+) {
+  void userId;
+  const sale = await prisma.sale.findFirst({
+    where: { id: saleId, tenantId },
+    include: {
+      items: {
+        include: {
+          product: { select: { id: true, tenantId: true } },
+          variant: { select: { id: true, product: { select: { tenantId: true } } } },
+        },
+      },
+    },
+  });
+  if (!sale) throw new Error("Sale not found");
+
+  if (sale.paymentStatus === "cancelled" && sale.inventoryRestored) {
+    return sale;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (!sale.inventoryRestored) {
+      for (const item of sale.items) {
+        if (item.productId && item.product?.tenantId === tenantId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stockQuantity: { increment: item.quantity } },
+          });
+        }
+        if (
+          item.variantId &&
+          item.variant?.product?.tenantId === tenantId
+        ) {
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stockQuantity: { increment: item.quantity } },
+          });
+        }
+      }
+    }
+
+    await tx.sale.update({
+      where: { id: saleId },
+      data: {
+        paymentStatus: "cancelled",
+        cancelledAt: new Date(),
+        inventoryRestored: true,
+      },
     });
   });
 

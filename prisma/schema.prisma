@@ -382,6 +382,19 @@ model Sale {
   orderStatus     String   @default("pending") @map("order_status")
   status          String   @default("completed")
 
+  // Payment terms (immediate | cod | credit). For "credit", `creditDays`
+  // and `dueDate` describe when the buyer must pay. For "cod", payment
+  // is collected on delivery and `amountDue` carries until then.
+  paymentTerms String    @default("immediate") @map("payment_terms")
+  creditDays   Int?      @map("credit_days")
+  dueDate      DateTime? @map("due_date")
+
+  // Cancel lifecycle. `inventoryRestored` is the once-only guard that
+  // prevents double-restoration if cancelSale is invoked more than once
+  // (or by both webhook + admin). `cancelledAt` is the audit timestamp.
+  inventoryRestored Boolean   @default(false) @map("inventory_restored")
+  cancelledAt       DateTime? @map("cancelled_at")
+
   // Courier
   courierStatus       String?   @default("not_sent") @map("courier_status")
   courierName         String?   @map("courier_name")
@@ -414,6 +427,7 @@ model Sale {
   customer Customer? @relation(fields: [customerId], references: [id])
   creator  User?     @relation("SaleCreator", fields: [createdBy], references: [id])
   items    SaleItem[]
+  payments SalePayment[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, paymentStatus])
@@ -421,6 +435,19 @@ model Sale {
   @@index([tenantId, createdAt])
   @@index([tenantId, isDeleted])
   @@map("sales")
+}
+
+model SalePayment {
+  id        String   @id @default(uuid()) @db.Uuid
+  saleId    String   @map("sale_id") @db.Uuid
+  method    String
+  amount    Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([saleId])
+  @@map("sale_payments")
 }
 
 model SaleItem {

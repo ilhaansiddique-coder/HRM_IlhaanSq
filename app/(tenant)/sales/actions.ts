@@ -5,7 +5,11 @@ import {
   createSale,
   updateSaleStatus,
   deleteSale,
+  cancelSale,
+  type PaymentTerms,
+  type SalePaymentSplit,
 } from "@/lib/services/sale.service";
+import { findOrCreateCustomerByNamePhone } from "@/lib/services/customer.service";
 import {
   getCachedProducts,
   getCachedCustomers,
@@ -91,14 +95,85 @@ export async function createSaleAction(formData: FormData) {
     );
   }
 
+  // Payment splits — multiple methods can each cover a portion of the
+  // grand total. The form posts a JSON array; rows with amount <= 0 are
+  // dropped server-side.
+  let paymentSplits: SalePaymentSplit[] | undefined;
+  const splitsJson = formData.get("paymentSplitsJson") as string | null;
+  if (splitsJson) {
+    try {
+      const parsed = JSON.parse(splitsJson) as Array<{
+        method?: unknown;
+        amount?: unknown;
+      }>;
+      paymentSplits = parsed
+        .map((s) => ({
+          method: typeof s.method === "string" && s.method ? s.method : "cash",
+          amount: Number(s.amount) || 0,
+        }))
+        .filter((s) => s.amount > 0);
+      if (paymentSplits.length === 0) paymentSplits = undefined;
+    } catch {
+      throw new Error("Invalid payment splits");
+    }
+  }
+
+  // Payment terms gate the credit-days / due-date fields. "credit" is
+  // the only term where creditDays is meaningful.
+  const rawTerms = (formData.get("paymentTerms") as string) || "immediate";
+  const paymentTerms: PaymentTerms =
+    rawTerms === "cod" || rawTerms === "credit" ? rawTerms : "immediate";
+
+  let creditDays: number | undefined;
+  if (paymentTerms === "credit") {
+    const raw = formData.get("creditDays") as string | null;
+    const n = raw ? parseInt(raw, 10) : NaN;
+    if (Number.isFinite(n) && n > 0) creditDays = n;
+  }
+
+  const explicitAmountPaid = formData.get("amountPaid");
+  const amountPaid =
+    explicitAmountPaid !== null && explicitAmountPaid !== ""
+      ? parseFloat(explicitAmountPaid as string)
+      : undefined;
+
+  // Customer resolution: an existing customerId wins. Otherwise, auto
+  // match-or-create on (name + phone) so cashiers can type a returning
+  // customer's details without picking from a dropdown and not produce
+  // duplicate rows.
+  const customerName = (formData.get("customerName") as string) || "";
+  const customerPhone =
+    (formData.get("customerPhone") as string) || undefined;
+  const customerAddress =
+    (formData.get("customerAddress") as string) || undefined;
+  const customerWhatsapp =
+    (formData.get("customerWhatsapp") as string) || undefined;
+  const explicitCustomerId =
+    (formData.get("customerId") as string) || undefined;
+
+  const customerId =
+    explicitCustomerId ||
+    (customerName.trim()
+      ? await findOrCreateCustomerByNamePhone(
+          session.tenantId,
+          session.userId,
+          {
+            name: customerName.trim(),
+            phone: customerPhone,
+            address: customerAddress,
+            whatsapp: customerWhatsapp,
+          }
+        )
+      : undefined);
+
   const sale = await createSale(session.tenantId, session.userId, {
-    customerName: formData.get("customerName") as string,
-    customerPhone: (formData.get("customerPhone") as string) || undefined,
-    customerAddress: (formData.get("customerAddress") as string) || undefined,
-    customerWhatsapp: (formData.get("customerWhatsapp") as string) || undefined,
-    customerId: (formData.get("customerId") as string) || undefined,
+    customerName,
+    customerPhone,
+    customerAddress,
+    customerWhatsapp,
+    customerId,
     paymentMethod: formData.get("paymentMethod") as string,
-    paymentStatus: (formData.get("paymentStatus") as string) || "pending",
+    paymentStatus: (formData.get("paymentStatus") as string) || undefined,
     discountAmount: formData.get("discountAmount")
       ? parseFloat(formData.get("discountAmount") as string)
       : 0,
@@ -107,6 +182,10 @@ export async function createSaleAction(formData: FormData) {
       : 0,
     additionalInfo: (formData.get("additionalInfo") as string) || undefined,
     saleDate,
+    paymentTerms,
+    creditDays,
+    paymentSplits,
+    amountPaid,
     items,
   });
 
@@ -145,5 +224,19 @@ export async function deleteSaleAction(formData: FormData) {
   );
   revalidatePath("/sales");
   revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+}
+
+export async function cancelSaleAction(formData: FormData) {
+  const session = await requireTenant();
+  await cancelSale(
+    session.tenantId,
+    session.userId,
+    formData.get("saleId") as string
+  );
+  revalidatePath("/sales");
+  revalidatePath("/invoices");
+  revalidatePath("/inventory");
+  revalidatePath("/products");
   revalidatePath("/dashboard");
 }
