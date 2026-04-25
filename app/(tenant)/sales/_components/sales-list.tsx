@@ -353,7 +353,11 @@ export function SalesList({
         />
       </div>
 
-      <Card className="rounded-lg p-3">
+      {/* In-page toolbar — mobile only. On desktop the TopBar carries
+          the same controls (search / date / filters / users) plus the
+          New Sale button, and the alert/density bits are redundant
+          with the KPI strip. The whole Card is hidden above md. */}
+      <Card className="rounded-lg p-3 md:hidden">
         <SalesToolbar
           filters={filters}
           onChange={setFilters}
