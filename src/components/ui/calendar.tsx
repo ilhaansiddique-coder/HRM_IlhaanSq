@@ -29,11 +29,18 @@ function Calendar({
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        table: "w-full border-collapse",
-        head_row: "flex gap-1",
+        // Spacing notes:
+        // - space-y-1.5 on the table adds 6px vertical gap between rows.
+        // - space-x-1.5 on each row adds 6px horizontal gap between cells.
+        // We use margin-based space-* utilities instead of the gap property
+        // because react-day-picker renders rows as <tr> elements; the gap
+        // property is inconsistent on table-row even when overridden to
+        // display:flex, but margin-based utilities always work.
+        table: "w-full border-collapse space-y-1.5",
+        head_row: "flex space-x-1.5",
         head_cell:
           "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full gap-1 mt-1",
+        row: "flex w-full space-x-1.5",
         cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
