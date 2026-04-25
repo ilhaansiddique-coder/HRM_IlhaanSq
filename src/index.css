@@ -18,99 +18,187 @@
 @tailwind utilities;
 
 @layer base {
+  /* ─── Cross-theme tokens ────────────────────────────────────
+     Variables that don't change between Light and Night themes.
+     Type stack, radius, shadow, motion, etc. */
   :root,
   html[data-theme] {
-    /* Bridge existing semantic tokens to daisyUI theme tokens */
-    --background: var(--color-base-100);
-    --foreground: var(--color-base-content);
-
-    --card: var(--color-base-100);
-    --card-foreground: var(--color-base-content);
-
-    --popover: var(--color-base-100);
-    --popover-foreground: var(--color-base-content);
-
-    --primary: var(--color-primary);
-    --primary-foreground: var(--color-primary-content);
-
-    --secondary: var(--color-secondary);
-    --secondary-foreground: var(--color-secondary-content);
-
-    --muted: var(--color-base-200);
-    --muted-foreground: color-mix(in oklab, var(--color-base-content) 65%, transparent);
-
-    --success: var(--color-success);
-    --success-foreground: var(--color-success-content);
-
-    --warning: var(--color-warning);
-    --warning-foreground: var(--color-warning-content);
-
-    --accent: var(--color-accent);
-    --accent-foreground: var(--color-accent-content);
-
-    --destructive: var(--color-error);
-    --destructive-foreground: var(--color-error-content);
-
-    --border: var(--color-base-300);
-    --input: var(--color-base-300);
-    --ring: var(--color-primary);
-
-    --radius: 1rem;
-
-    --sidebar-background: var(--color-base-200);
-    --sidebar-foreground: var(--color-base-content);
-    --sidebar-primary: var(--color-primary);
-    --sidebar-primary-foreground: var(--color-primary-content);
-    /* Sidebar active-pill background. The shadcn SidebarMenuButton
-       primitive bakes `data-[active=true]:bg-sidebar-accent` into its
-       CVA, so this — not --primary — controls the active-menu colour.
-       Hardcoded #5d60ef so the brand indigo applies on Light AND Night
-       themes (rather than tracking the per-theme --color-primary). */
-    --sidebar-accent: #5d60ef;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: var(--color-base-300);
-    --sidebar-ring: var(--color-primary);
-
-    /* Unified type stack — Bricolage Grotesque self-hosted from
-       public/fonts. Both --font-sans (body) and --font-display (headings)
-       resolve to the same family; next/font is no longer used. */
+    /* Type stack — Bricolage Grotesque self-hosted from public/fonts. */
     --font-sans: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
     --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+
+    /* Sizing & elevation */
+    --radius: 0.5rem;
+    --letter-spacing: 0.025em;
+
+    --shadow-blur: 3px;
+    --shadow-spread: 0px;
+    --shadow-offset-x: 0px;
+    --shadow-offset-y: 1px;
+    --shadow-color: #000000;
+    --shadow-opacity: 0.17;
   }
 
-  /* ─── Custom Light Theme (Dabang-inspired) ──────────────────
-     Overrides daisyUI's default "light" theme with a modern indigo-accented
-     palette. Cards stay pure white, surfaces are soft slate, primary is a
-     friendly indigo. Pairs with the default "night" theme for dark mode. */
+  /* ─── Light theme (default) ─────────────────────────────────
+     Mint-green primary on near-white surfaces. Both shadcn semantic
+     tokens (--primary, --background…) and daisyUI palette tokens
+     (--color-primary, --color-base-100…) are set in lockstep so
+     consumers of either system see the same values. */
   html[data-theme="light"] {
     color-scheme: light;
+
     /* Surfaces */
-    --color-base-100: #ffffff;          /* Cards, main canvas */
-    --color-base-200: #f8fafc;          /* Muted surfaces (subtle elevation) */
-    --color-base-300: #e2e8f0;          /* Borders, dividers, inputs */
-    --color-base-content: #0f172a;      /* Body text */
+    --background: #fcfcfc;
+    --foreground: #171717;
+    --card: #fcfcfc;
+    --card-foreground: #171717;
+    --popover: #fcfcfc;
+    --popover-foreground: #525252;
+    --muted: #ededed;
+    --muted-foreground: #202020;
+    --input: #f6f6f6;
+    --border: #dfdfdf;
 
     /* Accents */
-    --color-primary: #5d60ef;           /* Brand indigo — sidebar active pill, buttons, links */
-    --color-primary-content: #ffffff;
-    --color-secondary: #8b5cf6;         /* Violet-500 */
-    --color-secondary-content: #ffffff;
-    --color-accent: #f472b6;            /* Pink-400 — badges, highlights */
-    --color-accent-content: #ffffff;
-
-    /* Neutral */
-    --color-neutral: #1e293b;           /* Slate-800 — dark elements on light */
-    --color-neutral-content: #f1f5f9;
+    --primary: #72e3ad;
+    --primary-foreground: #1e2723;
+    --secondary: #fdfdfd;
+    --secondary-foreground: #171717;
+    --accent: #ededed;
+    --accent-foreground: #202020;
 
     /* Status */
-    --color-info: #3b82f6;              /* Blue-500 */
+    --destructive: #ca3214;
+    --destructive-foreground: #fffcfc;
+    --success: #10b981;
+    --success-foreground: #ffffff;
+    --warning: #f97316;
+    --warning-foreground: #ffffff;
+    --info: #3b82f6;
+    --info-foreground: #ffffff;
+
+    --ring: #72e3ad;
+
+    /* Sidebar — active pill follows --sidebar-accent per the doc spec. */
+    --sidebar: #fcfcfc;
+    --sidebar-foreground: #707070;
+    --sidebar-background: #fcfcfc;
+    --sidebar-primary: #72e3ad;
+    --sidebar-primary-foreground: #1e2723;
+    --sidebar-accent: #ededed;
+    --sidebar-accent-foreground: #202020;
+    --sidebar-border: #dfdfdf;
+    --sidebar-ring: #72e3ad;
+
+    /* Charts (Recharts dashboard widgets) */
+    --chart-1: #72e3ad;
+    --chart-2: #3b82f6;
+    --chart-3: #8b5cf6;
+    --chart-4: #f59e0b;
+    --chart-5: #10b981;
+
+    /* daisyUI palette mirrors */
+    --color-base-100: #fcfcfc;
+    --color-base-200: #ededed;
+    --color-base-300: #dfdfdf;
+    --color-base-content: #171717;
+    --color-primary: #72e3ad;
+    --color-primary-content: #1e2723;
+    --color-secondary: #fdfdfd;
+    --color-secondary-content: #171717;
+    --color-accent: #ededed;
+    --color-accent-content: #202020;
+    --color-neutral: #1e293b;
+    --color-neutral-content: #f1f5f9;
+    --color-info: #3b82f6;
     --color-info-content: #ffffff;
-    --color-success: #10b981;           /* Emerald-500 */
+    --color-success: #10b981;
     --color-success-content: #ffffff;
-    --color-warning: #f97316;           /* Orange-500 */
+    --color-warning: #f97316;
     --color-warning-content: #ffffff;
-    --color-error: #ef4444;             /* Red-500 */
-    --color-error-content: #ffffff;
+    --color-error: #ca3214;
+    --color-error-content: #fffcfc;
+  }
+
+  /* ─── Night theme ───────────────────────────────────────────
+     Deep-green primary on near-black surfaces. Overrides daisyUI's
+     built-in "night" theme so our spec wins. */
+  html[data-theme="night"] {
+    color-scheme: dark;
+
+    /* Surfaces */
+    --background: #121212;
+    --foreground: #e2e8f0;
+    --card: #171717;
+    --card-foreground: #e2e8f0;
+    --popover: #242424;
+    --popover-foreground: #a9a9a9;
+    --muted: #1f1f1f;
+    --muted-foreground: #a2a2a2;
+    --input: #242424;
+    --border: #292929;
+
+    /* Accents */
+    --primary: #006239;
+    --primary-foreground: #dde8e3;
+    --secondary: #242424;
+    --secondary-foreground: #fafafa;
+    --accent: #313131;
+    --accent-foreground: #fafafa;
+
+    /* Status */
+    --destructive: #541c15;
+    --destructive-foreground: #ede9e8;
+    --success: #2dd4bf;
+    --success-foreground: #ffffff;
+    --warning: #fbbf24;
+    --warning-foreground: #171717;
+    --info: #60a5fa;
+    --info-foreground: #ffffff;
+
+    --ring: #4ade80;
+
+    /* Sidebar */
+    --sidebar: #121212;
+    --sidebar-foreground: #898989;
+    --sidebar-background: #121212;
+    --sidebar-primary: #006239;
+    --sidebar-primary-foreground: #dde8e3;
+    --sidebar-accent: #313131;
+    --sidebar-accent-foreground: #fafafa;
+    --sidebar-border: #292929;
+    --sidebar-ring: #4ade80;
+
+    /* Charts */
+    --chart-1: #4ade80;
+    --chart-2: #60a5fa;
+    --chart-3: #a78bfa;
+    --chart-4: #fbbf24;
+    --chart-5: #2dd4bf;
+
+    /* daisyUI palette mirrors */
+    --color-base-100: #121212;
+    --color-base-200: #1f1f1f;
+    --color-base-300: #292929;
+    --color-base-content: #e2e8f0;
+    --color-primary: #006239;
+    --color-primary-content: #dde8e3;
+    --color-secondary: #242424;
+    --color-secondary-content: #fafafa;
+    --color-accent: #313131;
+    --color-accent-content: #fafafa;
+    --color-neutral: #f1f5f9;
+    --color-neutral-content: #1e293b;
+    --color-info: #60a5fa;
+    --color-info-content: #ffffff;
+    --color-success: #2dd4bf;
+    --color-success-content: #ffffff;
+    --color-warning: #fbbf24;
+    --color-warning-content: #171717;
+    --color-error: #541c15;
+    --color-error-content: #ede9e8;
   }
 }
 
