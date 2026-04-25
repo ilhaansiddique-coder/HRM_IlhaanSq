@@ -715,7 +715,7 @@ function MobileBottomNav({
         show ? "translate-y-0" : "translate-y-full"
       }`}
     >
-      <nav className="flex items-center gap-2 overflow-x-auto border-t border-border/70 bg-card/95 px-3 py-1.5 shadow-[0_-6px_20px_-16px_rgba(0,0,0,0.4)] backdrop-blur scrollbar-hide">
+      <nav className="flex items-center gap-2 overflow-x-auto border-t border-border/70 bg-card px-3 py-1.5 shadow-[0_-6px_20px_-16px_rgba(0,0,0,0.4)] scrollbar-hide">
         {items.map(({ label, to, icon: Icon }) => {
           const active = pathname === to || pathname.startsWith(`${to}/`);
           return (
