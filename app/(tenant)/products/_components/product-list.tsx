@@ -16,7 +16,6 @@ import {
   Upload,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
 import { useCurrency } from "../../_components/providers";
@@ -235,11 +234,14 @@ export function ProductList({
         />
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+      {/* Mobile-only search input. The desktop toolbar that used to live
+          here is gone — search + filter + Add Product moved to the
+          page-aware TopBar (ProductsHeaderControls + ProductsActionsCluster). */}
+      <div className="md:hidden">
+        <div className="relative">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-foreground/60"
           />
           <Input
             type="text"
@@ -249,20 +251,6 @@ export function ProductList({
             className="pl-9"
           />
         </div>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as StockFilter)}
-          className="hidden md:block h-9 rounded-md border border-input bg-background px-3 text-sm"
-        >
-          <option value="all">All Stock</option>
-          <option value="in">In Stock</option>
-          <option value="low">Low Stock</option>
-          <option value="out">Out of Stock</option>
-        </select>
-        <Button onClick={openCreate} className="hidden md:inline-flex">
-          <Plus className="h-4 w-4" />
-          Add Product
-        </Button>
       </div>
 
       {filtered.length === 0 ? (
