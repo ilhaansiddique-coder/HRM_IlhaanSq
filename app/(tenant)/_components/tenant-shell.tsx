@@ -44,6 +44,7 @@ import {
   GraduationCap,
   FolderLock,
   ClipboardCheck,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
@@ -104,14 +105,21 @@ const menuItems = [
   { title: "Alerts", url: "/alerts", icon: Bell },
 ];
 
-// Always-visible mobile bottom-nav entries — shown to every authenticated
-// tenant user regardless of role.
+// Mobile bottom-nav entries — shown to every authenticated tenant user
+// regardless of role. Order below matches the spec the user provided
+// (deduplicated across the three reference screenshots). Admin gets
+// appended for owner / admin / superadmin roles below.
 const baseBottomNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: Home },
   { label: "Products", to: "/products", icon: Package },
   { label: "Sales", to: "/sales", icon: ShoppingCart },
+  { label: "Packaging", to: "/packaging", icon: PackageCheck },
   { label: "Customers", to: "/customers", icon: Users },
   { label: "Reports", to: "/reports", icon: BarChart3 },
+  { label: "Invoices", to: "/invoices", icon: FileText },
+  { label: "Alerts", to: "/alerts", icon: Bell },
+  { label: "Profile", to: "/profile", icon: User },
+  { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 export function TenantShell({
@@ -672,11 +680,12 @@ function MobileBottomNav({
   //   - everyone: Dashboard, Products, Sales, Customers, Reports
   //   - super admin: + Tenants (cross-tenant management)
   //   - any admin (owner / admin / super admin): + Admin
+  // (Tenants is intentionally NOT in the mobile bar per the spec —
+  //  super admins reach it via the desktop sidebar.)
   const isAdmin =
     role === "owner" || role === "admin" || role === "superadmin" || isSuperAdmin;
   const items = [
     ...baseBottomNavItems,
-    ...(isSuperAdmin ? [{ label: "Tenants", to: "/tenants", icon: Building2 }] : []),
     ...(isAdmin ? [{ label: "Admin", to: "/admin", icon: Shield }] : []),
   ];
 
