@@ -67,6 +67,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { DateRangePicker } from "../dashboard/_components/date-range-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -440,9 +441,19 @@ function TopBar({
     .join("")
     .toUpperCase();
 
+  // Show the dashboard's date range picker in the TopBar's left slot
+  // when we're on the dashboard route — keeps everything in one row.
+  const { activePath } = useOptimisticNav();
+  const isDashboard = activePath === "/dashboard";
+
   return (
     <TooltipProvider delayDuration={150}>
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-end gap-1.5 border-b border-border/60 bg-card/80 px-4 backdrop-blur md:px-6">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 backdrop-blur md:px-6">
+        {/* Left — page-specific controls (currently dashboard date picker) */}
+        <div className="flex flex-1 items-center justify-start">
+          {isDashboard && <DateRangePicker />}
+        </div>
+
         {/* Quick navigation shortcuts */}
         <ToolbarIconLink href="/sales" label="Sales">
           <ShoppingCart className="h-4 w-4" />

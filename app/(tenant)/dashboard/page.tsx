@@ -3,7 +3,6 @@ import {
   getDashboardAnalytics,
   getPlatformCounters,
 } from "@/lib/services/dashboard-analytics.service";
-import { DashboardToolbar } from "./_components/dashboard-toolbar";
 import { KpiCardsRow } from "./_components/kpi-cards";
 import { VisitorInsightsChart } from "./_components/visitor-insights-chart";
 import { TotalRevenueChart } from "./_components/total-revenue-chart";
@@ -24,8 +23,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <DashboardToolbar />
-
       {/* Row 1 — KPI cards (left, 2/3) + Visitor Insights (right, 1/3 on xl, stack below) */}
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
