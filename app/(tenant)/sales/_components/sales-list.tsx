@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCurrency } from "../../_components/providers";
 import {
   Ban,
-  CheckCircle2,
-  CircleDollarSign,
+  CreditCard,
+  DollarSign,
   ShoppingCart,
-  Wallet,
+  TrendingUp,
+  Truck,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -260,13 +261,22 @@ export function SalesList({
   // KPIs reflect the filtered slice — what the user sees, not the
   // global total. Cancelled rows excluded from money columns so the
   // numbers stay meaningful when the cancelled toggle flips on.
+  // COD Due / Credit Due are split out from a generic "Outstanding"
+  // so the two collection channels each get their own KPI tile.
   const kpis = useMemo(() => {
     const active = filtered.filter((s) => s.paymentStatus !== "cancelled");
     return {
-      count: filtered.length,
+      count: active.length,
       revenue: active.reduce((sum, s) => sum + s.grandTotal, 0),
       paid: active.reduce((sum, s) => sum + s.amountPaid, 0),
-      due: active.reduce((sum, s) => sum + s.amountDue, 0),
+      codDue: active.reduce(
+        (sum, s) => sum + (s.paymentTerms === "cod" ? s.amountDue : 0),
+        0
+      ),
+      creditDue: active.reduce(
+        (sum, s) => sum + (s.paymentTerms === "credit" ? s.amountDue : 0),
+        0
+      ),
     };
   }, [filtered]);
 
@@ -330,26 +340,28 @@ export function SalesList({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
-          label="Total Sales"
-          value={kpis.count.toLocaleString()}
-          icon={<ShoppingCart className="h-4 w-4" />}
-        />
-        <KpiCard
-          label="Revenue"
+          label="Total Revenue"
           value={formatAmount(kpis.revenue)}
-          icon={<CircleDollarSign className="h-4 w-4 text-primary" />}
+          sublabel={`From ${kpis.count.toLocaleString()} sale${kpis.count === 1 ? "" : "s"}`}
+          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         />
         <KpiCard
-          label="Paid"
+          label="Amount Paid"
           value={formatAmount(kpis.paid)}
-          icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-          accent="success"
+          sublabel="Received payments"
+          icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
         />
         <KpiCard
-          label="Outstanding"
-          value={formatAmount(kpis.due)}
-          icon={<Wallet className="h-4 w-4 text-amber-500" />}
-          accent="warning"
+          label="COD Due"
+          value={formatAmount(kpis.codDue)}
+          sublabel="Courier due"
+          icon={<Truck className="h-4 w-4 text-muted-foreground" />}
+        />
+        <KpiCard
+          label="Credit Due"
+          value={formatAmount(kpis.creditDue)}
+          sublabel="Credit outstanding"
+          icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
 
@@ -615,11 +627,13 @@ export function SalesList({
 function KpiCard({
   label,
   value,
+  sublabel,
   icon,
   accent,
 }: {
   label: string;
   value: string;
+  sublabel?: string;
   icon: React.ReactNode;
   accent?: "success" | "warning";
 }) {
@@ -632,10 +646,13 @@ function KpiCard({
   return (
     <Card className="rounded-lg p-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <span className="text-sm font-medium text-foreground">{label}</span>
         {icon}
       </div>
-      <div className={`mt-2 text-xl font-bold ${valueClass}`}>{value}</div>
+      <div className={`mt-2 text-2xl font-bold ${valueClass}`}>{value}</div>
+      {sublabel && (
+        <div className="mt-1 text-xs text-muted-foreground">{sublabel}</div>
+      )}
     </Card>
   );
 }
