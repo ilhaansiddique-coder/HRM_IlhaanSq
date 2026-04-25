@@ -80,10 +80,21 @@ export function ProductsHeaderControls() {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Stock</SelectItem>
-          <SelectItem value="in">In Stock</SelectItem>
-          <SelectItem value="low">Low Stock</SelectItem>
-          <SelectItem value="out">Out of Stock</SelectItem>
+          {/* pl-3 overrides the primitive's pl-8 (which leaves room for the
+              active-item check indicator). Compact dropdown is what the
+              user asked for. */}
+          <SelectItem value="all" className="pl-3">
+            All Stock
+          </SelectItem>
+          <SelectItem value="in" className="pl-3">
+            In Stock
+          </SelectItem>
+          <SelectItem value="low" className="pl-3">
+            Low Stock
+          </SelectItem>
+          <SelectItem value="out" className="pl-3">
+            Out of Stock
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>
