@@ -6,14 +6,11 @@ import {
   Ban,
   CheckCircle2,
   CircleDollarSign,
-  Plus,
-  Search,
   ShoppingCart,
   Wallet,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -26,6 +23,14 @@ import {
 import { toast } from "@/lib/toast";
 import { cancelSaleAction } from "../actions";
 import { NewSaleDialog } from "./new-sale-dialog";
+import {
+  SalesToolbar,
+  type ToolbarFilters,
+  type StatusKey,
+  type TermsKey,
+  type CourierKey,
+  type DatePreset,
+} from "./sales-toolbar";
 
 export type SerializedSaleRow = {
   id: string;
@@ -36,8 +41,12 @@ export type SerializedSaleRow = {
   amountPaid: number;
   amountDue: number;
   paymentStatus: string;
+  paymentTerms: string;
   courierStatus: string | null;
+  dueDate: string | null;
   createdAt: string;
+  createdById: string | null;
+  createdByName: string | null;
   itemCount: number;
 };
 
@@ -51,42 +60,157 @@ const paymentVariants: Record<
   cancelled: "destructive",
 };
 
-type StatusFilter = "all" | "paid" | "partial" | "pending" | "cancelled";
+// Convert a date preset to absolute [start, end] bounds. Returns null
+// for "all" (no date constraint). Custom uses the explicit YYYY-MM-DD
+// strings the toolbar passes in.
+function presetRange(
+  preset: DatePreset,
+  startDate: string,
+  endDate: string
+): { start: Date | null; end: Date | null } {
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
 
-const statusOptions: Array<{ key: StatusFilter; label: string }> = [
-  { key: "all", label: "All" },
-  { key: "paid", label: "Paid" },
-  { key: "partial", label: "Partial" },
-  { key: "pending", label: "Pending" },
-  { key: "cancelled", label: "Cancelled" },
-];
+  const endOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+
+  switch (preset) {
+    case "all":
+      return { start: null, end: null };
+    case "today":
+      return { start: startOfToday, end: endOfToday };
+    case "yesterday": {
+      const s = new Date(startOfToday);
+      s.setDate(s.getDate() - 1);
+      const e = new Date(endOfToday);
+      e.setDate(e.getDate() - 1);
+      return { start: s, end: e };
+    }
+    case "last7": {
+      const s = new Date(startOfToday);
+      s.setDate(s.getDate() - 6);
+      return { start: s, end: endOfToday };
+    }
+    case "last30": {
+      const s = new Date(startOfToday);
+      s.setDate(s.getDate() - 29);
+      return { start: s, end: endOfToday };
+    }
+    case "this_month": {
+      const s = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: s, end: endOfToday };
+    }
+    case "last_month": {
+      const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const e = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        0,
+        23,
+        59,
+        59,
+        999
+      );
+      return { start: s, end: e };
+    }
+    case "custom": {
+      return {
+        start: startDate ? new Date(`${startDate}T00:00:00`) : null,
+        end: endDate ? new Date(`${endDate}T23:59:59.999`) : null,
+      };
+    }
+  }
+}
 
 export function SalesList({
   initialSales,
 }: {
   initialSales: SerializedSaleRow[];
 }) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [startDate, setStartDate] = useState<string>(""); // YYYY-MM-DD
-  const [endDate, setEndDate] = useState<string>(""); // YYYY-MM-DD
-  const [newSaleOpen, setNewSaleOpen] = useState(false);
   const { formatAmount } = useCurrency();
   const [pending, startTransition] = useTransition();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [newSaleOpen, setNewSaleOpen] = useState(false);
+
+  const [filters, setFilters] = useState<ToolbarFilters>({
+    search: "",
+    datePreset: "all",
+    startDate: "",
+    endDate: "",
+    statuses: new Set(),
+    terms: new Set(),
+    couriers: new Set(),
+    userId: "",
+    showCancelled: false,
+    density: "comfortable",
+  });
+
+  // Distinct users present in the loaded sales — drives the "All Users"
+  // dropdown so it only lists creators the viewer can actually filter to.
+  const users = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const s of initialSales) {
+      if (s.createdById && !seen.has(s.createdById)) {
+        seen.set(s.createdById, s.createdByName ?? "Unknown");
+      }
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [initialSales]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
-    const end = endDate ? new Date(`${endDate}T23:59:59.999`) : null;
+    const q = filters.search.trim().toLowerCase();
+    const { start, end } = presetRange(
+      filters.datePreset,
+      filters.startDate,
+      filters.endDate
+    );
 
     return initialSales.filter((s) => {
-      if (statusFilter !== "all" && s.paymentStatus !== statusFilter) return false;
+      // Cancelled rows are hidden by default; the toolbar Switch opts them in.
+      if (!filters.showCancelled && s.paymentStatus === "cancelled") {
+        return false;
+      }
+
+      if (
+        filters.statuses.size > 0 &&
+        !filters.statuses.has(s.paymentStatus as StatusKey)
+      ) {
+        return false;
+      }
+
+      if (
+        filters.terms.size > 0 &&
+        !filters.terms.has(s.paymentTerms as TermsKey)
+      ) {
+        return false;
+      }
+
+      if (filters.couriers.size > 0) {
+        const c = (s.courierStatus ?? "not_sent") as CourierKey;
+        if (!filters.couriers.has(c)) return false;
+      }
+
+      if (filters.userId && s.createdById !== filters.userId) return false;
+
       if (start || end) {
         const d = new Date(s.createdAt);
         if (start && d < start) return false;
         if (end && d > end) return false;
       }
+
       if (q) {
         const hit =
           s.invoiceNumber.toLowerCase().includes(q) ||
@@ -94,13 +218,14 @@ export function SalesList({
           (s.customerPhone ?? "").toLowerCase().includes(q);
         if (!hit) return false;
       }
+
       return true;
     });
-  }, [initialSales, search, statusFilter, startDate, endDate]);
+  }, [initialSales, filters]);
 
   // KPIs reflect the filtered slice — what the user sees, not the
-  // global total. Cancelled sales are excluded from "Revenue" so the
-  // number stays meaningful when you flip filters.
+  // global total. Cancelled rows excluded from money columns so the
+  // numbers stay meaningful when the cancelled toggle flips on.
   const kpis = useMemo(() => {
     const active = filtered.filter((s) => s.paymentStatus !== "cancelled");
     return {
@@ -110,6 +235,30 @@ export function SalesList({
       due: active.reduce((sum, s) => sum + s.amountDue, 0),
     };
   }, [filtered]);
+
+  // "Outstanding" = needs attention. Either the buyer still owes money
+  // and no term implies it'll be collected later, OR a credit sale's
+  // due date has already passed. Cancelled rows never count.
+  const alertCount = useMemo(() => {
+    const now = Date.now();
+    return initialSales.filter((s) => {
+      if (s.paymentStatus === "cancelled") return false;
+      if (s.amountDue <= 0) return false;
+      if (s.paymentTerms === "credit" && s.dueDate) {
+        return new Date(s.dueDate).getTime() < now;
+      }
+      return s.paymentStatus === "pending" || s.paymentStatus === "partial";
+    }).length;
+  }, [initialSales]);
+
+  function handleAlertClick() {
+    // Surface the outstanding subset: pending + partial, hide cancelled.
+    setFilters((prev) => ({
+      ...prev,
+      statuses: new Set<StatusKey>(["pending", "partial"]),
+      showCancelled: false,
+    }));
+  }
 
   function handleCancel(saleId: string, invoice: string) {
     if (
@@ -134,14 +283,12 @@ export function SalesList({
     });
   }
 
-  function clearDates() {
-    setStartDate("");
-    setEndDate("");
-  }
+  const compact = filters.density === "compact";
+  const cellPad = compact ? "py-1.5" : "py-3";
+  const cardPad = compact ? "p-2" : "p-3";
 
   return (
     <div className="space-y-4">
-      {/* KPI cards. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="Total Sales"
@@ -167,73 +314,15 @@ export function SalesList({
         />
       </div>
 
-      {/* Search + new sale. */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            type="text"
-            placeholder="Search by invoice, customer, phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Button
-          className="w-full sm:w-auto"
-          onClick={() => setNewSaleOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          New Sale
-        </Button>
-      </div>
-
-      {/* Status filter chips + date range. */}
       <Card className="rounded-lg p-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-2">
-            {statusOptions.map((opt) => (
-              <Button
-                key={opt.key}
-                variant={statusFilter === opt.key ? "default" : "outline"}
-                size="sm"
-                className="rounded-lg"
-                onClick={() => setStatusFilter(opt.key)}
-              >
-                {opt.label}
-              </Button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs text-muted-foreground">From</label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="h-9 w-auto"
-            />
-            <label className="text-xs text-muted-foreground">To</label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="h-9 w-auto"
-            />
-            {(startDate || endDate) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearDates}
-                className="h-9"
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-        </div>
+        <SalesToolbar
+          filters={filters}
+          onChange={setFilters}
+          users={users}
+          alertCount={alertCount}
+          onAlertClick={handleAlertClick}
+          onNewSale={() => setNewSaleOpen(true)}
+        />
       </Card>
 
       {/* Desktop table. */}
@@ -249,6 +338,8 @@ export function SalesList({
                 <TableHead className="text-right">Paid</TableHead>
                 <TableHead className="text-right">Due</TableHead>
                 <TableHead>Payment</TableHead>
+                <TableHead>Terms</TableHead>
+                <TableHead>By</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -257,7 +348,7 @@ export function SalesList({
               {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={11}
                     className="text-center py-12 text-muted-foreground"
                   >
                     <ShoppingCart className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -267,12 +358,21 @@ export function SalesList({
               ) : (
                 filtered.map((sale) => {
                   const cancelled = sale.paymentStatus === "cancelled";
+                  const isOverdue =
+                    sale.paymentTerms === "credit" &&
+                    sale.dueDate &&
+                    new Date(sale.dueDate).getTime() < Date.now() &&
+                    sale.amountDue > 0 &&
+                    !cancelled;
                   return (
-                    <TableRow key={sale.id} className={cancelled ? "opacity-60" : ""}>
-                      <TableCell className="font-mono text-xs">
+                    <TableRow
+                      key={sale.id}
+                      className={cancelled ? "opacity-60" : ""}
+                    >
+                      <TableCell className={`font-mono text-xs ${cellPad}`}>
                         {sale.invoiceNumber}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className={cellPad}>
                         <div>
                           <span className="font-medium">{sale.customerName}</span>
                           {sale.customerPhone && (
@@ -282,36 +382,57 @@ export function SalesList({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{sale.itemCount}</TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className={cellPad}>{sale.itemCount}</TableCell>
+                      <TableCell className={`text-right font-medium ${cellPad}`}>
                         {formatAmount(sale.grandTotal)}
                       </TableCell>
-                      <TableCell className="text-right text-emerald-600">
+                      <TableCell className={`text-right text-emerald-600 ${cellPad}`}>
                         {formatAmount(sale.amountPaid)}
                       </TableCell>
                       <TableCell
-                        className={`text-right ${
-                          sale.amountDue > 0 ? "font-medium text-amber-600" : "text-muted-foreground"
+                        className={`text-right ${cellPad} ${
+                          sale.amountDue > 0
+                            ? isOverdue
+                              ? "font-semibold text-destructive"
+                              : "font-medium text-amber-600"
+                            : "text-muted-foreground"
                         }`}
                       >
                         {formatAmount(sale.amountDue)}
+                        {isOverdue && (
+                          <span className="ml-1 text-[10px] uppercase">overdue</span>
+                        )}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={paymentVariants[sale.paymentStatus] ?? "outline"}>
+                      <TableCell className={cellPad}>
+                        <Badge
+                          variant={
+                            paymentVariants[sale.paymentStatus] ?? "outline"
+                          }
+                        >
                           {sale.paymentStatus}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className={`text-xs capitalize ${cellPad}`}>
+                        {sale.paymentTerms}
+                      </TableCell>
+                      <TableCell className={`text-xs text-muted-foreground ${cellPad}`}>
+                        {sale.createdByName ?? "—"}
+                      </TableCell>
+                      <TableCell
+                        className={`text-xs text-muted-foreground ${cellPad}`}
+                      >
                         {new Date(sale.createdAt).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className={`text-right ${cellPad}`}>
                         {!cancelled && (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                             disabled={pending && cancellingId === sale.id}
-                            onClick={() => handleCancel(sale.id, sale.invoiceNumber)}
+                            onClick={() =>
+                              handleCancel(sale.id, sale.invoiceNumber)
+                            }
                           >
                             <Ban className="h-3.5 w-3.5" />
                             Cancel
@@ -339,10 +460,16 @@ export function SalesList({
         ) : (
           filtered.map((sale) => {
             const cancelled = sale.paymentStatus === "cancelled";
+            const isOverdue =
+              sale.paymentTerms === "credit" &&
+              sale.dueDate &&
+              new Date(sale.dueDate).getTime() < Date.now() &&
+              sale.amountDue > 0 &&
+              !cancelled;
             return (
               <Card
                 key={sale.id}
-                className={`rounded-lg p-3 ${cancelled ? "opacity-60" : ""}`}
+                className={`rounded-lg ${cardPad} ${cancelled ? "opacity-60" : ""}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -366,7 +493,7 @@ export function SalesList({
                   </div>
                 </div>
 
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div className={`${compact ? "mt-1.5" : "mt-2"} grid grid-cols-2 gap-2 text-xs`}>
                   <div className="rounded-md bg-emerald-500/10 px-2 py-1">
                     <span className="text-muted-foreground">Paid</span>
                     <p className="text-sm font-medium text-emerald-600">
@@ -375,13 +502,23 @@ export function SalesList({
                   </div>
                   <div
                     className={`rounded-md px-2 py-1 ${
-                      sale.amountDue > 0 ? "bg-amber-500/10" : "bg-muted/40"
+                      sale.amountDue > 0
+                        ? isOverdue
+                          ? "bg-destructive/10"
+                          : "bg-amber-500/10"
+                        : "bg-muted/40"
                     }`}
                   >
-                    <span className="text-muted-foreground">Due</span>
+                    <span className="text-muted-foreground">
+                      {isOverdue ? "Overdue" : "Due"}
+                    </span>
                     <p
                       className={`text-sm font-medium ${
-                        sale.amountDue > 0 ? "text-amber-600" : "text-foreground"
+                        sale.amountDue > 0
+                          ? isOverdue
+                            ? "text-destructive"
+                            : "text-amber-600"
+                          : "text-foreground"
                       }`}
                     >
                       {formatAmount(sale.amountDue)}
@@ -389,12 +526,15 @@ export function SalesList({
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <div className={`${compact ? "mt-2" : "mt-3"} flex flex-wrap items-center gap-2 text-xs`}>
                   <Badge
                     variant={paymentVariants[sale.paymentStatus] ?? "outline"}
                     className="rounded-lg"
                   >
                     {sale.paymentStatus}
+                  </Badge>
+                  <Badge variant="outline" className="rounded-lg capitalize">
+                    {sale.paymentTerms}
                   </Badge>
                   <span className="text-muted-foreground">
                     {sale.itemCount} item{sale.itemCount !== 1 ? "s" : ""}

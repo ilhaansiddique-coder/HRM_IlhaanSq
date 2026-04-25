@@ -15,11 +15,20 @@ export default async function SalesPage() {
     amountPaid: Number(s.amountPaid ?? 0),
     amountDue: Number(s.amountDue ?? 0),
     paymentStatus: s.paymentStatus,
+    paymentTerms: s.paymentTerms ?? "immediate",
     courierStatus: s.courierStatus ?? null,
+    dueDate: s.dueDate
+      ? (s.dueDate instanceof Date
+          ? s.dueDate
+          : new Date(s.dueDate as unknown as string)
+        ).toISOString()
+      : null,
     createdAt: (s.createdAt instanceof Date
       ? s.createdAt
       : new Date(s.createdAt as unknown as string)
     ).toISOString(),
+    createdById: s.creator?.id ?? null,
+    createdByName: s.creator?.fullName ?? null,
     itemCount: s.items.length,
   }));
 

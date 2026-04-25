@@ -103,7 +103,11 @@ export async function invalidateCustomerCache(tenantId: string) {
 // ─── Sales ──────────────────────────────────────────────────
 
 type SaleWithItems = Prisma.SaleGetPayload<{
-  include: { items: { include: { product: true; variant: true } }; customer: true };
+  include: {
+    items: { include: { product: true; variant: true } };
+    customer: true;
+    creator: { select: { id: true; fullName: true; email: true } };
+  };
 }>;
 
 export async function getCachedSales(tenantId: string): Promise<SaleWithItems[]> {
@@ -117,6 +121,7 @@ export async function getCachedSales(tenantId: string): Promise<SaleWithItems[]>
     include: {
       items: { include: { product: true, variant: true } },
       customer: true,
+      creator: { select: { id: true, fullName: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 200,
