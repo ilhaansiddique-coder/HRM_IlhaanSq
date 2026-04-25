@@ -118,7 +118,7 @@ export function ProductList({
             value={filter}
             onChange={(e) => setFilter(e.target.value as StockFilter)}
             style={{ color: "#AEAEAF", borderColor: "#AEAEAF" }}
-            className="h-9 w-28 rounded-lg border bg-background px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#AEAEAF]/30"
+            className="h-9 w-28 rounded-lg border bg-background pl-3 pr-6 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#AEAEAF]/30"
           >
             <option value="all" style={{ color: "#AEAEAF" }}>
               All Stock
