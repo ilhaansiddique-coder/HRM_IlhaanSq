@@ -61,8 +61,11 @@
     --sidebar-foreground: var(--color-base-content);
     --sidebar-primary: var(--color-primary);
     --sidebar-primary-foreground: var(--color-primary-content);
-    --sidebar-accent: var(--color-accent);
-    --sidebar-accent-foreground: var(--color-accent-content);
+    /* Sidebar active-pill background. The shadcn SidebarMenuButton
+       primitive bakes `data-[active=true]:bg-sidebar-accent` into its
+       CVA, so this — not --primary — controls the active-menu colour. */
+    --sidebar-accent: var(--color-primary);
+    --sidebar-accent-foreground: var(--color-primary-content);
     --sidebar-border: var(--color-base-300);
     --sidebar-ring: var(--color-primary);
 
