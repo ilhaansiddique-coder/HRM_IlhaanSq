@@ -266,14 +266,24 @@ export function DateRangePicker({
             </div>
           </div>
 
-          {/* Calendar + actions */}
+          {/* Calendar + actions.
+              "All Time" is a sentinel range starting Jan 1 2000 — feeding
+              that to the calendar would open it in the year 2000 and
+              highlight a giant block. Suppress both: pin the visible
+              month to last/this month and clear the selection. The
+              preset stays highlighted in the sidebar so users still see
+              that All Time is the active filter. */}
           <div className="min-w-0 flex-1">
             <Calendar
               mode="range"
-              selected={draftRange}
+              selected={draftPreset === "all_time" ? undefined : draftRange}
               onSelect={onCalendarSelect}
               numberOfMonths={2}
-              defaultMonth={draftRange?.from ?? subMonths(new Date(), 1)}
+              defaultMonth={
+                draftPreset === "all_time" || !draftRange?.from
+                  ? subMonths(new Date(), 1)
+                  : draftRange.from
+              }
               showOutsideDays
               className="p-3"
             />
