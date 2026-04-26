@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Fuse from "fuse.js";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Search,
   Plus,
   Minus,
@@ -26,7 +34,15 @@ import {
   X,
 } from "lucide-react";
 import { useCurrency } from "../../../_components/providers";
-import { createSaleAction } from "../../actions";
+import { createSaleAction, updateSaleAction } from "../../actions";
+
+type Variant = {
+  id: string;
+  label: string;
+  sku: string | null;
+  rate: number;
+  stockQuantity: number;
+};
 
 type Product = {
   id: string;
@@ -34,6 +50,17 @@ type Product = {
   sku: string | null;
   rate: number;
   stockQuantity: number;
+  variants?: Variant[];
+};
+
+type PaymentMethodMeta = {
+  id: string;
+  name: string;
+  key: string;
+  type: string;
+  defaultTerms: PaymentTerms;
+  defaultPaidBehavior: "full" | "zero" | "custom";
+  sortOrder: number;
 };
 
 type Customer = {
@@ -46,7 +73,12 @@ type Customer = {
 
 type CartItem = {
   productId: string;
+  // null for products with no variant axis. The same productId can
+  // appear multiple times in the cart with different variantIds —
+  // that's the whole point of variants.
+  variantId?: string | null;
   productName: string;
+  variantLabel?: string | null;
   unitPrice: number;
   quantity: number;
   maxStock: number;
@@ -57,6 +89,27 @@ type PaymentTerms = "immediate" | "cod" | "credit";
 type PaymentSplit = {
   method: string;
   amount: number;
+};
+
+// Initial seed for edit mode. Same shape as DraftShape minus draft-only
+// concerns; carries the saleId + saleDate + invoice number.
+export type POSSaleFormInitial = {
+  saleId: string;
+  saleDate?: string;
+  cart: CartItem[];
+  customerMode: "new" | "existing";
+  selectedCustomerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerWhatsapp: string;
+  discountAmount: number;
+  charge: number;
+  paymentMethod: string;
+  paymentTerms: PaymentTerms;
+  creditDays: number;
+  paymentSplits: PaymentSplit[];
+  notes: string;
 };
 
 const DRAFT_KEY = "sales:new-sale:draft:v1";
@@ -83,46 +136,71 @@ export function POSSaleForm({
   customers,
   paymentMethods,
   onSuccess,
+  mode = "create",
+  initial,
 }: {
   products: Product[];
   customers: Customer[];
-  paymentMethods: { id: string; name: string }[];
+  paymentMethods: PaymentMethodMeta[];
   // When provided (dialog usage), the form notifies its parent on
   // successful submit instead of navigating to /sales itself. Always
   // calls router.refresh() so the listing reflects the new sale.
   onSuccess?: () => void;
+  // "create" wires the form to createSaleAction + draft persistence.
+  // "edit" wires it to updateSaleAction (the saleId comes from
+  // `initial.saleId`) and disables draft persistence so an
+  // in-progress edit doesn't leak into a fresh New Sale.
+  mode?: "create" | "edit";
+  initial?: POSSaleFormInitial;
 }) {
   const router = useRouter();
   const { formatAmount, symbol } = useCurrency();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const isEdit = mode === "edit";
 
   // Cart
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(initial?.cart ?? []);
   const [search, setSearch] = useState("");
+  // When the user clicks a product that has variants, we open this
+  // little picker dialog instead of adding the parent product.
+  const [variantPickerProduct, setVariantPickerProduct] =
+    useState<Product | null>(null);
 
   // Customer
-  const [customerMode, setCustomerMode] = useState<"new" | "existing">("new");
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerAddress, setCustomerAddress] = useState("");
-  const [customerWhatsapp, setCustomerWhatsapp] = useState("");
+  const [customerMode, setCustomerMode] = useState<"new" | "existing">(
+    initial?.customerMode ?? "new"
+  );
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
+    initial?.selectedCustomerId ?? ""
+  );
+  const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
+  const [customerPhone, setCustomerPhone] = useState(initial?.customerPhone ?? "");
+  const [customerAddress, setCustomerAddress] = useState(initial?.customerAddress ?? "");
+  const [customerWhatsapp, setCustomerWhatsapp] = useState(initial?.customerWhatsapp ?? "");
 
   // Totals + payment
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [charge, setCharge] = useState(0);
+  const [discountAmount, setDiscountAmount] = useState(initial?.discountAmount ?? 0);
+  const [charge, setCharge] = useState(initial?.charge ?? 0);
   const [paymentMethod, setPaymentMethod] = useState(
-    paymentMethods[0]?.name ?? "Cash"
+    initial?.paymentMethod ?? paymentMethods[0]?.name ?? "Cash"
   );
-  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("immediate");
-  const [creditDays, setCreditDays] = useState<number>(7);
-  const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>([]);
-  const [notes, setNotes] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(
+    initial?.paymentTerms ?? "immediate"
+  );
+  const [creditDays, setCreditDays] = useState<number>(initial?.creditDays ?? 7);
+  const [paymentSplits, setPaymentSplits] = useState<PaymentSplit[]>(
+    initial?.paymentSplits ?? []
+  );
+  const [notes, setNotes] = useState(initial?.notes ?? "");
 
-  // Draft restore — runs once on mount.
+  // Draft restore + persist — only in create mode. Edit mode skips
+  // both because (a) we don't want a half-finished edit to bleed
+  // into a fresh New Sale, and (b) the initial state IS the source
+  // of truth for an edit.
   const draftRestored = useRef(false);
   useEffect(() => {
+    if (isEdit) return;
     if (draftRestored.current) return;
     draftRestored.current = true;
     try {
@@ -149,11 +227,10 @@ export function POSSaleForm({
       // Corrupt draft — wipe it and continue.
       localStorage.removeItem(DRAFT_KEY);
     }
-  }, []);
+  }, [isEdit]);
 
-  // Draft persist (debounced) — every change saves so a refresh
-  // recovers the half-finished sale.
   useEffect(() => {
+    if (isEdit) return;
     const t = setTimeout(() => {
       const draft: DraftShape = {
         cart,
@@ -179,6 +256,7 @@ export function POSSaleForm({
     }, 250);
     return () => clearTimeout(t);
   }, [
+    isEdit,
     cart,
     customerMode,
     selectedCustomerId,
@@ -195,15 +273,45 @@ export function POSSaleForm({
     notes,
   ]);
 
+  // Auto-prefill payment terms from the chosen method's metadata.
+  // When the cashier picks "COD", default the term to "cod" and zero
+  // the amountPaid; when they pick "Bkash", default to "immediate"
+  // and full prepay. The cashier can still override the term picker
+  // afterwards. Only fires on actual method change so we don't
+  // overwrite the cashier's mid-flow term tweaks.
+  const lastAppliedMethodRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastAppliedMethodRef.current === paymentMethod) return;
+    lastAppliedMethodRef.current = paymentMethod;
+    const meta = paymentMethods.find((m) => m.name === paymentMethod);
+    if (!meta) return;
+    setPaymentTerms(meta.defaultTerms);
+    if (meta.defaultPaidBehavior === "zero") {
+      // Drop any user-entered splits — the COD/credit defaults expect
+      // the buyer hasn't paid anything up front.
+      setPaymentSplits([]);
+    }
+  }, [paymentMethod, paymentMethods]);
+
+  // Fuse.js fuzzy search — handles typos and partial matches that the
+  // old `.includes()` filter missed (e.g. "kuta" finds "Cotton Kurta").
+  // Threshold 0.3 is a sweet spot for product names; ignoreLocation
+  // means a match anywhere in the string scores the same.
+  const fuse = useMemo(
+    () =>
+      new Fuse(products, {
+        keys: ["name", "sku"],
+        threshold: 0.3,
+        ignoreLocation: true,
+      }),
+    [products]
+  );
+
   const filteredProducts = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (!q) return products.slice(0, 50);
-    return products
-      .filter(
-        (p) => p.name.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q)
-      )
-      .slice(0, 50);
-  }, [products, search]);
+    return fuse.search(q).slice(0, 50).map((r) => r.item);
+  }, [fuse, products, search]);
 
   const subtotal = cart.reduce((sum, c) => sum + c.unitPrice * c.quantity, 0);
   const grandTotal = Math.max(0, subtotal - discountAmount + charge);
@@ -230,33 +338,70 @@ export function POSSaleForm({
     return d;
   }, [paymentTerms, creditDays]);
 
-  function addToCart(p: Product) {
-    setCart((prev) => {
-      const existing = prev.find((c) => c.productId === p.id);
-      if (existing) {
-        if (existing.quantity >= p.stockQuantity) return prev;
-        return prev.map((c) =>
-          c.productId === p.id ? { ...c, quantity: c.quantity + 1 } : c
-        );
-      }
-      return [
-        ...prev,
-        {
-          productId: p.id,
-          productName: p.name,
-          unitPrice: p.rate,
-          quantity: 1,
-          maxStock: p.stockQuantity,
-        },
-      ];
+  // Cart row identity is (productId + variantId). The same product
+  // can sit in the cart twice with different variants — that's
+  // intentional. cartKey() centralizes the equality so updateQty /
+  // setUnitPrice / removeFromCart all agree.
+  const cartKey = (productId: string, variantId?: string | null) =>
+    `${productId}::${variantId ?? ""}`;
+
+  function addProductOrVariant(p: Product) {
+    // Product has variants → defer to the picker. Otherwise add the
+    // parent product directly (the legacy zero-variant path).
+    if (p.variants && p.variants.length > 0) {
+      setVariantPickerProduct(p);
+      return;
+    }
+    addCartLine({
+      productId: p.id,
+      variantId: null,
+      productName: p.name,
+      variantLabel: null,
+      unitPrice: p.rate,
+      quantity: 1,
+      maxStock: p.stockQuantity,
     });
   }
 
-  function updateQty(productId: string, delta: number) {
+  function addVariantFromPicker(p: Product, v: Variant) {
+    addCartLine({
+      productId: p.id,
+      variantId: v.id,
+      productName: p.name,
+      variantLabel: v.label || v.sku || "Variant",
+      unitPrice: v.rate,
+      quantity: 1,
+      maxStock: v.stockQuantity,
+    });
+    setVariantPickerProduct(null);
+  }
+
+  function addCartLine(line: CartItem) {
+    setCart((prev) => {
+      const existing = prev.find(
+        (c) => cartKey(c.productId, c.variantId) === cartKey(line.productId, line.variantId)
+      );
+      if (existing) {
+        if (existing.quantity >= line.maxStock) return prev;
+        return prev.map((c) =>
+          cartKey(c.productId, c.variantId) === cartKey(line.productId, line.variantId)
+            ? { ...c, quantity: c.quantity + 1 }
+            : c
+        );
+      }
+      return [...prev, line];
+    });
+  }
+
+  function updateQty(
+    productId: string,
+    variantId: string | null | undefined,
+    delta: number
+  ) {
     setCart((prev) =>
       prev
         .map((c) => {
-          if (c.productId !== productId) return c;
+          if (cartKey(c.productId, c.variantId) !== cartKey(productId, variantId)) return c;
           const next = c.quantity + delta;
           if (next < 1) return null;
           if (next > c.maxStock) return c;
@@ -266,14 +411,26 @@ export function POSSaleForm({
     );
   }
 
-  function setUnitPrice(productId: string, value: number) {
+  function setUnitPrice(
+    productId: string,
+    variantId: string | null | undefined,
+    value: number
+  ) {
     setCart((prev) =>
-      prev.map((c) => (c.productId === productId ? { ...c, unitPrice: value } : c))
+      prev.map((c) =>
+        cartKey(c.productId, c.variantId) === cartKey(productId, variantId)
+          ? { ...c, unitPrice: value }
+          : c
+      )
     );
   }
 
-  function removeFromCart(productId: string) {
-    setCart((prev) => prev.filter((c) => c.productId !== productId));
+  function removeFromCart(productId: string, variantId: string | null | undefined) {
+    setCart((prev) =>
+      prev.filter(
+        (c) => cartKey(c.productId, c.variantId) !== cartKey(productId, variantId)
+      )
+    );
   }
 
   function selectExistingCustomer(id: string) {
@@ -387,28 +544,55 @@ export function POSSaleForm({
       JSON.stringify(
         cart.map((c) => ({
           productId: c.productId,
+          variantId: c.variantId ?? undefined,
           quantity: c.quantity,
           unitPrice: c.unitPrice,
         }))
       )
     );
 
+    if (isEdit) {
+      if (!initial?.saleId) {
+        setError("Missing saleId for edit");
+        return;
+      }
+      fd.set("saleId", initial.saleId);
+      // Edit allows back-dating too — keep the original saleDate by
+      // default unless the cashier wants to change it.
+      if (initial.saleDate) fd.set("saleDate", initial.saleDate);
+      // In edit mode customerId is whatever the original sale had
+      // (or whatever the cashier picked from the existing-customer
+      // dropdown). Don't auto-create here — the underlying service
+      // doesn't run findOrCreate, it just trusts what the form sends.
+      if (selectedCustomerId) fd.set("customerId", selectedCustomerId);
+    }
+
     startTransition(async () => {
       try {
-        await createSaleAction(fd);
-        try {
-          localStorage.removeItem(DRAFT_KEY);
-        } catch {
-          // ignore
+        if (isEdit) {
+          await updateSaleAction(fd);
+        } else {
+          await createSaleAction(fd);
+          try {
+            localStorage.removeItem(DRAFT_KEY);
+          } catch {
+            // ignore
+          }
         }
         router.refresh();
         if (onSuccess) {
           onSuccess();
-        } else {
+        } else if (!isEdit) {
           router.push("/sales");
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to create sale");
+        setError(
+          e instanceof Error
+            ? e.message
+            : isEdit
+              ? "Failed to update sale"
+              : "Failed to create sale"
+        );
       }
     });
   }
@@ -442,26 +626,43 @@ export function POSSaleForm({
               {filteredProducts.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6 col-span-2">No products found</p>
               ) : (
-                filteredProducts.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => addToCart(p)}
-                    disabled={p.stockQuantity <= 0}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-background/40 p-2.5 text-left hover:border-primary hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{p.name}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">{p.sku ?? "—"}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold">{formatAmount(p.rate)}</p>
-                      <Badge variant={p.stockQuantity > 0 ? "outline" : "destructive"} className="text-[10px]">
-                        {p.stockQuantity > 0 ? `${p.stockQuantity} left` : "Out"}
-                      </Badge>
-                    </div>
-                  </button>
-                ))
+                filteredProducts.map((p) => {
+                  const hasVariants = (p.variants?.length ?? 0) > 0;
+                  // For variant-bearing products, show the parent's
+                  // total stock (sum of variants) so the cashier
+                  // doesn't see "0 left" on a product whose variants
+                  // are still in stock.
+                  const displayStock = hasVariants
+                    ? p.variants!.reduce((s, v) => s + v.stockQuantity, 0)
+                    : p.stockQuantity;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => addProductOrVariant(p)}
+                      disabled={displayStock <= 0}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-background/40 p-2.5 text-left hover:border-primary hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {p.name}
+                          {hasVariants && (
+                            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                              · {p.variants!.length} variants
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-mono">{p.sku ?? "—"}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold">{formatAmount(p.rate)}</p>
+                        <Badge variant={displayStock > 0 ? "outline" : "destructive"} className="text-[10px]">
+                          {displayStock > 0 ? `${displayStock} left` : "Out"}
+                        </Badge>
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </CardContent>
@@ -482,9 +683,19 @@ export function POSSaleForm({
             ) : (
               <div className="divide-y divide-border/60">
                 {cart.map((c) => (
-                  <div key={c.productId} className="flex items-center gap-2 p-3">
+                  <div
+                    key={cartKey(c.productId, c.variantId)}
+                    className="flex items-center gap-2 p-3"
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{c.productName}</p>
+                      <p className="text-sm font-medium truncate">
+                        {c.productName}
+                        {c.variantLabel && (
+                          <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
+                            · {c.variantLabel}
+                          </span>
+                        )}
+                      </p>
                       <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                         <span>{symbol}</span>
                         <Input
@@ -493,7 +704,7 @@ export function POSSaleForm({
                           min="0"
                           value={c.unitPrice}
                           onChange={(e) =>
-                            setUnitPrice(c.productId, parseFloat(e.target.value) || 0)
+                            setUnitPrice(c.productId, c.variantId, parseFloat(e.target.value) || 0)
                           }
                           className="h-6 w-20 text-xs px-2 py-0"
                         />
@@ -506,7 +717,7 @@ export function POSSaleForm({
                         variant="outline"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={() => updateQty(c.productId, -1)}
+                        onClick={() => updateQty(c.productId, c.variantId, -1)}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
@@ -516,7 +727,7 @@ export function POSSaleForm({
                         variant="outline"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={() => updateQty(c.productId, 1)}
+                        onClick={() => updateQty(c.productId, c.variantId, 1)}
                         disabled={c.quantity >= c.maxStock}
                       >
                         <Plus className="h-3 w-3" />
@@ -530,7 +741,7 @@ export function POSSaleForm({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-destructive"
-                      onClick={() => removeFromCart(c.productId)}
+                      onClick={() => removeFromCart(c.productId, c.variantId)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -871,9 +1082,60 @@ export function POSSaleForm({
           className="w-full h-12 text-base font-bold"
         >
           {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-          Create Sale · {formatAmount(grandTotal)}
+          {isEdit ? "Save Changes" : "Create Sale"} · {formatAmount(grandTotal)}
         </Button>
       </div>
+
+      {/* Variant picker — opens when the cashier taps a product that
+          has variants. Each row shows the variant label, sku, price,
+          and per-variant stock so an out-of-stock variant is greyed
+          out instead of silently failing at submit time. */}
+      <Dialog
+        open={!!variantPickerProduct}
+        onOpenChange={(o) => !o && setVariantPickerProduct(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{variantPickerProduct?.name ?? "Pick variant"}</DialogTitle>
+            <DialogDescription>Choose which variant to add to the cart.</DialogDescription>
+          </DialogHeader>
+          {variantPickerProduct && (
+            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1">
+              {(variantPickerProduct.variants ?? []).map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() =>
+                    addVariantFromPicker(variantPickerProduct, v)
+                  }
+                  disabled={v.stockQuantity <= 0}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/60 bg-background/40 p-2.5 text-left hover:border-primary hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {v.label || "(unlabeled variant)"}
+                    </p>
+                    {v.sku && (
+                      <p className="text-[10px] text-muted-foreground font-mono">
+                        {v.sku}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold">{formatAmount(v.rate)}</p>
+                    <Badge
+                      variant={v.stockQuantity > 0 ? "outline" : "destructive"}
+                      className="text-[10px]"
+                    >
+                      {v.stockQuantity > 0 ? `${v.stockQuantity} left` : "Out"}
+                    </Badge>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

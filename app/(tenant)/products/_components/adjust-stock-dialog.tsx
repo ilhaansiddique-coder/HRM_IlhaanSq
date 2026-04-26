@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -121,6 +122,10 @@ export function AdjustStockDialog({
           <DialogTitle className="text-xl font-semibold">
             Adjust Stock
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Increase or decrease stock for the selected product with an
+            optional reason for the audit log.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

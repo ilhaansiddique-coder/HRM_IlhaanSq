@@ -249,13 +249,23 @@ export async function getCachedSystemSettings(tenantId: string) {
 }
 
 export async function invalidateSettingsCache(tenantId: string) {
+  // Bug fix: previously this only cleared business + system settings
+  // and left the payment_methods cache stale, so after any
+  // create/update/delete on a method the settings page would render
+  // an outdated list (sometimes containing rows that no longer exist
+  // in Postgres → "Payment method not found" on delete clicks).
   await cacheDel(
     CacheKeys.businessSettings(tenantId),
-    CacheKeys.systemSettings(tenantId)
+    CacheKeys.systemSettings(tenantId),
+    CacheKeys.paymentMethods(tenantId)
   );
 }
 
 // ─── Payment Methods ────────────────────────────────────────
+// Two readers: one returns ACTIVE methods only (used by the sale
+// form — disabled methods shouldn't appear in the cashier picker),
+// the other returns ALL methods including inactive (used by the
+// settings admin page so the cashier can re-enable a disabled method).
 
 export async function getCachedPaymentMethods(tenantId: string) {
   const key = CacheKeys.paymentMethods(tenantId);
@@ -265,9 +275,22 @@ export async function getCachedPaymentMethods(tenantId: string) {
   const db = tenantDb(tenantId);
   const methods = await db.paymentMethod.findMany({
     where: { isActive: true },
-    orderBy: { name: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
   await cacheSet(key, methods, { ttl: CacheTTL.SETTINGS });
   return methods;
+}
+
+/**
+ * Returns ALL payment methods (active + inactive). NOT cached — the
+ * settings page is admin-facing and renders fresh after every
+ * mutation. Avoids the "delete a row that the cache still thinks
+ * exists" failure mode that the cached read had.
+ */
+export async function getAllTenantPaymentMethods(tenantId: string) {
+  const db = tenantDb(tenantId);
+  return db.paymentMethod.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
 }

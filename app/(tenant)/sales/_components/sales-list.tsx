@@ -44,6 +44,8 @@ import {
   updateSaleStatusAction,
 } from "../actions";
 import { NewSaleDialog } from "./new-sale-dialog";
+import { EditSaleDialog } from "./edit-sale-dialog";
+import { SaleDetailsDialog } from "./sale-details-dialog";
 import { SalesHistoryDialog } from "./sales-history-dialog";
 import {
   SalesToolbar,
@@ -160,6 +162,12 @@ export function SalesList({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [newSaleOpen, setNewSaleOpen] = useState(false);
+  // Edit + view dialogs share the same lazy-load pattern: store the
+  // sale id, open=true triggers the inner fetch. Keeping them as
+  // top-level state (vs. portal'd render-prop) means React Query /
+  // server-action revalidation flows back into the listing cleanly.
+  const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
+  const [viewingSaleId, setViewingSaleId] = useState<string | null>(null);
 
   // ─── URL-driven filter state ────────────────────────────────
   // Mirrored to URL params so the TopBar's SalesHeaderControls
@@ -728,14 +736,14 @@ export function SalesList({
                         <div className="inline-flex items-center gap-0.5">
                           <ActionIcon
                             label="Edit"
-                            onClick={() => comingSoon("Edit Sale")}
-                            disabled={rowBusy}
+                            onClick={() => setEditingSaleId(sale.id)}
+                            disabled={rowBusy || cancelled}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </ActionIcon>
                           <ActionIcon
                             label="View"
-                            onClick={() => comingSoon("View Sale")}
+                            onClick={() => setViewingSaleId(sale.id)}
                             disabled={rowBusy}
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -794,6 +802,18 @@ export function SalesList({
       </Card>
 
       <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
+
+      <EditSaleDialog
+        open={editingSaleId !== null}
+        onOpenChange={(o) => !o && setEditingSaleId(null)}
+        saleId={editingSaleId}
+      />
+
+      <SaleDetailsDialog
+        open={viewingSaleId !== null}
+        onOpenChange={(o) => !o && setViewingSaleId(null)}
+        saleId={viewingSaleId}
+      />
 
       <SalesHistoryDialog
         open={urlHistory}

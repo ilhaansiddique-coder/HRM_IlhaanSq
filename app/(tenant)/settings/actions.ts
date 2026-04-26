@@ -5,10 +5,50 @@ import {
   updateBusinessSettings,
   updateSystemSettings,
   createPaymentMethod,
+  updatePaymentMethod,
   togglePaymentMethod,
   deletePaymentMethod,
+  seedDefaultPaymentMethods,
+  type PaymentMethodWriteInput,
 } from "@/lib/services/settings.service";
 import { revalidatePath } from "next/cache";
+
+type Terms = NonNullable<PaymentMethodWriteInput["defaultTerms"]>;
+type Behavior = NonNullable<PaymentMethodWriteInput["defaultPaidBehavior"]>;
+type FeeType = NonNullable<PaymentMethodWriteInput["feeType"]>;
+
+function parsePaymentMethodForm(formData: FormData): PaymentMethodWriteInput {
+  const terms = formData.get("defaultTerms") as string | null;
+  const behavior = formData.get("defaultPaidBehavior") as string | null;
+  const feeType = formData.get("feeType") as string | null;
+  const feeValueRaw = formData.get("feeValue") as string | null;
+  const sortRaw = formData.get("sortOrder") as string | null;
+  return {
+    name: ((formData.get("name") as string) ?? "").trim(),
+    type: (formData.get("type") as string) || undefined,
+    defaultTerms:
+      terms === "immediate" || terms === "cod" || terms === "credit"
+        ? (terms as Terms)
+        : undefined,
+    defaultPaidBehavior:
+      behavior === "full" || behavior === "zero" || behavior === "custom"
+        ? (behavior as Behavior)
+        : undefined,
+    feeType:
+      feeType === "none" || feeType === "fixed" || feeType === "percent"
+        ? (feeType as FeeType)
+        : undefined,
+    feeValue:
+      feeValueRaw && feeValueRaw.trim() !== ""
+        ? Number(feeValueRaw)
+        : undefined,
+    sortOrder:
+      sortRaw && sortRaw.trim() !== "" ? parseInt(sortRaw, 10) : undefined,
+    isActive: formData.get("isActive")
+      ? formData.get("isActive") === "true"
+      : undefined,
+  };
+}
 
 export async function saveBusinessSettings(formData: FormData) {
   const session = await requireTenant();
@@ -48,9 +88,18 @@ export async function saveSystemSettings(formData: FormData) {
 
 export async function addPaymentMethodAction(formData: FormData) {
   const session = await requireTenant();
-  const name = (formData.get("name") as string)?.trim();
-  if (!name) return;
-  await createPaymentMethod(session.tenantId, name);
+  const input = parsePaymentMethodForm(formData);
+  if (!input.name) return;
+  await createPaymentMethod(session.tenantId, input);
+  revalidatePath("/settings");
+}
+
+export async function updatePaymentMethodAction(formData: FormData) {
+  const session = await requireTenant();
+  const id = formData.get("id") as string;
+  if (!id) throw new Error("Missing id");
+  // Patch shape — only fields actually present in the form get sent.
+  await updatePaymentMethod(session.tenantId, id, parsePaymentMethodForm(formData));
   revalidatePath("/settings");
 }
 
@@ -67,4 +116,11 @@ export async function deletePaymentMethodAction(formData: FormData) {
   const id = formData.get("id") as string;
   await deletePaymentMethod(session.tenantId, id);
   revalidatePath("/settings");
+}
+
+export async function seedDefaultPaymentMethodsAction() {
+  const session = await requireTenant();
+  const result = await seedDefaultPaymentMethods(session.tenantId);
+  revalidatePath("/settings");
+  return result;
 }

@@ -34,6 +34,7 @@ model User {
   inventoryLogs InventoryLog[]
   createdSales  Sale[]         @relation("SaleCreator")
   employee      Employee?      @relation("UserEmployee")
+  paymentLogs   PaymentLog[]
 
   @@map("users")
 }
@@ -79,6 +80,7 @@ model Tenant {
   customers        Customer[]
   sales            Sale[]
   paymentMethods   PaymentMethod[]
+  paymentLogs      PaymentLog[]
   inventoryLogs    InventoryLog[]
   activityLogs     ActivityLog[]
   businessSettings BusinessSettings?
@@ -340,8 +342,9 @@ model Customer {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sales  Sale[]
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sales       Sale[]
+  paymentLogs PaymentLog[]
 
   @@index([tenantId, status])
   @@index([tenantId, name])
@@ -394,6 +397,12 @@ model Sale {
   // (or by both webhook + admin). `cancelledAt` is the audit timestamp.
   inventoryRestored Boolean   @default(false) @map("inventory_restored")
   cancelledAt       DateTime? @map("cancelled_at")
+  // Symmetric lifecycle timestamps for return / lost flows. Same
+  // pattern as cancelledAt — set once when the status transitions,
+  // and the same `inventoryRestored` flag prevents double-restore.
+  returnedAt        DateTime? @map("returned_at")
+  lostAt            DateTime? @map("lost_at")
+  statusChangedAt   DateTime? @map("status_changed_at")
 
   // Courier
   courierStatus       String?   @default("not_sent") @map("courier_status")
@@ -423,11 +432,12 @@ model Sale {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer Customer? @relation(fields: [customerId], references: [id])
-  creator  User?     @relation("SaleCreator", fields: [createdBy], references: [id])
-  items    SaleItem[]
-  payments SalePayment[]
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer    Customer?     @relation(fields: [customerId], references: [id])
+  creator     User?         @relation("SaleCreator", fields: [createdBy], references: [id])
+  items       SaleItem[]
+  payments    SalePayment[]
+  paymentLogs PaymentLog[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId, paymentStatus])
@@ -469,6 +479,32 @@ model SaleItem {
   @@map("sale_items")
 }
 
+// Audit trail for credit collections only. Each row = one application
+// of a customer's payment against one credit invoice. Positive `amount`
+// = collection; negative = reversal. Cash/COD/online sales DO NOT
+// write here — their payment record is the `amountPaid` column on the
+// `Sale` row itself. See lib/services/customer-payment.service.ts.
+model PaymentLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  saleId          String   @map("sale_id") @db.Uuid
+  customerId      String   @map("customer_id") @db.Uuid
+  invoiceNumber   String   @map("invoice_number")
+  amount          Decimal  @db.Decimal(12, 2)
+  paidByUserId    String?  @map("paid_by_user_id") @db.Uuid
+  paidByName      String   @map("paid_by_name")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale     Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [paidByUserId], references: [id])
+
+  @@index([tenantId, customerId, createdAt(sort: Desc)])
+  @@index([saleId])
+  @@map("payment_logs")
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════
@@ -478,12 +514,24 @@ model PaymentMethod {
   tenantId  String   @map("tenant_id") @db.Uuid
   name      String
   isActive  Boolean  @default(true) @map("is_active")
+  // ── Enrichment (matches the Vite/Supabase reference spec). All
+  // optional with defaults so existing rows keep working — `key` is
+  // backfilled from a slug of `name` in the migration.
+  key                 String?  @map("key")
+  type                String   @default("cash") @map("type")
+  defaultTerms        String   @default("immediate") @map("default_terms")
+  defaultPaidBehavior String   @default("full") @map("default_paid_behavior")
+  feeType             String   @default("none") @map("fee_type")
+  feeValue            Decimal? @map("fee_value") @db.Decimal(12, 2)
+  sortOrder           Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, key])
   @@index([tenantId])
+  @@index([tenantId, sortOrder])
   @@map("payment_methods")
 }
 

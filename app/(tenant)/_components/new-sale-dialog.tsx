@@ -7,6 +7,7 @@ import { Calendar as CalendarIcon, Minus, Plus, Search, Trash2 } from "lucide-re
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -280,6 +281,9 @@ export function NewSaleDialog({
           <DialogTitle className="text-xl font-semibold">
             Create New Sale
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Add products, choose a customer, and pick how it&apos;ll be paid.
+          </DialogDescription>
           {/* Editable date — Popover + Calendar gives us full control
               over the display format (dd/MM/yyyy) regardless of browser
               locale. pr-8 leaves room for the auto-rendered Dialog × button. */}

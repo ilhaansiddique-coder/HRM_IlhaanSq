@@ -160,24 +160,41 @@ export const useCustomers = () => {
       // Batch the .in() query to avoid exceeding Supabase URL length limits
       const customerIds = (customersData || []).map((c) => c.id);
       const BATCH_SIZE = 100;
+      const SALES_BASE_SELECT =
+        "customer_id, grand_total, fee, created_at, payment_status, courier_status, amount_paid, amount_due, review_amount_paid, review_amount_due, payment_terms, payment_method, is_deleted, id";
+      const SALES_SELECT_WITH_SPLITS = `${SALES_BASE_SELECT}, sale_payments(method, amount)`;
       let salesData: Array<{
         customer_id: string | null;
         grand_total: number | null;
         amount_due: number | null;
+        review_amount_due: number | null;
+        amount_paid: number | null;
+        review_amount_paid: number | null;
         fee: number | null;
         created_at: string;
         payment_status: string | null;
         courier_status: string | null;
-        amount_paid: number | null;
         payment_terms: string | null;
+        payment_method: string | null;
+        sale_payments: Array<{ method: string | null; amount: number | null }>;
       }> = [];
+      let supportsSalePaymentsJoin = true;
       for (let i = 0; i < customerIds.length; i += BATCH_SIZE) {
         const batch = customerIds.slice(i, i + BATCH_SIZE);
-        const salesResult = await supabase
+        let salesResult = await supabase
           .from("sales")
-          .select("*")
+          .select(supportsSalePaymentsJoin ? SALES_SELECT_WITH_SPLITS : SALES_BASE_SELECT)
           .eq("tenant_id", tenantId)
           .in("customer_id", batch);
+        if (salesResult.error && supportsSalePaymentsJoin && isSchemaCompatibilityError(salesResult.error)) {
+          // Postgrest can't see sale_payments — drop the join for the rest of the loop.
+          supportsSalePaymentsJoin = false;
+          salesResult = await supabase
+            .from("sales")
+            .select(SALES_BASE_SELECT)
+            .eq("tenant_id", tenantId)
+            .in("customer_id", batch);
+        }
         if (salesResult.error) {
           if (isSchemaCompatibilityError(salesResult.error)) {
             continue;
@@ -191,12 +208,21 @@ export const useCustomers = () => {
               customer_id: (sale.customer_id as string | null) ?? null,
               grand_total: (sale.grand_total as number | null) ?? 0,
               amount_due: (sale.amount_due as number | null) ?? 0,
+              review_amount_due: (sale.review_amount_due as number | null) ?? null,
+              amount_paid: (sale.amount_paid as number | null) ?? 0,
+              review_amount_paid: (sale.review_amount_paid as number | null) ?? null,
               fee: (sale.fee as number | null) ?? 0,
               created_at: String(sale.created_at ?? ""),
               payment_status: (sale.payment_status as string | null) ?? null,
               courier_status: (sale.courier_status as string | null) ?? null,
-              amount_paid: (sale.amount_paid as number | null) ?? 0,
               payment_terms: (sale.payment_terms as string | null) ?? null,
+              payment_method: (sale.payment_method as string | null) ?? null,
+              sale_payments: Array.isArray(sale.sale_payments)
+                ? (sale.sale_payments as Array<{ method?: string | null; amount?: number | null }>).map((split) => ({
+                    method: split?.method ?? null,
+                    amount: typeof split?.amount === "number" ? split.amount : Number(split?.amount) || 0,
+                  }))
+                : [],
             }));
           salesData = salesData.concat(mapped);
         }
@@ -241,14 +267,33 @@ export const useCustomers = () => {
           stats.cancelledCount += 1;
         }
 
-        const paymentStatus = String((sale as any).payment_status || "").toLowerCase();
-        const paymentTerms = String((sale as any).payment_terms || "").toLowerCase();
-        if (isActiveCourier && paymentTerms === "credit" && paymentStatus !== "paid") {
-          const dueByField = Number((sale as any).amount_due);
-          const computedDue = Number(sale.grand_total || 0) - Number((sale as any).amount_paid || 0);
-          const remainingDue = Math.max(0, dueByField || computedDue);
-          if (remainingDue > 0) {
-            stats.creditDue += remainingDue;
+        // Credit-due rule must mirror isCreditManagedInvoice in useCustomerPayments,
+        // otherwise the wallet icon (driven by credit_due) and the dialog (driven by
+        // the broader rule) disagree on which customers owe credit.
+        if (isActiveCourier) {
+          const paymentTerms = String((sale as any).payment_terms || "").toLowerCase();
+          const paymentMethod = String((sale as any).payment_method || "").toLowerCase().trim();
+          const normalizedMethod = paymentMethod === "condition" ? "cod" : paymentMethod;
+          const hasCreditSplit = (sale.sale_payments || []).some((split) => {
+            const splitMethodRaw = String(split.method || "").toLowerCase().trim();
+            const splitMethod = splitMethodRaw === "condition" ? "cod" : splitMethodRaw;
+            return splitMethod === "credit" && (Number(split.amount) || 0) > 0;
+          });
+          const isCreditDue = paymentTerms === "credit" || normalizedMethod === "credit" || hasCreditSplit;
+          if (isCreditDue) {
+            const reviewDue = sale.review_amount_due;
+            const rawDue =
+              reviewDue !== null && reviewDue !== undefined
+                ? Number(reviewDue)
+                : Number(sale.amount_due);
+            const computedDue = Number(sale.grand_total || 0) - Number(sale.amount_paid || 0);
+            const remainingDue = Math.max(
+              0,
+              Number.isFinite(rawDue) && rawDue !== 0 ? rawDue : computedDue
+            );
+            if (remainingDue > 0) {
+              stats.creditDue += remainingDue;
+            }
           }
         }
       });

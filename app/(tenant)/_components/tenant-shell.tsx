@@ -73,10 +73,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "../dashboard/_components/date-range-picker";
 import { ProductsHeaderControls } from "../products/_components/products-header-controls";
+import { InvoicesHeaderControls } from "../invoices/_components/invoices-header-controls";
+import { InvoicesExportButton } from "../invoices/_components/invoices-export-button";
 import { ProductsActionsCluster } from "../products/_components/products-actions-cluster";
 import { InventoryHeaderControls } from "../inventory/_components/inventory-header-controls";
 import { SalesHeaderControls } from "../sales/_components/sales-header-controls";
 import { SalesCancelledToggle } from "../sales/_components/sales-cancelled-toggle";
+import { ReportsHeaderControls } from "../reports/_components/reports-header-controls";
+import { ReportsExportButton } from "../reports/_components/reports-export-button";
+import { CustomersHeaderControls } from "../customers/_components/customers-header-controls";
+import { CustomersActionsCluster } from "../customers/_components/customers-actions-cluster";
 import {
   Tooltip,
   TooltipContent,
@@ -481,6 +487,12 @@ function TopBar({
     activePath === "/inventory" || activePath.startsWith("/inventory/");
   const isSales =
     activePath === "/sales" || activePath.startsWith("/sales/");
+  const isInvoices =
+    activePath === "/invoices" || activePath.startsWith("/invoices/");
+  const isReports =
+    activePath === "/reports" || activePath.startsWith("/reports/");
+  const isCustomers =
+    activePath === "/customers" || activePath.startsWith("/customers/");
   // /products and /inventory share the same right-side actions cluster
   // (Import, Export, Adjust Stock). Both pages care about the same product
   // operations.
@@ -519,10 +531,44 @@ function TopBar({
               <SalesHeaderControls />
             </div>
           )}
+          {isInvoices && (
+            <div className="hidden md:block">
+              <InvoicesHeaderControls />
+            </div>
+          )}
+          {isReports && (
+            <div className="hidden md:block">
+              <ReportsHeaderControls />
+            </div>
+          )}
+          {isCustomers && (
+            <div className="hidden md:block">
+              <CustomersHeaderControls />
+            </div>
+          )}
         </div>
 
         {/* Notifications bell — opens a dropdown of recent activity */}
         <NotificationBell notifications={notifications} />
+
+        {/* Invoices export — popover with CSV / PDF options. Sits in
+            the right cluster (after the bell) per the page convention,
+            so its icon spacing matches the bell + new-sale + theme +
+            user buttons that follow. */}
+        {isInvoices && (
+          <div className="hidden md:block">
+            <InvoicesExportButton />
+          </div>
+        )}
+
+        {/* Reports export — Excel download of the current filtered view.
+            Sits alongside InvoicesExportButton in the right cluster so
+            both pages keep the same icon ordering. */}
+        {isReports && (
+          <div className="hidden md:block">
+            <ReportsExportButton />
+          </div>
+        )}
 
         {/* Cancelled-rows toggle — only meaningful on /sales, sits
             between the bell and the New Sale (+) button. URL-synced
@@ -533,15 +579,29 @@ function TopBar({
           </div>
         )}
 
+        {/* Customers actions cluster — Export / Import / Refresh / +.
+            The `+` here adds a customer (via ?action=add URL flag),
+            replacing the generic New Sale shortcut on this page. */}
+        {isCustomers && (
+          <div className="hidden md:block">
+            <CustomersActionsCluster />
+          </div>
+        )}
+
         {/* Page-aware action cluster:
               /products & /inventory → Import / Export / Adjust Stock
+              /reports*              → none (reports are read-only;
+                                       the New Sale shortcut is noise
+                                       for an analytics surface)
+              /customers             → none (CustomersActionsCluster
+                                       above provides + Add Customer)
               Elsewhere              → New Sale (cart)
             Reports / Customers / Add-Product shortcuts were removed —
             those destinations are reachable from the sidebar, and the
             global TopBar should stay focused on the current page. */}
         {showProductActions ? (
           <ProductsActionsCluster />
-        ) : (
+        ) : isReports || isCustomers ? null : (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

@@ -1,6 +1,12 @@
 import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
-import daisyui from "daisyui";
+
+// Helper for the daisyUI-replacement tokens. Each maps to an
+// `rgb(R G B / <alpha-value>)` expression so utilities like
+// `bg-success/35`, `text-warning/12` continue to compose correctly
+// after daisyUI was removed. The triplet vars are defined in
+// src/index.css under both light and night themes.
+const rgbVar = (name: string) => `rgb(var(--${name}-rgb) / <alpha-value>)`;
 
 export default {
 	darkMode: ["class"],
@@ -67,7 +73,41 @@ export default {
 					'accent-foreground': 'var(--sidebar-accent-foreground)',
 					border: 'var(--sidebar-border)',
 					ring: 'var(--sidebar-ring)'
-				}
+				},
+				// ─── daisyUI-replacement tokens ─────────────────────
+				// daisyUI used to register success/warning/error/info,
+				// base-100/200/300/content, neutral, primary-content,
+				// etc. Now that the plugin is gone we register them
+				// here against the RGB triplet vars in src/index.css so
+				// the same `bg-success/35`, `text-base-content`,
+				// `border-base-300` classes keep working unchanged.
+				success: {
+					DEFAULT: rgbVar('success'),
+					content: rgbVar('success-content'),
+				},
+				warning: {
+					DEFAULT: rgbVar('warning'),
+					content: rgbVar('warning-content'),
+				},
+				error: {
+					DEFAULT: rgbVar('error'),
+					content: rgbVar('error-content'),
+				},
+				info: {
+					DEFAULT: rgbVar('info'),
+					content: rgbVar('info-content'),
+				},
+				neutral: {
+					DEFAULT: rgbVar('neutral'),
+					content: rgbVar('neutral-content'),
+				},
+				'base-100': rgbVar('base-100'),
+				'base-200': rgbVar('base-200'),
+				'base-300': rgbVar('base-300'),
+				'base-content': rgbVar('base-content'),
+				'primary-content': rgbVar('primary-content'),
+				'secondary-content': rgbVar('secondary-content'),
+				'accent-content': rgbVar('accent-content'),
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -100,8 +140,5 @@ export default {
 	},
 	plugins: [
 		tailwindcssAnimate,
-		daisyui({
-			themes: "all",
-		}),
 	],
 } satisfies Config;

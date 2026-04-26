@@ -5,10 +5,26 @@ import {
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  getCustomerHistory,
 } from "@/lib/services/customer.service";
+import {
+  getCustomerDueInvoices,
+  getCustomerPaymentHistory,
+  recordCustomerPayment,
+} from "@/lib/services/customer-payment.service";
+import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
 function parseInput(formData: FormData) {
+  // Status comes from a Select; normalize anything outside the
+  // allowed enum back to undefined so we don't violate the DB
+  // CHECK constraint.
+  const rawStatus = formData.get("status") as string | null;
+  const status =
+    rawStatus === "active" || rawStatus === "neutral" || rawStatus === "inactive"
+      ? rawStatus
+      : undefined;
+
   return {
     name: formData.get("name") as string,
     phone: (formData.get("phone") as string) || undefined,
@@ -19,6 +35,7 @@ function parseInput(formData: FormData) {
       ? parseFloat(formData.get("creditLimit") as string)
       : undefined,
     additionalInfo: (formData.get("additionalInfo") as string) || undefined,
+    status,
   };
 }
 
@@ -47,4 +64,75 @@ export async function deleteCustomerAction(formData: FormData) {
   );
   revalidatePath("/customers");
   revalidatePath("/dashboard");
+}
+
+// ─── Credit collection ──────────────────────────────────────
+// All three actions are scoped to the current session's tenant via
+// requireTenant — the underlying services double-check the customer
+// belongs to the tenant via the `where: { tenantId, customerId }`
+// filter, so cross-tenant reads/writes are impossible.
+
+export async function getCustomerHistoryAction(customerId: string) {
+  const session = await requireTenant();
+  return getCustomerHistory(session.tenantId, customerId);
+}
+
+export async function getCustomerDueInvoicesAction(customerId: string) {
+  const session = await requireTenant();
+  const rows = await getCustomerDueInvoices(session.tenantId, customerId);
+  // Plain primitives only — Decimals + Date go over the wire.
+  return rows.map((r) => ({
+    id: r.id,
+    invoiceNumber: r.invoiceNumber,
+    amountPaid: r.amountPaid,
+    amountDue: r.amountDue,
+    paymentTerms: r.paymentTerms,
+    paymentMethod: r.paymentMethod,
+    courierStatus: r.courierStatus,
+    createdAt: r.createdAt.toISOString(),
+  }));
+}
+
+export async function getCustomerPaymentHistoryAction(customerId: string) {
+  const session = await requireTenant();
+  return getCustomerPaymentHistory(session.tenantId, customerId);
+}
+
+export async function recordCustomerPaymentAction(formData: FormData) {
+  const session = await requireTenant();
+
+  const customerId = formData.get("customerId") as string;
+  const rawAmount = formData.get("amount") as string;
+  if (!customerId) throw new Error("Missing customerId");
+  if (!rawAmount) throw new Error("Missing amount");
+
+  const amount = Number(rawAmount);
+  if (!Number.isFinite(amount) || amount === 0) {
+    throw new Error("Enter a non-zero amount.");
+  }
+
+  // Display name for the audit log. Fall back chain: profile.fullName →
+  // session.email → "Unknown User".
+  const profile = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { fullName: true, email: true },
+  });
+  const paidByName =
+    profile?.fullName ||
+    profile?.email?.split("@")[0] ||
+    "Unknown User";
+
+  const applied = await recordCustomerPayment(session.tenantId, {
+    customerId,
+    amount,
+    paidByName,
+    paidByUserId: session.userId,
+  });
+
+  revalidatePath("/customers");
+  revalidatePath("/sales");
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+
+  return applied;
 }

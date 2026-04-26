@@ -1,213 +1,214 @@
 import { requireTenant } from "@/lib/auth";
 import { tenantDb } from "@/lib/db";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { AlertTriangle, Clock, DollarSign, CheckCircle2, Package } from "lucide-react";
-import Link from "next/link";
+import { getCachedBusinessSettings } from "@/lib/cache";
+import { AlertsView, type SerializedAlert } from "./_components/alerts-view";
+
+// /alerts — server component. Aggregates everything that should
+// surface as an alert (out-of-stock, low-stock, overdue invoices,
+// large pending payments, recent + VIP customers) into a single
+// SerializedAlert[] that the client view renders.
+//
+// The element hierarchy mirrors the Vite reference page at
+// src/views/Alerts.tsx (the same code the dev server at 192.168.0.127:8081
+// renders): 4 KPI cards on top, 2-column grid below (Recent Alerts +
+// Preferences). Vite version uses live React-Query hooks; this Next
+// version does the same aggregation server-side via Prisma.
 
 export default async function AlertsPage() {
   const session = await requireTenant();
   const db = tenantDb(session.tenantId);
 
-  const [lowStock, pendingOrders, unpaidSales] = await Promise.all([
-    db.product.findMany({
-      where: { isDeleted: false, stockQuantity: { lte: 10 } },
-      orderBy: { stockQuantity: "asc" },
-      take: 50,
-    }),
-    db.sale.findMany({
-      where: { isDeleted: false, orderStatus: "pending" },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    }),
-    db.sale.findMany({
-      where: { isDeleted: false, paymentStatus: { in: ["pending", "partial"] } },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-    }),
-  ]);
+  // Threshold for low-stock alerts comes from BusinessSettings; falls
+  // back to 12 to match the Vite reference (`businessSettings?.low_stock_alert_quantity || 12`).
+  const businessSettings = await getCachedBusinessSettings(session.tenantId);
+  const lowStockThreshold = businessSettings?.lowStockAlertQuantity ?? 12;
 
-  const totalAlerts = lowStock.length + pendingOrders.length + unpaidSales.length;
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Low stock — desktop: table view. Mobile uses the card stack below. */}
-      <Card className="hidden md:block border-warning/35 bg-card/80 rounded-lg">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                Low Stock Products
-              </CardTitle>
-              <CardDescription>{lowStock.length} below threshold</CardDescription>
-            </div>
-            <Link href="/inventory">
-              <Button variant="ghost" size="sm">View Inventory</Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {lowStock.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle2 className="h-10 w-10 text-success mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">All products well-stocked</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead className="text-right">In Stock</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lowStock.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{p.sku ?? "-"}</TableCell>
-                    <TableCell className="text-right font-medium">{p.stockQuantity}</TableCell>
-                    <TableCell>
-                      {p.stockQuantity <= 0 ? (
-                        <Badge variant="destructive">Out of Stock</Badge>
-                      ) : (
-                        <Badge variant="secondary">Low</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+  const [products, overdueSales, largePending, newCustomers, vipRecent] =
+    await Promise.all([
+      // All products at or below the threshold (we'll split into
+      // critical=out / warning=low when generating alerts).
+      db.product.findMany({
+        where: { isDeleted: false, stockQuantity: { lte: lowStockThreshold } },
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          stockQuantity: true,
+          updatedAt: true,
+        },
+        orderBy: { stockQuantity: "asc" },
+        take: 200,
+      }),
+      // Overdue: created >30d ago, not paid, not cancelled.
+      db.sale.findMany({
+        where: {
+          isDeleted: false,
+          paymentStatus: { in: ["pending", "partial"] },
+          createdAt: { lt: thirtyDaysAgo },
+          courierStatus: { notIn: ["cancelled", "returned", "lost"] },
+        },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          customerName: true,
+          amountDue: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+        take: 50,
+      }),
+      // Large pending payments — amount_due > 10,000 (matches the Vite
+      // reference's threshold).
+      db.sale.findMany({
+        where: {
+          isDeleted: false,
+          paymentStatus: "pending",
+          amountDue: { gt: 10000 },
+        },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          customerName: true,
+          amountDue: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      }),
+      // New customers in the last 7 days.
+      db.customer.findMany({
+        where: { isDeleted: false, createdAt: { gt: sevenDaysAgo } },
+        select: {
+          id: true,
+          name: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      }),
+      // VIP recent: total_spent > 50,000 AND last_purchase_date within 3 days.
+      db.customer.findMany({
+        where: {
+          isDeleted: false,
+          totalSpent: { gt: 50000 },
+          lastPurchaseDate: {
+            gt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          totalSpent: true,
+          lastPurchaseDate: true,
+        },
+        orderBy: { lastPurchaseDate: "desc" },
+        take: 3,
+      }),
+    ]);
 
-      {/* Mobile: low-stock card stack — name + status header, SKU + stock
-          row below. No horizontal scroll, no truncation. */}
-      <div className="md:hidden space-y-3">
-        <Card className="border-warning/35 bg-card/80 rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="flex items-center gap-2 text-base font-semibold">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                Low Stock Products
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {lowStock.length} below threshold
-              </p>
-            </div>
-            <Link href="/inventory">
-              <Button variant="ghost" size="sm">View</Button>
-            </Link>
-          </div>
-        </Card>
+  // Currency formatter — server-side fallback. The Vite version uses
+  // a per-tenant currency hook; for simplicity we use the bare number
+  // and let the client format if needed. If your business setting has a
+  // currencyCode we can prepend the symbol later.
+  const fmtAmount = (n: number) => n.toLocaleString();
 
-        {lowStock.length === 0 ? (
-          <Card className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-            <CheckCircle2 className="h-10 w-10 text-success" />
-            <span className="text-sm">All products well-stocked</span>
-          </Card>
-        ) : (
-          lowStock.map((p) => (
-            <Card key={p.id} className="rounded-lg p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium leading-tight">{p.name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {p.sku ?? "-"}
-                  </p>
-                </div>
-                {p.stockQuantity <= 0 ? (
-                  <Badge variant="destructive" className="rounded-lg">
-                    Out of Stock
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="rounded-lg">
-                    Low
-                  </Badge>
-                )}
-              </div>
-              <div className="mt-2 text-xs">
-                <span className="text-muted-foreground">In Stock: </span>
-                <span className="font-semibold">{p.stockQuantity}</span>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
+  const alerts: SerializedAlert[] = [];
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Pending orders */}
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="h-5 w-5 text-primary" />
-              Pending Orders
-            </CardTitle>
-            <CardDescription>{pendingOrders.length} orders awaiting action</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {pendingOrders.length === 0 ? (
-              <div className="text-center py-6">
-                <CheckCircle2 className="h-8 w-8 text-success mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">No pending orders</p>
-              </div>
-            ) : (
-              pendingOrders.slice(0, 10).map((s) => (
-                <div key={s.id} className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2 text-sm">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{s.invoiceNumber}</p>
-                    <p className="text-xs text-muted-foreground truncate">{s.customerName}</p>
-                  </div>
-                  <Badge variant="outline" className="text-xs">{s.orderStatus}</Badge>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+  // Out of stock (critical) — stockQuantity === 0
+  for (const p of products) {
+    if (p.stockQuantity === 0) {
+      alerts.push({
+        id: `out-of-stock-${p.id}`,
+        type: "critical",
+        category: "inventory",
+        title: "Product Out of Stock",
+        message: `${p.name}${p.sku ? ` (${p.sku})` : ""} is completely out of stock`,
+        time: p.updatedAt.toISOString(),
+        iconKey: "alert-triangle",
+        actionable: true,
+      });
+    }
+  }
+  // Low stock (warning) — between 1 and threshold inclusive
+  for (const p of products) {
+    if (p.stockQuantity > 0 && p.stockQuantity <= lowStockThreshold) {
+      alerts.push({
+        id: `low-stock-${p.id}`,
+        type: "warning",
+        category: "inventory",
+        title: "Low Stock Alert",
+        message: `${p.name} is below minimum threshold (${p.stockQuantity} remaining, threshold: ${lowStockThreshold})`,
+        time: p.updatedAt.toISOString(),
+        iconKey: "package",
+        actionable: true,
+      });
+    }
+  }
 
-        {/* Unpaid sales */}
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <DollarSign className="h-5 w-5 text-primary" />
-              Unpaid Sales
-            </CardTitle>
-            <CardDescription>{unpaidSales.length} with outstanding balance</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {unpaidSales.length === 0 ? (
-              <div className="text-center py-6">
-                <CheckCircle2 className="h-8 w-8 text-success mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">All sales paid</p>
-              </div>
-            ) : (
-              unpaidSales.slice(0, 10).map((s) => (
-                <div key={s.id} className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2 text-sm">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{s.invoiceNumber}</p>
-                    <p className="text-xs text-muted-foreground truncate">{s.customerName}</p>
-                  </div>
-                  <Badge variant={s.paymentStatus === "partial" ? "secondary" : "outline"} className="text-xs">
-                    {s.paymentStatus}
-                  </Badge>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+  // Overdue invoices
+  for (const s of overdueSales) {
+    const dueDate = new Date(s.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const daysOverdue = Math.max(
+      0,
+      Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+    );
+    alerts.push({
+      id: `overdue-${s.id}`,
+      type: daysOverdue > 15 ? "critical" : "warning",
+      category: "payment",
+      title: "Overdue Invoice",
+      message: `Invoice ${s.invoiceNumber} is ${daysOverdue} days overdue (${s.customerName}) - ${fmtAmount(Number(s.amountDue ?? 0))} due`,
+      time: s.createdAt.toISOString(),
+      iconKey: "info",
+      actionable: true,
+    });
+  }
+
+  // Large pending payments
+  for (const s of largePending) {
+    alerts.push({
+      id: `large-pending-${s.id}`,
+      type: "info",
+      category: "payment",
+      title: "Large Pending Payment",
+      message: `Invoice ${s.invoiceNumber} has a large pending amount: ${fmtAmount(Number(s.amountDue ?? 0))}`,
+      time: s.createdAt.toISOString(),
+      iconKey: "trending-up",
+      actionable: true,
+    });
+  }
+
+  // New customers
+  for (const c of newCustomers) {
+    alerts.push({
+      id: `new-customer-${c.id}`,
+      type: "info",
+      category: "customer",
+      title: "New Customer",
+      message: `${c.name} joined recently`,
+      time: c.createdAt.toISOString(),
+      iconKey: "users",
+      actionable: false,
+    });
+  }
+
+  // VIP recent activity
+  for (const c of vipRecent) {
+    alerts.push({
+      id: `vip-activity-${c.id}`,
+      type: "info",
+      category: "customer",
+      title: "VIP Customer Activity",
+      message: `${c.name} (spent ${fmtAmount(Number(c.totalSpent ?? 0))}) made a recent purchase`,
+      time: (c.lastPurchaseDate ?? now).toISOString(),
+      iconKey: "trending-up",
+      actionable: false,
+    });
+  }
+
+  return <AlertsView initialAlerts={alerts} />;
 }

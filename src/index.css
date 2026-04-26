@@ -120,6 +120,31 @@
     --color-warning-content: #f9f9f9;
     --color-error: #ca3214;
     --color-error-content: #f9f9f9;
+
+    /* ─── RGB triplets for Tailwind /<alpha> utilities ──────────
+       After uninstalling daisyUI we register the same token names
+       (success, warning, error, base-100/200/300/content, etc.) in
+       tailwind.config.ts via `rgb(var(--<name>-rgb) / <alpha-value>)`.
+       The triplet form (no commas, no rgb() wrapper) is what Tailwind
+       v3's <alpha-value> placeholder requires for utilities like
+       `bg-success/35` to compose correctly. */
+    --base-100-rgb: 249 249 249;
+    --base-200-rgb: 237 237 237;
+    --base-300-rgb: 223 223 223;
+    --base-content-rgb: 23 23 23;
+    --primary-content-rgb: 30 39 35;
+    --secondary-content-rgb: 23 23 23;
+    --accent-content-rgb: 32 32 32;
+    --neutral-rgb: 30 41 59;
+    --neutral-content-rgb: 241 245 249;
+    --info-rgb: 59 130 246;
+    --info-content-rgb: 249 249 249;
+    --success-rgb: 16 185 129;
+    --success-content-rgb: 249 249 249;
+    --warning-rgb: 249 115 22;
+    --warning-content-rgb: 249 249 249;
+    --error-rgb: 202 50 20;
+    --error-content-rgb: 249 249 249;
   }
 
   /* ─── Night theme ───────────────────────────────────────────
@@ -199,6 +224,25 @@
     --color-warning-content: #171717;
     --color-error: #541c15;
     --color-error-content: #ede9e8;
+
+    /* RGB triplets for Tailwind /<alpha> utilities — see light theme. */
+    --base-100-rgb: 18 18 18;
+    --base-200-rgb: 31 31 31;
+    --base-300-rgb: 41 41 41;
+    --base-content-rgb: 226 232 240;
+    --primary-content-rgb: 221 232 227;
+    --secondary-content-rgb: 250 250 250;
+    --accent-content-rgb: 250 250 250;
+    --neutral-rgb: 241 245 249;
+    --neutral-content-rgb: 30 41 59;
+    --info-rgb: 96 165 250;
+    --info-content-rgb: 255 255 255;
+    --success-rgb: 45 212 191;
+    --success-content-rgb: 255 255 255;
+    --warning-rgb: 251 191 36;
+    --warning-content-rgb: 23 23 23;
+    --error-rgb: 84 28 21;
+    --error-content-rgb: 237 233 232;
   }
 }
 
@@ -254,7 +298,13 @@
       radial-gradient(1200px 600px at 8% -10%, color-mix(in oklab, var(--color-primary) 14%, transparent), transparent),
       radial-gradient(900px 500px at 95% 0%, color-mix(in oklab, var(--color-accent) 18%, transparent), transparent),
       linear-gradient(180deg, var(--background), color-mix(in oklab, var(--background) 88%, var(--color-base-200)));
-    background-attachment: fixed;
+    /* `background-attachment: fixed` looks nice on desktop (the radial
+       gradients stay anchored to the viewport corners while content
+       scrolls past) but is a documented mobile-browser footgun: on
+       iOS Safari and several Android Chrome builds it conflicts with
+       the compositor and silently disables vertical page scroll.
+       Confine it to ≥768px so mobile keeps native scroll behaviour. */
+    background-attachment: scroll;
 
     /* ── Mobile reset ──
        - antialiased text on retina/AMOLED
@@ -290,6 +340,16 @@
   html {
     -webkit-text-size-adjust: 100%;
     overscroll-behavior-y: contain;
+  }
+
+  /* Re-enable the fixed-attachment radial backdrop on tablet+ where
+     the compositor handles it cleanly. Below this width we leave
+     `background-attachment: scroll` so vertical page scroll works
+     on iOS Safari and Android Chrome. */
+  @media (min-width: 768px) {
+    body {
+      background-attachment: fixed;
+    }
   }
 
   #root {
