@@ -2,8 +2,17 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import "dotenv/config";
+import { resolveDatabaseUrl } from "../lib/server-env";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const { connectionString } = resolveDatabaseUrl();
+
+if (!connectionString) {
+  throw new Error(
+    "Database is not configured. Set DATABASE_URL, PLATFORM_DATABASE_POOLER_URL, PLATFORM_DATABASE_URL, or SUPABASE_DB_URL."
+  );
+}
+
+const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

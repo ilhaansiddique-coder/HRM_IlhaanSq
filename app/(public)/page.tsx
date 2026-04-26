@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getOptionalSession } from "@/lib/auth";
 import { Hero } from "./_components/sections/hero";
 import { LogoCloud } from "./_components/sections/logo-cloud";
 import { Features } from "./_components/sections/features";
@@ -12,7 +12,7 @@ import { CTA } from "./_components/sections/cta";
 export default async function LandingPage() {
   // Logged-in users skip the marketing page.
   // Super admins use the same tenant dashboard (with extra Tenants sidebar menu).
-  const session = await getSession();
+  const session = await getOptionalSession();
   if (session) {
     if (session.tenantId) redirect("/dashboard");
     redirect("/onboarding");

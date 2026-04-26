@@ -4,13 +4,16 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import authConfig from "./auth.config";
-import { prisma } from "./db";
 import { checkRate } from "./rate-limit";
 
 // ─── Full NextAuth Config (Node Runtime) ────────────────────
 // This file extends auth.config.ts with the Credentials provider
 // (which uses Prisma + bcrypt — both Node-only).
 // Imported by app routes and Server Actions, NEVER by middleware.
+
+async function getPrisma() {
+  return (await import("./db")).prisma;
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -41,6 +44,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         const tDb = Date.now();
+        const prisma = await getPrisma();
         const user = await prisma.user.findUnique({
           where: { email },
           include: {
@@ -135,6 +139,18 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
   };
 });
 
+export const getOptionalSession = cache(async (): Promise<AppSession | null> => {
+  try {
+    return await getSession();
+  } catch (error) {
+    console.error(
+      "[auth] Optional session lookup failed on a public route.",
+      error
+    );
+    return null;
+  }
+});
+
 // ─── Auth Guards ────────────────────────────────────────────
 
 export async function requireAuth(): Promise<AppSession> {
@@ -166,6 +182,7 @@ export async function hasPermission(
 ): Promise<boolean> {
   if (role === "owner" || role === "admin") return true;
 
+  const prisma = await getPrisma();
   const permission = await prisma.tenantRolePermission.findUnique({
     where: {
       tenantId_role_permissionKey: {

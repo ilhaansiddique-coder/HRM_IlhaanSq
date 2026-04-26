@@ -1,5 +1,6 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { resolveDatabaseUrl } from "./server-env";
 
 // ─── Singleton Prisma Client ────────────────────────────────
 // Prevents multiple instances in development (hot-reload).
@@ -8,9 +9,20 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient(): PrismaClient {
+  const { connectionString, source } = resolveDatabaseUrl();
+  if (!connectionString) {
+    throw new Error(
+      "Database is not configured. Set DATABASE_URL, PLATFORM_DATABASE_POOLER_URL, PLATFORM_DATABASE_URL, or SUPABASE_DB_URL."
+    );
+  }
+
   const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
+    connectionString,
   });
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[db] Prisma configured via ${source}.`);
+  }
 
   return new PrismaClient({
     adapter,
