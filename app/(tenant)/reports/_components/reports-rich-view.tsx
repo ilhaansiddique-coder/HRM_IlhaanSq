@@ -225,7 +225,7 @@ export function ReportsRichView({
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-              <LegendChip chip="bg-emerald-500" text={`Revenue ${formatAmount(histogramTotals.revenue)}`} />
+              <LegendChip chip="bg-[#034b28]" text={`Revenue ${formatAmount(histogramTotals.revenue)}`} />
               <LegendChip chip="bg-indigo-500" text={`Orders ${histogramTotals.orders}`} />
               <LegendChip chip="bg-amber-500" text={`Customers ${histogramTotals.customers}`} />
             </div>
@@ -277,7 +277,7 @@ export function ReportsRichView({
                         return [value.toLocaleString(), name];
                       }}
                     />
-                    <Bar dataKey="revenue" name="Revenue" fill="#10B981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="revenue" name="Revenue" fill="#034b28" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="orders" name="Orders" fill="#6366F1" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="customers" name="New Customers" fill="#F59E0B" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="avgOrder" name="Avg Order" fill="#EC4899" radius={[4, 4, 0, 0]} />
@@ -309,7 +309,7 @@ export function ReportsRichView({
 // ─── Sub-components ─────────────────────────────────────────
 
 const TONE_CLASSES: Record<string, string> = {
-  emerald: "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400",
+  emerald: "text-[#034b28] bg-[#034b28]/10 dark:text-[#034b28]",
   indigo: "text-indigo-600 bg-indigo-500/10 dark:text-indigo-400",
   rose: "text-rose-600 bg-rose-500/10 dark:text-rose-400",
   amber: "text-amber-600 bg-amber-500/10 dark:text-amber-400",
@@ -420,7 +420,7 @@ function ItemCard({
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <DollarSign className="h-3.5 w-3.5" />
           <span>Value:</span>
-          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+          <span className="font-semibold text-[#034b28] dark:text-[#034b28]">
             {formatAmount(item.totalValue)}
           </span>
         </div>

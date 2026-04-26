@@ -654,7 +654,7 @@ export function SalesList({
                       {showTenant && (
                         <TableCell className={`text-xs ${cellPad}`}>
                           {sale.tenantName ? (
-                            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
+                            <span className="rounded-md bg-[#034b28]/10 px-1.5 py-0.5 font-medium capitalize text-[#034b28] dark:text-[#034b28]">
                               {sale.tenantName}
                             </span>
                           ) : (
@@ -901,7 +901,7 @@ export function SalesList({
 
                 {showTenant && sale.tenantName && (
                   <div className="mt-2">
-                    <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                    <span className="rounded-md bg-[#034b28]/10 px-1.5 py-0.5 text-[11px] font-medium capitalize text-[#034b28] dark:text-[#034b28]">
                       {sale.tenantName}
                     </span>
                   </div>

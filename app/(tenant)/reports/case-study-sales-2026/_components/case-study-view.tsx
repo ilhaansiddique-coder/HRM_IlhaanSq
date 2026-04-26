@@ -57,11 +57,11 @@ export function CaseStudyView({
   return (
     <div className="space-y-6">
       {/* === Hero === */}
-      <Card className="border-border/70 bg-gradient-to-br from-emerald-500/10 via-card/80 to-indigo-500/10">
+      <Card className="border-border/70 bg-gradient-to-br from-[#034b28]/10 via-card/80 to-indigo-500/10">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
-              <Badge variant="outline" className="border-emerald-500/40 text-emerald-700 dark:text-emerald-400">
+              <Badge variant="outline" className="border-[#034b28]/40 text-[#034b28] dark:text-[#034b28]">
                 Sales Case Study
               </Badge>
               <CardTitle className="text-2xl md:text-3xl font-semibold tracking-tight">
@@ -152,8 +152,8 @@ export function CaseStudyView({
                   >
                     <defs>
                       <linearGradient id="csRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10B981" stopOpacity={0.4} />
-                        <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#034b28" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#034b28" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
@@ -185,7 +185,7 @@ export function CaseStudyView({
                       type="monotone"
                       dataKey="revenue"
                       name="Revenue"
-                      stroke="#10B981"
+                      stroke="#034b28"
                       strokeWidth={2.5}
                       fill="url(#csRevenue)"
                     />
@@ -411,7 +411,7 @@ export function CaseStudyView({
 // ─── Sub-components ─────────────────────────────────────────
 
 const BIG_KPI_TONES: Record<string, string> = {
-  emerald: "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400",
+  emerald: "text-[#034b28] bg-[#034b28]/10 dark:text-[#034b28]",
   indigo: "text-indigo-600 bg-indigo-500/10 dark:text-indigo-400",
   amber: "text-amber-600 bg-amber-500/10 dark:text-amber-400",
   rose: "text-rose-600 bg-rose-500/10 dark:text-rose-400",

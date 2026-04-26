@@ -59,15 +59,6 @@ import {
 
 const PAGE_SIZE = 30;
 
-const statusVariants: Record<
-  string,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  active: "default",
-  neutral: "secondary",
-  inactive: "outline",
-};
-
 // Serialized row passed from the server. Decimal/Date fields are
 // converted to plain primitives so the client can render without
 // re-importing Prisma types.
@@ -312,10 +303,10 @@ export function CustomerList({
   }
 
   // Desktop column count — must stay in sync with the visible <TableHead>s.
-  // 8 base columns: Name, Additional Info, Phone, WhatsApp, Orders,
-  // Delivered, Cancelled, Total Spent. +1 for the Tenant column on
-  // super-admin reads. +1 for Actions when the table is editable.
-  const desktopColSpan = (showTenant ? 1 : 0) + (readOnly ? 8 : 9);
+  // 9 base columns: Name, Additional Info, Phone, WhatsApp, Orders,
+  // Delivered, Cancelled, Total Spent, Actions. +1 for the Tenant
+  // column on super-admin reads.
+  const desktopColSpan = (showTenant ? 1 : 0) + 9;
 
   return (
     <div className="space-y-4">
@@ -386,12 +377,10 @@ export function CustomerList({
             />
             {refreshing ? "Refreshing…" : "Refresh"}
           </Button>
-          {!readOnly && (
-            <Button onClick={openCreate} className="flex-1">
-              <Plus className="h-4 w-4" />
-              Add Customer
-            </Button>
-          )}
+          <Button onClick={openCreate} className="flex-1">
+            <Plus className="h-4 w-4" />
+            Add Customer
+          </Button>
         </div>
       </div>
 
@@ -403,10 +392,9 @@ export function CustomerList({
               <TableRow>
                 {showTenant && <TableHead>Tenant</TableHead>}
                 <TableHead>Name</TableHead>
-                <TableHead>Notes</TableHead>
+                <TableHead>Additional Info</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>WhatsApp</TableHead>
-                <TableHead>Status</TableHead>
                 <SortableHead
                   label="Orders"
                   field="orderCount"
@@ -432,7 +420,7 @@ export function CustomerList({
                   onToggle={toggleSort}
                   align="right"
                 />
-                {!readOnly && <TableHead className="w-[1%]"></TableHead>}
+                <TableHead className="text-right w-[1%]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -452,7 +440,7 @@ export function CustomerList({
                     {showTenant && (
                       <TableCell className="text-xs">
                         {customer.tenantName ? (
-                          <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
+                          <span className="rounded-md bg-[#034b28]/10 px-1.5 py-0.5 font-medium capitalize text-[#034b28] dark:text-[#034b28]">
                             {customer.tenantName}
                           </span>
                         ) : (
@@ -492,96 +480,89 @@ export function CustomerList({
                           href={`https://wa.me/${customer.whatsapp.replace(/[^\d]/g, "")}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-emerald-600 hover:underline dark:text-emerald-400"
                           title={customer.whatsapp}
+                          aria-label={`Open WhatsApp chat with ${customer.name}`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#034b28] text-white shadow-sm transition-colors hover:bg-[#023a1f]"
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
-                          <span className="text-xs">{customer.whatsapp}</span>
                         </a>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={statusVariants[customer.status] ?? "outline"}
-                      >
-                        {customer.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-right tabular-nums text-amber-600 dark:text-amber-400">
                       {customer.orderCount}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-right tabular-nums text-amber-600 dark:text-amber-400">
                       {customer.deliveredCount}
                     </TableCell>
-                    <TableCell
-                      className={`text-right tabular-nums ${
-                        customer.cancelledCount > 0
-                          ? "text-rose-600 dark:text-rose-400"
-                          : "text-muted-foreground"
-                      }`}
-                    >
+                    <TableCell className="text-right tabular-nums text-amber-600 dark:text-amber-400">
                       {customer.cancelledCount}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {formatAmount(customer.totalSpent)}
                     </TableCell>
-                    {!readOnly && (
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-8 w-8 ${
-                              (customer.creditDue ?? 0) > 0
-                                ? "text-amber-600 hover:text-amber-600"
-                                : "text-muted-foreground/40 hover:bg-transparent hover:text-muted-foreground/40"
-                            }`}
-                            onClick={() => openPayment(customer)}
-                            disabled={(customer.creditDue ?? 0) <= 0}
-                            aria-label={
-                              (customer.creditDue ?? 0) > 0
-                                ? `Collect credit (${formatAmount(customer.creditDue)} due)`
-                                : "No credit due"
-                            }
-                            title={
-                              (customer.creditDue ?? 0) > 0
-                                ? `Collect credit · ${formatAmount(customer.creditDue)} due`
-                                : "No credit due"
-                            }
-                          >
-                            <Wallet className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openHistory(customer)}
-                            aria-label={`View history for ${customer.name}`}
-                            title="View purchase history"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEdit(customer)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setPendingDelete(customer)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Square 36px buttons — matches the mobile
+                            card layout so the action cluster reads
+                            the same on every viewport. Wallet stays
+                            muted when there's no credit to collect. */}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className={`!h-9 !min-h-9 !w-9 rounded-md ${
+                            (customer.creditDue ?? 0) > 0
+                              ? "text-amber-600 hover:text-amber-600"
+                              : "text-muted-foreground/50"
+                          }`}
+                          onClick={() => openPayment(customer)}
+                          disabled={(customer.creditDue ?? 0) <= 0}
+                          aria-label={
+                            (customer.creditDue ?? 0) > 0
+                              ? `Collect credit (${formatAmount(customer.creditDue)} due)`
+                              : "No credit due"
+                          }
+                          title={
+                            (customer.creditDue ?? 0) > 0
+                              ? `Collect credit · ${formatAmount(customer.creditDue)} due`
+                              : "No credit due"
+                          }
+                        >
+                          <Wallet className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="!h-9 !min-h-9 !w-9 rounded-md"
+                          onClick={() => openHistory(customer)}
+                          aria-label={`View history for ${customer.name}`}
+                          title="View purchase history"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="!h-9 !min-h-9 !w-9 rounded-md"
+                          onClick={() => openEdit(customer)}
+                          aria-label={`Edit ${customer.name}`}
+                          title="Edit customer"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="!h-9 !min-h-9 !w-9 rounded-md text-destructive hover:text-destructive"
+                          onClick={() => setPendingDelete(customer)}
+                          aria-label={`Delete ${customer.name}`}
+                          title="Delete customer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -598,125 +579,132 @@ export function CustomerList({
             <span className="text-sm">No customers found</span>
           </Card>
         ) : (
-          paginated.map((customer) => (
-            <Card key={customer.id} className="rounded-lg p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium leading-tight">{customer.name}</p>
-                  {customer.additionalInfo && (
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                      {customer.additionalInfo}
-                    </p>
+          paginated.map((customer) => {
+            const hasCreditDue = (customer.creditDue ?? 0) > 0;
+            return (
+              <Card key={customer.id} className="rounded-lg p-4 space-y-3">
+                {/* Header — Name (left) + Additional Info pill (right).
+                    "No Notes" outlined badge fills the slot when the
+                    customer has no extra info, mirroring the design. */}
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 flex-1 truncate text-base font-semibold leading-tight">
+                    {customer.name}
+                  </p>
+                  <Badge
+                    variant={customer.additionalInfo ? "secondary" : "outline"}
+                    className="shrink-0 rounded-md font-normal"
+                    title={customer.additionalInfo ?? undefined}
+                  >
+                    <span className="block max-w-[140px] truncate">
+                      {customer.additionalInfo ?? "No Notes"}
+                    </span>
+                  </Badge>
+                </div>
+
+                {showTenant && customer.tenantName && (
+                  <div>
+                    <span className="rounded-md bg-[#034b28]/10 px-1.5 py-0.5 text-[11px] font-medium capitalize text-[#034b28] dark:text-[#034b28]">
+                      {customer.tenantName}
+                    </span>
+                  </div>
+                )}
+
+                {/* Contact row — phone (icon + number) + WhatsApp icon
+                    button. Mirrors the desktop WhatsApp icon style. */}
+                <div className="flex items-center gap-3 text-sm">
+                  {customer.phone ? (
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5" />
+                      {customer.phone}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                  {customer.whatsapp && (
+                    <a
+                      href={`https://wa.me/${customer.whatsapp.replace(/[^\d]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={customer.whatsapp}
+                      aria-label={`Open WhatsApp chat with ${customer.name}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#034b28] text-white shadow-sm transition-colors hover:bg-[#023a1f]"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" />
+                    </a>
                   )}
                 </div>
-                <Badge
-                  variant={statusVariants[customer.status] ?? "outline"}
-                  className="rounded-lg"
-                >
-                  {customer.status}
-                </Badge>
-              </div>
 
-              {showTenant && customer.tenantName && (
-                <div className="mt-2">
-                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
-                    {customer.tenantName}
-                  </span>
+                {/* 2x2 stat grid — uppercase labels, bold values, all
+                    centered. Matches the second screenshot. */}
+                <div className="grid grid-cols-2 gap-3">
+                  <StatBlock label="Orders" value={customer.orderCount} />
+                  <StatBlock
+                    label="Delivered"
+                    value={customer.deliveredCount}
+                  />
+                  <StatBlock
+                    label="Cancelled"
+                    value={customer.cancelledCount}
+                  />
+                  <StatBlock
+                    label="Spent"
+                    value={formatAmount(customer.totalSpent)}
+                  />
                 </div>
-              )}
 
-              {/* Contact row */}
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-                {customer.phone ? (
-                  <span className="inline-flex items-center gap-1 text-muted-foreground">
-                    <Phone className="h-3 w-3" />
-                    {customer.phone}
-                  </span>
-                ) : null}
-                {customer.whatsapp && (
-                  <a
-                    href={`https://wa.me/${customer.whatsapp.replace(/[^\d]/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    {customer.whatsapp}
-                  </a>
-                )}
-              </div>
-
-              {/* 4 metric chips */}
-              <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
-                <MetricChip label="Orders" value={customer.orderCount} />
-                <MetricChip
-                  label="Delivered"
-                  value={customer.deliveredCount}
-                />
-                <MetricChip
-                  label="Cancelled"
-                  value={customer.cancelledCount}
-                  tone={customer.cancelledCount > 0 ? "rose" : undefined}
-                />
-                <MetricChip
-                  label="Spent"
-                  value={formatAmount(customer.totalSpent)}
-                />
-              </div>
-
-              {!readOnly && (customer.creditDue ?? 0) > 0 && (
-                <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
-                  <span className="text-amber-700 dark:text-amber-400">
-                    Credit due:{" "}
-                    <span className="font-semibold">
-                      {formatAmount(customer.creditDue)}
-                    </span>
-                  </span>
+                {/* 4 icon-only action buttons in a row. Wallet stays
+                    enabled only when there's actually credit to collect
+                    (matches desktop). */}
+                <div className="flex items-center gap-2 pt-1">
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                    variant="outline"
+                    size="icon"
+                    className={`!h-9 !min-h-9 !w-9 rounded-md ${
+                      hasCreditDue
+                        ? "text-amber-600 hover:text-amber-600"
+                        : "text-muted-foreground/40"
+                    }`}
                     onClick={() => openPayment(customer)}
+                    disabled={!hasCreditDue}
+                    aria-label={
+                      hasCreditDue
+                        ? `Collect credit (${formatAmount(customer.creditDue)} due)`
+                        : "No credit due"
+                    }
                   >
-                    <Wallet className="h-3.5 w-3.5" />
-                    Collect
+                    <Wallet className="h-4 w-4" />
                   </Button>
-                </div>
-              )}
-
-              {!readOnly && (
-                <div className="mt-3 flex gap-2">
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="flex-1 rounded-lg"
+                    size="icon"
+                    className="!h-9 !min-h-9 !w-9 rounded-md"
                     onClick={() => openHistory(customer)}
+                    aria-label={`View history for ${customer.name}`}
                   >
-                    <Eye className="h-3.5 w-3.5" />
-                    History
+                    <Eye className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="flex-1 rounded-lg"
+                    size="icon"
+                    className="!h-9 !min-h-9 !w-9 rounded-md"
                     onClick={() => openEdit(customer)}
+                    aria-label={`Edit ${customer.name}`}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="flex-1 rounded-lg text-destructive hover:text-destructive"
+                    size="icon"
+                    className="!h-9 !min-h-9 !w-9 rounded-md text-destructive hover:text-destructive"
                     onClick={() => setPendingDelete(customer)}
+                    aria-label={`Delete ${customer.name}`}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-              )}
-            </Card>
-          ))
+              </Card>
+            );
+          })
         )}
       </div>
 
@@ -802,23 +790,19 @@ export function CustomerList({
         }
       />
 
-      {!readOnly && (
-        <CustomerPaymentDialog
-          open={paymentTarget !== null}
-          onOpenChange={(o) => !o && setPaymentTarget(null)}
-          customerId={paymentTarget?.id ?? null}
-          customerName={paymentTarget?.name ?? null}
-        />
-      )}
+      <CustomerPaymentDialog
+        open={paymentTarget !== null}
+        onOpenChange={(o) => !o && setPaymentTarget(null)}
+        customerId={paymentTarget?.id ?? null}
+        customerName={paymentTarget?.name ?? null}
+      />
 
-      {!readOnly && (
-        <CustomerHistoryDialog
-          open={historyTarget !== null}
-          onOpenChange={(o) => !o && setHistoryTarget(null)}
-          customerId={historyTarget?.id ?? null}
-          customerName={historyTarget?.name ?? null}
-        />
-      )}
+      <CustomerHistoryDialog
+        open={historyTarget !== null}
+        onOpenChange={(o) => !o && setHistoryTarget(null)}
+        customerId={historyTarget?.id ?? null}
+        customerName={historyTarget?.name ?? null}
+      />
 
       <AlertDialog
         open={pendingDelete !== null}
@@ -856,7 +840,7 @@ export function CustomerList({
 // ─── Sub-components ─────────────────────────────────────────
 
 const KPI_TONES: Record<string, string> = {
-  emerald: "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400",
+  emerald: "text-[#034b28] bg-[#034b28]/10 dark:text-[#034b28]",
   indigo: "text-indigo-600 bg-indigo-500/10 dark:text-indigo-400",
   rose: "text-rose-600 bg-rose-500/10 dark:text-rose-400",
   amber: "text-amber-600 bg-amber-500/10 dark:text-amber-400",
@@ -926,27 +910,22 @@ function SortableHead({
   );
 }
 
-function MetricChip({
+// Centered stat block used in the mobile customer cards. Uppercase
+// label on top, large bold value below — matches the second
+// screenshot's 2x2 grid.
+function StatBlock({
   label,
   value,
-  tone,
 }: {
   label: string;
   value: number | string;
-  tone?: "rose";
 }) {
   return (
-    <div className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5">
+    <div className="flex flex-col items-center justify-center gap-1 py-1">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
-      <div
-        className={`text-sm font-semibold ${
-          tone === "rose" ? "text-rose-600 dark:text-rose-400" : ""
-        }`}
-      >
-        {value}
-      </div>
+      <div className="text-base font-semibold tabular-nums">{value}</div>
     </div>
   );
 }

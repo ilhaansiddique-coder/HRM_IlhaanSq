@@ -246,7 +246,7 @@ export function CustomerPaymentDialog({
                             <TableCell
                               className={`text-right ${
                                 row.allocatedAmount > 0
-                                  ? "text-emerald-600 font-medium"
+                                  ? "text-[#034b28] font-medium"
                                   : row.allocatedAmount < 0
                                     ? "text-amber-600 font-medium"
                                     : "text-muted-foreground"
@@ -362,7 +362,7 @@ export function CustomerPaymentDialog({
                           </TableCell>
                           <TableCell
                             className={`text-right font-medium ${
-                              h.amount < 0 ? "text-amber-600" : "text-emerald-600"
+                              h.amount < 0 ? "text-amber-600" : "text-[#034b28]"
                             }`}
                           >
                             {h.amount > 0 ? "+" : ""}

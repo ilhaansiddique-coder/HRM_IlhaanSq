@@ -48,7 +48,7 @@ const statusVariants: Record<
 };
 
 const paymentStatusTone: Record<string, string> = {
-  paid: "text-emerald-600 dark:text-emerald-400",
+  paid: "text-[#034b28] dark:text-[#034b28]",
   partial: "text-amber-600 dark:text-amber-400",
   pending: "text-muted-foreground",
   cancelled: "text-rose-600 dark:text-rose-400",
@@ -259,7 +259,7 @@ export function CustomerHistoryDialog({
                         <TableCell className="text-right tabular-nums">
                           {formatAmount(s.grandTotal)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                        <TableCell className="text-right tabular-nums text-[#034b28] dark:text-[#034b28]">
                           {formatAmount(s.amountPaid)}
                         </TableCell>
                         <TableCell
@@ -300,7 +300,7 @@ export function CustomerHistoryDialog({
 }
 
 const SUMMARY_TONES: Record<string, string> = {
-  emerald: "text-emerald-600 bg-emerald-500/10 dark:text-emerald-400",
+  emerald: "text-[#034b28] bg-[#034b28]/10 dark:text-[#034b28]",
   indigo: "text-indigo-600 bg-indigo-500/10 dark:text-indigo-400",
   amber: "text-amber-600 bg-amber-500/10 dark:text-amber-400",
 };
@@ -359,7 +359,7 @@ function ContactRow({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-right text-sm text-emerald-600 hover:underline dark:text-emerald-400"
+            className="text-right text-sm text-[#034b28] hover:underline dark:text-[#034b28]"
           >
             {value}
           </a>
