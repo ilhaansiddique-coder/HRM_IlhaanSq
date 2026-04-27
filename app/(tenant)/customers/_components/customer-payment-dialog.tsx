@@ -173,7 +173,7 @@ export function CustomerPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             Credit & Due — {customerName ?? "Customer"}
@@ -220,31 +220,80 @@ export function CustomerPaymentDialog({
               <>
                 <Card>
                   <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Invoice</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead className="text-right">Was Paid</TableHead>
-                          <TableHead className="text-right">Allocated</TableHead>
-                          <TableHead className="text-right">Now Paid</TableHead>
-                          <TableHead className="text-right">Now Due</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {distributedRows.map((row) => (
-                          <TableRow key={row.id}>
-                            <TableCell className="font-mono text-xs">
+                    <div className="hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Invoice</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead className="text-right">Was Paid</TableHead>
+                            <TableHead className="text-right">Allocated</TableHead>
+                            <TableHead className="text-right">Now Paid</TableHead>
+                            <TableHead className="text-right">Now Due</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {distributedRows.map((row) => (
+                            <TableRow key={row.id}>
+                              <TableCell className="font-mono text-xs">
+                                {row.invoiceNumber}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {new Date(row.createdAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatAmount(row.amountPaid)}
+                              </TableCell>
+                              <TableCell
+                                className={`text-right ${
+                                  row.allocatedAmount > 0
+                                    ? "text-[#034b28] font-medium"
+                                    : row.allocatedAmount < 0
+                                      ? "text-amber-600 font-medium"
+                                      : "text-muted-foreground"
+                                }`}
+                              >
+                                {row.allocatedAmount === 0
+                                  ? "—"
+                                  : (row.allocatedAmount > 0 ? "+" : "") +
+                                    formatAmount(row.allocatedAmount)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatAmount(row.updatedPaidAmount)}
+                              </TableCell>
+                              <TableCell
+                                className={`text-right ${
+                                  row.currentDueBalance > 0
+                                    ? "text-amber-600 font-medium"
+                                    : ""
+                                }`}
+                              >
+                                {formatAmount(row.currentDueBalance)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="md:hidden divide-y divide-border/60">
+                      {distributedRows.map((row) => (
+                        <div key={row.id} className="space-y-2 p-3 text-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="font-mono text-xs">
                               {row.invoiceNumber}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
+                            </span>
+                            <span className="text-xs text-muted-foreground">
                               {new Date(row.createdAt).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="text-right">
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                            <span className="text-muted-foreground">Was Paid</span>
+                            <span className="text-right tabular-nums">
                               {formatAmount(row.amountPaid)}
-                            </TableCell>
-                            <TableCell
-                              className={`text-right ${
+                            </span>
+                            <span className="text-muted-foreground">Allocated</span>
+                            <span
+                              className={`text-right tabular-nums ${
                                 row.allocatedAmount > 0
                                   ? "text-[#034b28] font-medium"
                                   : row.allocatedAmount < 0
@@ -256,23 +305,25 @@ export function CustomerPaymentDialog({
                                 ? "—"
                                 : (row.allocatedAmount > 0 ? "+" : "") +
                                   formatAmount(row.allocatedAmount)}
-                            </TableCell>
-                            <TableCell className="text-right">
+                            </span>
+                            <span className="text-muted-foreground">Now Paid</span>
+                            <span className="text-right tabular-nums">
                               {formatAmount(row.updatedPaidAmount)}
-                            </TableCell>
-                            <TableCell
-                              className={`text-right ${
+                            </span>
+                            <span className="text-muted-foreground">Now Due</span>
+                            <span
+                              className={`text-right tabular-nums ${
                                 row.currentDueBalance > 0
                                   ? "text-amber-600 font-medium"
                                   : ""
                               }`}
                             >
                               {formatAmount(row.currentDueBalance)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -342,37 +393,62 @@ export function CustomerPaymentDialog({
             ) : (
               <Card>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>When</TableHead>
-                        <TableHead>Invoice</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead>By</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {history.map((h) => (
-                        <TableRow key={h.id}>
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                            {new Date(h.createdAt).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>When</TableHead>
+                          <TableHead>Invoice</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>By</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {history.map((h) => (
+                          <TableRow key={h.id}>
+                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                              {new Date(h.createdAt).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {h.invoiceNumber}
+                            </TableCell>
+                            <TableCell
+                              className={`text-right font-medium ${
+                                h.amount < 0 ? "text-amber-600" : "text-[#034b28]"
+                              }`}
+                            >
+                              {h.amount > 0 ? "+" : ""}
+                              {formatAmount(h.amount)}
+                            </TableCell>
+                            <TableCell className="text-xs">{h.paidByName}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="md:hidden divide-y divide-border/60">
+                    {history.map((h) => (
+                      <div key={h.id} className="space-y-1.5 p-3 text-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-mono text-xs">
                             {h.invoiceNumber}
-                          </TableCell>
-                          <TableCell
-                            className={`text-right font-medium ${
+                          </span>
+                          <span
+                            className={`text-right font-medium tabular-nums ${
                               h.amount < 0 ? "text-amber-600" : "text-[#034b28]"
                             }`}
                           >
                             {h.amount > 0 ? "+" : ""}
                             {formatAmount(h.amount)}
-                          </TableCell>
-                          <TableCell className="text-xs">{h.paidByName}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                          <span>{new Date(h.createdAt).toLocaleString()}</span>
+                          <span className="truncate">{h.paidByName}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}

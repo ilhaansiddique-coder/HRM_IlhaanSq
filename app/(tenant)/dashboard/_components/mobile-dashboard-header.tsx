@@ -17,7 +17,9 @@ import type { NotificationItem } from "@/lib/services/notifications.service";
 //   │ │🛒│ │ +│ │📊│ │👥│              │
 //   │ Sale Product Reports Customers   │
 //   └──────────────────────────────────┘
-// Wrapped in `md:hidden` so desktop keeps the existing TopBar layout.
+// Wrapped in `lg:hidden` so desktop (>= 1024px) keeps the existing
+// TopBar layout. Tablets fall under this and use the mobile header
+// like phones — matches the boundary in tenant-shell.tsx.
 // The TopBar's own date picker is hidden on mobile so we don't show
 // the same control twice.
 export function MobileDashboardHeader({
@@ -32,7 +34,7 @@ export function MobileDashboardHeader({
     // TooltipProvider is needed because NotificationBell uses Tooltip;
     // the global one in TenantShell only wraps the desktop TopBar.
     <TooltipProvider delayDuration={150}>
-      <div className="md:hidden space-y-3">
+      <div className="lg:hidden space-y-3">
       {/* Title + Notification + Today picker */}
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>

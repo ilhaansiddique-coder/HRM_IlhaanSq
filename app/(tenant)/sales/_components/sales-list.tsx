@@ -46,7 +46,8 @@ import {
 import { NewSaleDialog } from "./new-sale-dialog";
 import { EditSaleDialog } from "./edit-sale-dialog";
 import { SaleDetailsDialog } from "./sale-details-dialog";
-import { SalesHistoryDialog } from "./sales-history-dialog";
+import { SalesHistoryPanel } from "./sales-history-panel";
+import { format, isSameDay } from "date-fns";
 import {
   SalesToolbar,
   type ToolbarFilters,
@@ -144,6 +145,28 @@ function resolveDateBounds(
 // Parse a comma-separated URL value into a Set, dropping empty strings.
 const parseSet = <T extends string>(raw: string | null): Set<T> =>
   new Set(((raw ?? "").split(",").filter(Boolean) as T[]));
+
+// Pretty label for the Sales History panel header. Mirrors whatever
+// the toolbar's DateRangePicker has in the URL so the panel and the
+// list always agree on which slice they're describing. Examples:
+//   today     → "April 27th, 2026"
+//   last_7    → "Apr 21st – Apr 27th, 2026"
+//   custom    → "Apr 21st – Apr 27th, 2026" (or year-spanning variant)
+//   all_time  → "All time"
+function formatDateRangeLabel(
+  rangeParam: string | null,
+  fromParam: string | null,
+  toParam: string | null
+): string {
+  if (rangeParam === "all_time") return "All time";
+  const { start, end } = resolveDateBounds(rangeParam, fromParam, toParam);
+  if (!start || !end) return "All time";
+  if (isSameDay(start, end)) return format(start, "MMMM do, yyyy");
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${format(start, "MMM do")} – ${format(end, "MMM do, yyyy")}`;
+  }
+  return `${format(start, "MMM do, yyyy")} – ${format(end, "MMM do, yyyy")}`;
+}
 
 export function SalesList({
   initialSales,
@@ -353,12 +376,6 @@ export function SalesList({
     });
   }
 
-  function closeHistory() {
-    const p = new URLSearchParams(params.toString());
-    p.delete("history");
-    router.replace(`?${p.toString()}`, { scroll: false });
-  }
-
   // ─── Per-row actions ────────────────────────────────────────
   // The action icons in the table all share this `runAction` pattern:
   // confirm if needed, set the busy id, fire the server action, toast
@@ -500,6 +517,17 @@ export function SalesList({
         />
       </div>
 
+      {/* Sales History panel — appears inline between the KPI strip and
+          the table when the TopBar's history toggle flips `?history=1`.
+          The panel re-uses the same `filtered` slice the table reads, so
+          its bucket totals always equal the KPI strip's Total Revenue. */}
+      {urlHistory && (
+        <SalesHistoryPanel
+          sales={filtered}
+          dateLabel={formatDateRangeLabel(urlRange, urlFrom, urlTo)}
+        />
+      )}
+
       {/* In-page toolbar — mobile only. On desktop the TopBar carries
           the same controls (search / date / filters / users) plus the
           New Sale button, and the alert/density bits are redundant
@@ -513,67 +541,6 @@ export function SalesList({
           onAlertClick={handleAlertClick}
           onNewSale={() => setNewSaleOpen(true)}
         />
-      </Card>
-
-      {/* Desktop bulk header — Bulk Status select + Bulk Print +
-          refresh, plus a count of selected rows. */}
-      <Card className="hidden md:block rounded-lg p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-xs text-muted-foreground">
-            {selected.size > 0
-              ? `${selected.size} selected`
-              : "Select rows for bulk actions"}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 rounded-lg"
-              onClick={() => router.refresh()}
-              aria-label="Refresh"
-              title="Refresh"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-1.5">
-              <Select
-                value={bulkStatus}
-                onValueChange={(v) => setBulkStatus(v)}
-                disabled={selected.size === 0}
-              >
-                <SelectTrigger className="h-9 w-36 rounded-lg">
-                  <SelectValue placeholder="Bulk Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courierStatusOptions.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 rounded-lg"
-                disabled={selected.size === 0 || !bulkStatus || pending}
-                onClick={applyBulkStatus}
-              >
-                Apply
-              </Button>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-2 rounded-lg"
-              disabled={selected.size === 0}
-              onClick={() => comingSoon("Bulk Print")}
-            >
-              <Printer className="h-4 w-4" />
-              Bulk Print
-            </Button>
-          </div>
-        </div>
       </Card>
 
       {/* Desktop table. */}
@@ -608,7 +575,65 @@ export function SalesList({
                 <TableHead>Courier Name</TableHead>
                 <TableHead>CN Number</TableHead>
                 <TableHead>Courier Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">
+                  {/* Actions label sits next to the bulk-action cluster
+                      (Refresh / Bulk Status / Apply / Bulk Print) so the
+                      header row carries both the per-row action title
+                      and the selection-driven bulk controls inline,
+                      right-aligned over the action icons in body rows. */}
+                  <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                    <span className="mr-auto text-left">Actions</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 rounded-lg"
+                      onClick={() => router.refresh()}
+                      aria-label="Refresh"
+                      title={
+                        selected.size > 0
+                          ? `${selected.size} selected — refresh`
+                          : "Refresh"
+                      }
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Select
+                      value={bulkStatus}
+                      onValueChange={(v) => setBulkStatus(v)}
+                      disabled={selected.size === 0}
+                    >
+                      <SelectTrigger className="h-9 w-36 rounded-lg">
+                        <SelectValue placeholder="Bulk Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courierStatusOptions.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 rounded-lg"
+                      disabled={selected.size === 0 || !bulkStatus || pending}
+                      onClick={applyBulkStatus}
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-2 rounded-lg"
+                      disabled={selected.size === 0}
+                      onClick={() => comingSoon("Bulk Print")}
+                    >
+                      <Printer className="h-4 w-4" />
+                      Bulk Print
+                    </Button>
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -732,7 +757,7 @@ export function SalesList({
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className={`text-right ${cellPad}`}>
+                      <TableCell className={`text-left ${cellPad}`}>
                         <div className="inline-flex items-center gap-0.5">
                           <ActionIcon
                             label="Edit"
@@ -813,14 +838,6 @@ export function SalesList({
         open={viewingSaleId !== null}
         onOpenChange={(o) => !o && setViewingSaleId(null)}
         saleId={viewingSaleId}
-      />
-
-      <SalesHistoryDialog
-        open={urlHistory}
-        onOpenChange={(o) => {
-          if (!o) closeHistory();
-        }}
-        sales={filtered}
       />
 
       {/* Mobile card stack. */}

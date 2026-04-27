@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArchiveRestore, Download, Upload } from "lucide-react";
+import { ArchiveRestore, Download, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -15,6 +15,7 @@ import {
   exportProductsCsvAction,
 } from "../actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
+import { ProductDialog } from "./product-dialog";
 
 // Replaces the generic Sales / Reports / Customers TopBar shortcuts when
 // the user is on /products. Provides three product-management actions:
@@ -28,6 +29,7 @@ export function ProductsActionsCluster() {
   const [exporting, startExport] = useTransition();
   const [importing, setImporting] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   function handleExport() {
@@ -150,8 +152,20 @@ export function ProductsActionsCluster() {
       >
         <ArchiveRestore className="h-4 w-4" />
       </ClusterIconButton>
+      {/* Add Product — opens the same ProductDialog the per-row Edit
+          uses, but with no `initial` so it boots in create mode (with
+          variants tab + image dropzone + category combobox). The dialog
+          calls router.refresh() on submit so the page repopulates with
+          the new product without a manual reload. */}
+      <ClusterIconButton
+        label="Add Product"
+        onClick={() => setAddOpen(true)}
+      >
+        <Plus className="h-4 w-4" />
+      </ClusterIconButton>
 
       <AdjustStockDialog open={adjustOpen} onOpenChange={setAdjustOpen} />
+      <ProductDialog open={addOpen} onOpenChange={setAddOpen} />
     </>
   );
 }

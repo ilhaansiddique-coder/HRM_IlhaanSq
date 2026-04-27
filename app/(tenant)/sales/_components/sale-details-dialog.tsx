@@ -67,7 +67,7 @@ export function SaleDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl w-[calc(100vw-1.5rem)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -118,34 +118,59 @@ export function SaleDetailsDialog({
             {/* Items */}
             <Card>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Variant</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sale.items.map((it) => (
-                      <TableRow key={it.id}>
-                        <TableCell className="font-medium">{it.productName}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
-                          {it.variantLabel ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-right">{it.quantity}</TableCell>
-                        <TableCell className="text-right">
-                          {formatAmount(it.unitPrice)}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {formatAmount(it.totalPrice)}
-                        </TableCell>
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Variant</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Rate</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {sale.items.map((it) => (
+                        <TableRow key={it.id}>
+                          <TableCell className="font-medium">{it.productName}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            {it.variantLabel ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-right">{it.quantity}</TableCell>
+                          <TableCell className="text-right">
+                            {formatAmount(it.unitPrice)}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {formatAmount(it.totalPrice)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="md:hidden divide-y divide-border/60">
+                  {sale.items.map((it) => (
+                    <div key={it.id} className="space-y-1.5 p-3 text-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium break-words">{it.productName}</div>
+                          {it.variantLabel && (
+                            <div className="text-xs text-muted-foreground break-words">
+                              {it.variantLabel}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right font-semibold tabular-nums">
+                          {formatAmount(it.totalPrice)}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Qty {it.quantity}</span>
+                        <span>@ {formatAmount(it.unitPrice)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 

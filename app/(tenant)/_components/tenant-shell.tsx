@@ -24,8 +24,8 @@ import {
   LogOut,
   Shield,
   PanelLeft,
-  Palette,
-  Check,
+  Sun,
+  Moon,
   ArrowUp,
   Building2,
   ChevronDown,
@@ -90,13 +90,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import {
   applyThemeToDocument,
-  DAISY_THEMES,
   getStoredTheme,
   resolveTheme,
   setStoredTheme,
@@ -176,7 +170,7 @@ export function TenantShell({
               role={role}
               notifications={notifications}
             />
-            <main className="flex-1 p-4 nav-mb-safe md:p-6 min-w-0">{children}</main>
+            <main className="flex-1 p-4 nav-mb-safe lg:p-6 min-w-0">{children}</main>
           </div>
         </div>
 
@@ -505,44 +499,44 @@ function TopBar({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <header className="sticky top-0 z-30 hidden md:flex items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 py-3 backdrop-blur md:px-6">
+      <header className="sticky top-0 z-30 hidden lg:flex items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 py-3 backdrop-blur lg:px-6">
         {/* Left — page-specific controls. Hidden on mobile because each
             page renders its own mobile header below.
               /dashboard → DateRangePicker
               /products  → ProductsHeaderControls (search + stock filter) */}
         <div className="flex flex-1 items-center justify-start">
           {isDashboard && (
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <DateRangePicker />
             </div>
           )}
           {isProducts && (
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <ProductsHeaderControls />
             </div>
           )}
           {isInventory && (
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <InventoryHeaderControls />
             </div>
           )}
           {isSales && (
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <SalesHeaderControls />
             </div>
           )}
           {isInvoices && (
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <InvoicesHeaderControls />
             </div>
           )}
           {isReports && (
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <ReportsHeaderControls />
             </div>
           )}
           {isCustomers && (
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <CustomersHeaderControls />
             </div>
           )}
@@ -556,7 +550,7 @@ function TopBar({
             so its icon spacing matches the bell + new-sale + theme +
             user buttons that follow. */}
         {isInvoices && (
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <InvoicesExportButton />
           </div>
         )}
@@ -565,7 +559,7 @@ function TopBar({
             Sits alongside InvoicesExportButton in the right cluster so
             both pages keep the same icon ordering. */}
         {isReports && (
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <ReportsExportButton />
           </div>
         )}
@@ -574,7 +568,7 @@ function TopBar({
             between the bell and the New Sale (+) button. URL-synced
             with the in-page sales list via the `cancelled` query param. */}
         {isSales && (
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <SalesCancelledToggle />
           </div>
         )}
@@ -583,7 +577,7 @@ function TopBar({
             The `+` here adds a customer (via ?action=add URL flag),
             replacing the generic New Sale shortcut on this page. */}
         {isCustomers && (
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <CustomersActionsCluster />
           </div>
         )}
@@ -618,62 +612,38 @@ function TopBar({
           </Tooltip>
         )}
 
-        {/* Theme picker */}
-      <HoverCard openDelay={100} closeDelay={80}>
-        <HoverCardTrigger asChild>
-          <button
-            type="button"
-            aria-label="Theme"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
-          >
-            <Palette className="h-4 w-4" />
-          </button>
-        </HoverCardTrigger>
-        <HoverCardContent
-          side="bottom"
-          align="end"
-          className="w-[320px] max-w-[80vw] p-3"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Themes
-            </p>
-            <span className="text-xs text-muted-foreground">
-              {DAISY_THEMES.find((t) => t.name === selectedTheme)?.label ??
-                selectedTheme}
-            </span>
-          </div>
-          <div className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1">
-            {DAISY_THEMES.map((t) => {
-              const active = selectedTheme === t.name;
-              return (
-                <button
-                  key={t.name}
-                  type="button"
-                  onClick={() => handleThemeChange(t.name)}
-                  className={`flex items-center justify-between rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${
-                    active
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-base-300 bg-base-100 text-base-content hover:border-primary/40"
-                  }`}
-                >
-                  <span className="truncate pr-2">{t.label}</span>
-                  <span className="flex items-center gap-1">
-                    {t.swatch.slice(0, 2).map((c) => (
-                      <span
-                        key={c}
-                        className="h-2.5 w-2.5 rounded-full border border-base-300/70"
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                    {active && <Check className="h-3 w-3" />}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </HoverCardContent>
-      </HoverCard>
+        {/* Theme toggle — single click flips between Light ("light")
+            and Dark ("night"). Sun icon shown while in dark mode (a
+            click brings the sun back), Moon shown while in light mode
+            (a click summons night). Replaces the previous HoverCard
+            picker. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={
+                selectedTheme === "night"
+                  ? "Switch to light theme"
+                  : "Switch to dark theme"
+              }
+              onClick={() =>
+                handleThemeChange(
+                  selectedTheme === "night" ? "light" : "night"
+                )
+              }
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
+            >
+              {selectedTheme === "night" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {selectedTheme === "night" ? "Light mode" : "Dark mode"}
+          </TooltipContent>
+        </Tooltip>
 
         {/* User identity pill — clicking it opens the profile page.
             Name + role on top, email kept on hover via title attribute. */}
@@ -685,7 +655,7 @@ function TopBar({
           <Avatar className="h-7 w-7 border border-border/60">
             <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
           </Avatar>
-          <div className="hidden min-w-0 leading-tight md:block">
+          <div className="hidden min-w-0 leading-tight lg:block">
             <p className="truncate text-xs font-medium">{userName}</p>
             {roleLabel && (
               <p className="truncate text-[10px] text-muted-foreground">
@@ -701,10 +671,10 @@ function TopBar({
           onClick={() => signOut({ callbackUrl: "/login" })}
           aria-label="Sign Out"
           title="Sign Out"
-          className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted md:w-9 md:justify-center md:px-0"
+          className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted lg:w-9 lg:justify-center lg:px-0"
         >
           <LogOut className="h-4 w-4" />
-          <span className="md:hidden">Sign Out</span>
+          <span className="lg:hidden">Sign Out</span>
         </button>
       </header>
 
@@ -771,7 +741,7 @@ function MobileBottomNav({
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-40 md:hidden transition-transform duration-200 gpu pb-safe ${
+      className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden transition-transform duration-200 gpu pb-safe ${
         show ? "translate-y-0" : "translate-y-full"
       }`}
     >

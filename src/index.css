@@ -342,11 +342,16 @@
     overscroll-behavior-y: contain;
   }
 
-  /* Re-enable the fixed-attachment radial backdrop on tablet+ where
-     the compositor handles it cleanly. Below this width we leave
-     `background-attachment: scroll` so vertical page scroll works
-     on iOS Safari and Android Chrome. */
-  @media (min-width: 768px) {
+  /* Re-enable the fixed-attachment radial backdrop only on true
+     mouse-driven desktops. The `(hover: hover) and (pointer: fine)`
+     pair filters out every touch device — real phones/tablets, touch
+     laptops, and Chrome DevTools mobile emulation — because that's
+     exactly where `background-attachment: fixed` triggers the iOS
+     Safari / Android Chrome compositor bug that silently kills
+     vertical page scroll. The 1024px floor keeps narrow desktop
+     windows on `scroll` too, since the gradient looks fine either
+     way at that width. */
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
     body {
       background-attachment: fixed;
     }

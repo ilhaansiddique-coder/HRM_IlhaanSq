@@ -1,6 +1,12 @@
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+// Bumped 768 → 1024 so iPad-class tablets get the mobile shell
+// (Sheet sidebar + bottom nav) instead of the cramped desktop layout
+// where the sidebar eats half the viewport. Must stay aligned with
+// the `lg:` boundary used in tenant-shell.tsx for the TopBar / bottom
+// nav visibility — otherwise the JS hook and Tailwind classes
+// disagree and you get a TopBar with no sidebar trigger.
+const MOBILE_BREAKPOINT = 1024
 
 export function useIsMobile() {
   // Always start false on both SSR and the FIRST client render —

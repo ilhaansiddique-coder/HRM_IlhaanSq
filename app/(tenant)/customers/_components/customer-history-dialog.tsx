@@ -105,7 +105,7 @@ export function CustomerHistoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl w-[calc(100vw-1.5rem)] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {customerName ?? data?.customer.name ?? "Customer"} — Purchase

@@ -57,5 +57,20 @@ export function LenisProvider({ children }: { children: React.ReactNode }) {
     };
   }, [enabled]);
 
+  // Guard against Radix Dialog/Sheet leaks. When Radix opens a modal
+  // it sets `pointer-events: none` on body and `overflow: hidden` on
+  // <html>. If a modal unmounts mid-transition (route change while
+  // open, error during close, etc.) the cleanup can be skipped and
+  // the page becomes scroll-dead and tap-dead while dialogs (rendered
+  // in their own portal) keep working — a textbook reproduction of
+  // "mobile scroll broken but dialogs scroll fine". Forcing a reset
+  // on every pathname change costs nothing and rescues the user.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.pointerEvents = "";
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+  }, [pathname]);
+
   return <>{children}</>;
 }

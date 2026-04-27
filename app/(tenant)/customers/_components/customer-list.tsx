@@ -384,11 +384,13 @@ export function CustomerList({
         </div>
       </div>
 
-      {/* === Desktop table === */}
-      <Card className="hidden md:block overflow-hidden rounded-lg">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+      {/* === Desktop table ===
+          The Table primitive already ships its own bordered, rounded
+          scroll wrapper — no Card around it (that produced two
+          stacked borders with mismatched radii in the screenshot). */}
+      <div className="hidden md:block">
+        <Table containerClassName="rounded-md">
+          <TableHeader>
               <TableRow>
                 {showTenant && <TableHead>Tenant</TableHead>}
                 <TableHead>Name</TableHead>
@@ -418,9 +420,8 @@ export function CustomerList({
                   field="totalSpent"
                   sort={sort}
                   onToggle={toggleSort}
-                  align="right"
                 />
-                <TableHead className="text-right w-[1%]">Actions</TableHead>
+                <TableHead className="w-[1%] whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -490,20 +491,20 @@ export function CustomerList({
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums text-amber-600 dark:text-amber-400">
+                    <TableCell className="tabular-nums text-amber-600 dark:text-amber-400">
                       {customer.orderCount}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums text-amber-600 dark:text-amber-400">
+                    <TableCell className="tabular-nums text-amber-600 dark:text-amber-400">
                       {customer.deliveredCount}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums text-amber-600 dark:text-amber-400">
+                    <TableCell className="tabular-nums text-amber-600 dark:text-amber-400">
                       {customer.cancelledCount}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
+                    <TableCell className="font-medium tabular-nums">
                       {formatAmount(customer.totalSpent)}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-start gap-1.5">
                         {/* Square 36px buttons — matches the mobile
                             card layout so the action cluster reads
                             the same on every viewport. Wallet stays
@@ -566,10 +567,9 @@ export function CustomerList({
                   </TableRow>
                 ))
               )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+          </TableBody>
+        </Table>
+      </div>
 
       {/* === Mobile cards === */}
       <div className="md:hidden space-y-3">
@@ -884,7 +884,7 @@ function SortableHead({
   field,
   sort,
   onToggle,
-  align = "right",
+  align = "left",
 }: {
   label: string;
   field: SortField;
