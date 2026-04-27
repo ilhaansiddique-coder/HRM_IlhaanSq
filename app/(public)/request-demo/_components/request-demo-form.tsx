@@ -41,11 +41,15 @@ export function RequestDemoForm() {
   function handleSubmit(formData: FormData) {
     setError(null);
     startTransition(async () => {
-      try {
-        await submitDemoRequestAction(formData);
+      // Action returns { error: null | string } — see actions.ts. We
+      // don't try/catch here: validation errors come back in the
+      // payload with the original message intact (Next.js would
+      // otherwise sanitise a thrown Error.message in prod).
+      const result = await submitDemoRequestAction(formData);
+      if (result.error) {
+        setError(result.error);
+      } else {
         setSuccess(true);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to submit request");
       }
     });
   }
