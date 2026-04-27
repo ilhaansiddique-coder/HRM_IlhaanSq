@@ -2,17 +2,26 @@ import { requireTenant } from "@/lib/auth";
 import { getCachedSales } from "@/lib/cache";
 import { getAllTenantsSales } from "@/lib/services/sale.service";
 import { SalesList, type SerializedSaleRow } from "./_components/sales-list";
+import { PageErrorState } from "../_components/page-error-state";
 
 export default async function SalesPage() {
   const session = await requireTenant();
 
-  // Super admin: cross-tenant sales (each row tagged with tenant name).
-  // Tenant user: their own tenant's cached sales only.
-  const sales = session.isSuperAdmin
-    ? await getAllTenantsSales()
-    : await getCachedSales(session.tenantId);
+  // Wrap the data fetch + serialization in try/catch so a failed query
+  // (schema drift, DB connectivity, malformed row) renders an inline
+  // error instead of crashing the route to a generic 500. Production
+  // strips error.message before it reaches a client error.tsx, so the
+  // user would otherwise have no signal about what failed — see
+  // PageErrorState for why we surface it as page content.
+  let serialized: SerializedSaleRow[];
+  try {
+    // Super admin: cross-tenant sales (each row tagged with tenant name).
+    // Tenant user: their own tenant's cached sales only.
+    const sales = session.isSuperAdmin
+      ? await getAllTenantsSales()
+      : await getCachedSales(session.tenantId);
 
-  const serialized: SerializedSaleRow[] = sales.map((s) => {
+    serialized = sales.map((s) => {
     // Cross-tenant payload includes the tenant relation; tenant-scoped
     // reads do not. Read it defensively so both paths typecheck.
     const tenantName =
@@ -54,7 +63,14 @@ export default async function SalesPage() {
       tenantId: s.tenantId,
       tenantName,
     };
-  });
+    });
+  } catch (e) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <PageErrorState title="Sales" error={e} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">

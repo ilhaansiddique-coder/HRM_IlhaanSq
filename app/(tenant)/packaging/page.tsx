@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { requireTenant } from "@/lib/auth";
 import { tenantDb } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,28 +13,48 @@ import {
 } from "@/components/ui/table";
 import { PackageOpen, CheckCircle2 } from "lucide-react";
 import { PackagingActions } from "./_components/packaging-actions";
+import { PageErrorState } from "../_components/page-error-state";
+
+type PendingOrder = Prisma.SaleGetPayload<{
+  include: {
+    items: { include: { product: true; variant: true } };
+    customer: true;
+  };
+}>;
 
 export default async function PackagingPage() {
   const session = await requireTenant();
   const db = tenantDb(session.tenantId);
 
-  const pendingOrders = await db.sale.findMany({
-    where: {
-      isDeleted: false,
-      OR: [
-        { courierStatus: "not_sent" },
-        { courierStatus: null },
-        { orderStatus: "pending" },
-      ],
-      paymentStatus: { not: "cancelled" },
-    },
-    include: {
-      items: { include: { product: true, variant: true } },
-      customer: true,
-    },
-    orderBy: { createdAt: "asc" },
-    take: 200,
-  });
+  // See PageErrorState — wrapping the fetch keeps the route loadable
+  // when the DB query throws (schema drift, network blip) and surfaces
+  // the actual reason instead of a blank 500.
+  let pendingOrders: PendingOrder[];
+  try {
+    pendingOrders = await db.sale.findMany({
+      where: {
+        isDeleted: false,
+        OR: [
+          { courierStatus: "not_sent" },
+          { courierStatus: null },
+          { orderStatus: "pending" },
+        ],
+        paymentStatus: { not: "cancelled" },
+      },
+      include: {
+        items: { include: { product: true, variant: true } },
+        customer: true,
+      },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+    });
+  } catch (e) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <PageErrorState title="Packaging" error={e} />
+      </div>
+    );
+  }
 
   const totalItems = pendingOrders.reduce(
     (sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0),

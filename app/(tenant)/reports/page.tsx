@@ -2,6 +2,7 @@ import { requireTenant } from "@/lib/auth";
 import { resolveDateBounds, formatDateLabel } from "@/lib/date-range";
 import { getReportsPageData } from "@/lib/services/reports.service";
 import { ReportsRichView } from "./_components/reports-rich-view";
+import { PageErrorState } from "../_components/page-error-state";
 
 // Reports page — rich operational dashboard scoped to a date range.
 //
@@ -30,7 +31,19 @@ export default async function ReportsPage({
   const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "today");
   const scope = session.isSuperAdmin ? null : session.tenantId;
 
-  const data = await getReportsPageData(scope, start, end);
+  // See PageErrorState — wrapping the fetch keeps the route loadable
+  // when the report aggregation throws (schema drift, DB connectivity)
+  // and surfaces the actual reason instead of a blank 500.
+  let data: Awaited<ReturnType<typeof getReportsPageData>>;
+  try {
+    data = await getReportsPageData(scope, start, end);
+  } catch (e) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <PageErrorState title="Reports" error={e} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
