@@ -21,10 +21,10 @@
     "baseUrl": ".",
     "paths": {
       "@/components/*": [
-        "./src/components/*"
+        "./components/*"
       ],
       "@/hooks/*": [
-        "./src/hooks/*"
+        "./app/_hooks/*"
       ],
       "@/*": [
         "./*"

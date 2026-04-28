@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 
-import "../src/index.css";
-import "lenis/dist/lenis.css";
-import { Toaster } from "@/components/ui/sonner";
+import "./globals.css";
+import { ToasterProvider } from "./_components/toaster-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -92,7 +91,7 @@ export default function RootLayout({
           {themeBootstrapScript}
         </Script>
         {children}
-        <Toaster position="bottom-right" richColors />
+        <ToasterProvider />
       </body>
     </html>
   );

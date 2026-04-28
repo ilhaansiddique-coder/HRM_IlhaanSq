@@ -1,5 +1,4 @@
-// Re-export shared UI utilities from src/lib so both old and new code share one source
-export { cn } from "../src/lib/utils";
+export { cn } from "./cn";
 export {
   applyThemeToDocument,
   DAISY_THEMES,
@@ -9,4 +8,4 @@ export {
   isDarkTheme,
   type DaisyThemeName,
   type DaisyThemeOption,
-} from "../src/lib/themePreferences";
+} from "./theme-preferences";

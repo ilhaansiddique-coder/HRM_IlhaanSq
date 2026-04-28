@@ -1,0 +1,681 @@
+/* Bricolage Grotesque — self-hosted from the user-supplied Google Fonts
+   download under public/fonts/Bricolage_Grotesque/. Single variable WOFF2
+   covers all three axes (weight 200–800, width 75–100, optical size
+   12–96) and the full unicode range shipped by the foundry. */
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-display: swap;
+  src: url("/fonts/Bricolage_Grotesque/BricolageGrotesque-Variable.woff2")
+    format("woff2-variations");
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ─── Cross-theme tokens ────────────────────────────────────
+     Variables that don't change between Light and Night themes.
+     Type stack, radius, shadow, motion, etc. */
+  :root,
+  html[data-theme] {
+    /* Type stack — Bricolage Grotesque self-hosted from public/fonts. */
+    --font-sans: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+
+    /* Sizing & elevation */
+    --radius: 0.5rem;
+    --letter-spacing: 0.025em;
+
+    --shadow-blur: 3px;
+    --shadow-spread: 0px;
+    --shadow-offset-x: 0px;
+    --shadow-offset-y: 1px;
+    --shadow-color: #000000;
+    --shadow-opacity: 0.17;
+  }
+
+  /* ─── Light theme (default) ─────────────────────────────────
+     Mint-green primary on a unified off-white (#F9F9F9). Every
+     "white" surface in the light theme — page background, cards,
+     popovers, sidebar, secondary, badge text on saturated colours —
+     resolves to the same #F9F9F9 so the whole UI shares one tone. */
+  html[data-theme="light"] {
+    color-scheme: light;
+
+    /* Surfaces */
+    --background: #f9f9f9;
+    --foreground: #171717;
+    --card: #f9f9f9;
+    --card-foreground: #171717;
+    --popover: #f9f9f9;
+    --popover-foreground: #525252;
+    --muted: #ededed;
+    --muted-foreground: #202020;
+    --input: #f6f6f6;
+    --border: #dfdfdf;
+
+    /* Accents */
+    --primary: #72e3ad;
+    --primary-foreground: #1e2723;
+    --secondary: #f9f9f9;
+    --secondary-foreground: #171717;
+    --accent: #ededed;
+    --accent-foreground: #202020;
+
+    /* Status — foreground (text on coloured fills) is unified to #F9F9F9. */
+    --destructive: #ca3214;
+    --destructive-foreground: #f9f9f9;
+    --success: #10b981;
+    --success-foreground: #f9f9f9;
+    --warning: #f97316;
+    --warning-foreground: #f9f9f9;
+    --info: #3b82f6;
+    --info-foreground: #f9f9f9;
+
+    --ring: #72e3ad;
+
+    /* Sidebar — active pill follows --sidebar-accent per the doc spec. */
+    --sidebar: #f9f9f9;
+    --sidebar-foreground: #707070;
+    --sidebar-background: #f9f9f9;
+    --sidebar-primary: #72e3ad;
+    --sidebar-primary-foreground: #1e2723;
+    --sidebar-accent: #ededed;
+    --sidebar-accent-foreground: #202020;
+    --sidebar-border: #dfdfdf;
+    --sidebar-ring: #72e3ad;
+
+    /* Charts (Recharts dashboard widgets) */
+    --chart-1: #72e3ad;
+    --chart-2: #3b82f6;
+    --chart-3: #8b5cf6;
+    --chart-4: #f59e0b;
+    --chart-5: #10b981;
+
+    /* daisyUI palette mirrors */
+    --color-base-100: #f9f9f9;
+    --color-base-200: #ededed;
+    --color-base-300: #dfdfdf;
+    --color-base-content: #171717;
+    --color-primary: #72e3ad;
+    --color-primary-content: #1e2723;
+    --color-secondary: #f9f9f9;
+    --color-secondary-content: #171717;
+    --color-accent: #ededed;
+    --color-accent-content: #202020;
+    --color-neutral: #1e293b;
+    --color-neutral-content: #f1f5f9;
+    --color-info: #3b82f6;
+    --color-info-content: #f9f9f9;
+    --color-success: #10b981;
+    --color-success-content: #f9f9f9;
+    --color-warning: #f97316;
+    --color-warning-content: #f9f9f9;
+    --color-error: #ca3214;
+    --color-error-content: #f9f9f9;
+
+    /* ─── RGB triplets for Tailwind /<alpha> utilities ──────────
+       After uninstalling daisyUI we register the same token names
+       (success, warning, error, base-100/200/300/content, etc.) in
+       tailwind.config.ts via `rgb(var(--<name>-rgb) / <alpha-value>)`.
+       The triplet form (no commas, no rgb() wrapper) is what Tailwind
+       v3's <alpha-value> placeholder requires for utilities like
+       `bg-success/35` to compose correctly. */
+    --base-100-rgb: 249 249 249;
+    --base-200-rgb: 237 237 237;
+    --base-300-rgb: 223 223 223;
+    --base-content-rgb: 23 23 23;
+    --primary-content-rgb: 30 39 35;
+    --secondary-content-rgb: 23 23 23;
+    --accent-content-rgb: 32 32 32;
+    --neutral-rgb: 30 41 59;
+    --neutral-content-rgb: 241 245 249;
+    --info-rgb: 59 130 246;
+    --info-content-rgb: 249 249 249;
+    --success-rgb: 16 185 129;
+    --success-content-rgb: 249 249 249;
+    --warning-rgb: 249 115 22;
+    --warning-content-rgb: 249 249 249;
+    --error-rgb: 202 50 20;
+    --error-content-rgb: 249 249 249;
+  }
+
+  /* ─── Night theme ───────────────────────────────────────────
+     Deep-green primary on near-black surfaces. Overrides daisyUI's
+     built-in "night" theme so our spec wins. */
+  html[data-theme="night"] {
+    color-scheme: dark;
+
+    /* Surfaces */
+    --background: #121212;
+    --foreground: #e2e8f0;
+    --card: #171717;
+    --card-foreground: #e2e8f0;
+    --popover: #242424;
+    --popover-foreground: #a9a9a9;
+    --muted: #1f1f1f;
+    --muted-foreground: #a2a2a2;
+    --input: #242424;
+    --border: #292929;
+
+    /* Accents */
+    --primary: #006239;
+    --primary-foreground: #dde8e3;
+    --secondary: #242424;
+    --secondary-foreground: #fafafa;
+    --accent: #313131;
+    --accent-foreground: #fafafa;
+
+    /* Status */
+    --destructive: #541c15;
+    --destructive-foreground: #ede9e8;
+    --success: #2dd4bf;
+    --success-foreground: #ffffff;
+    --warning: #fbbf24;
+    --warning-foreground: #171717;
+    --info: #60a5fa;
+    --info-foreground: #ffffff;
+
+    --ring: #4ade80;
+
+    /* Sidebar */
+    --sidebar: #121212;
+    --sidebar-foreground: #898989;
+    --sidebar-background: #121212;
+    --sidebar-primary: #006239;
+    --sidebar-primary-foreground: #dde8e3;
+    --sidebar-accent: #313131;
+    --sidebar-accent-foreground: #fafafa;
+    --sidebar-border: #292929;
+    --sidebar-ring: #4ade80;
+
+    /* Charts */
+    --chart-1: #4ade80;
+    --chart-2: #60a5fa;
+    --chart-3: #a78bfa;
+    --chart-4: #fbbf24;
+    --chart-5: #2dd4bf;
+
+    /* daisyUI palette mirrors */
+    --color-base-100: #121212;
+    --color-base-200: #1f1f1f;
+    --color-base-300: #292929;
+    --color-base-content: #e2e8f0;
+    --color-primary: #006239;
+    --color-primary-content: #dde8e3;
+    --color-secondary: #242424;
+    --color-secondary-content: #fafafa;
+    --color-accent: #313131;
+    --color-accent-content: #fafafa;
+    --color-neutral: #f1f5f9;
+    --color-neutral-content: #1e293b;
+    --color-info: #60a5fa;
+    --color-info-content: #ffffff;
+    --color-success: #2dd4bf;
+    --color-success-content: #ffffff;
+    --color-warning: #fbbf24;
+    --color-warning-content: #171717;
+    --color-error: #541c15;
+    --color-error-content: #ede9e8;
+
+    /* RGB triplets for Tailwind /<alpha> utilities — see light theme. */
+    --base-100-rgb: 18 18 18;
+    --base-200-rgb: 31 31 31;
+    --base-300-rgb: 41 41 41;
+    --base-content-rgb: 226 232 240;
+    --primary-content-rgb: 221 232 227;
+    --secondary-content-rgb: 250 250 250;
+    --accent-content-rgb: 250 250 250;
+    --neutral-rgb: 241 245 249;
+    --neutral-content-rgb: 30 41 59;
+    --info-rgb: 96 165 250;
+    --info-content-rgb: 255 255 255;
+    --success-rgb: 45 212 191;
+    --success-content-rgb: 255 255 255;
+    --warning-rgb: 251 191 36;
+    --warning-content-rgb: 23 23 23;
+    --error-rgb: 84 28 21;
+    --error-content-rgb: 237 233 232;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  :where(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"])
+    ):not(.input) {
+    @apply h-10 w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors;
+    border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  }
+
+  :where(select):not(.select) {
+    @apply h-10 w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors;
+    border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  }
+
+  :where(textarea):not(.textarea) {
+    @apply min-h-[80px] w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors;
+    border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  }
+
+  :where(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"]),
+      select,
+      textarea
+    ):focus-visible {
+    @apply border-primary outline-none ring-0;
+  }
+
+  :where(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"]),
+      select,
+      textarea
+    ):disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  :where(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"]),
+      textarea
+    ):not(.input):not(.textarea)::placeholder {
+    color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    background-image:
+      radial-gradient(1200px 600px at 8% -10%, color-mix(in oklab, var(--color-primary) 14%, transparent), transparent),
+      radial-gradient(900px 500px at 95% 0%, color-mix(in oklab, var(--color-accent) 18%, transparent), transparent),
+      linear-gradient(180deg, var(--background), color-mix(in oklab, var(--background) 88%, var(--color-base-200)));
+    background-attachment: scroll;
+
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior-y: contain;
+  }
+
+  input,
+  textarea,
+  [contenteditable] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: contain;
+  }
+
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    body {
+      background-attachment: fixed;
+    }
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  @media (max-width: 640px) {
+    html,
+    body,
+    #root {
+      overflow-x: hidden;
+      width: 100%;
+    }
+  }
+
+  @media (display-mode: standalone) {
+    html,
+    body,
+    #root {
+      overflow-x: hidden;
+      width: 100%;
+    }
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  button,
+  [role="button"],
+  a {
+    touch-action: manipulation;
+  }
+
+  /* Compact view styles */
+  .compact-view .space-y-4 > * + * {
+    margin-top: 0.5rem !important;
+  }
+
+  .compact-view .space-y-6 > * + * {
+    margin-top: 0.75rem !important;
+  }
+
+  .compact-view .p-6 {
+    padding: 5px 10px !important;
+  }
+
+  .compact-view .py-4 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .compact-view table td {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  .min-w-\[200px\] {
+    min-width: 150px;
+  }
+
+  .dialog-content,
+  .alert-dialog-content {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .dialog-content::-webkit-scrollbar,
+  .dialog-content *::-webkit-scrollbar,
+  .alert-dialog-content::-webkit-scrollbar,
+  .alert-dialog-content *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .dialog-content::-webkit-scrollbar-track,
+  .dialog-content *::-webkit-scrollbar-track,
+  .alert-dialog-content::-webkit-scrollbar-track,
+  .alert-dialog-content *::-webkit-scrollbar-track {
+    margin: 10px 6px;
+    background: transparent;
+    border-radius: 999px;
+  }
+
+  .dialog-content::-webkit-scrollbar-thumb,
+  .dialog-content *::-webkit-scrollbar-thumb,
+  .alert-dialog-content::-webkit-scrollbar-thumb,
+  .alert-dialog-content *::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  .field-control {
+    @apply h-10 w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50;
+    border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  }
+
+  .field-control-area {
+    @apply min-h-[80px] w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50;
+    border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  }
+
+  .field-control::placeholder,
+  .field-control-area::placeholder {
+    color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+  }
+
+  .app-shell {
+    border-radius: 0;
+    border: 0;
+    background: var(--card);
+    box-shadow: none;
+  }
+
+  /* Global popup consistency contract */
+  .dialog-content,
+  .alert-dialog-content {
+    font-family: var(--font-sans);
+    color: var(--foreground);
+  }
+
+  .dialog-content h1,
+  .dialog-content h2,
+  .dialog-content h3,
+  .dialog-content h4,
+  .alert-dialog-content h1,
+  .alert-dialog-content h2,
+  .alert-dialog-content h3,
+  .alert-dialog-content h4 {
+    color: var(--foreground);
+  }
+
+  .dialog-content p,
+  .dialog-content span,
+  .dialog-content td,
+  .dialog-content th,
+  .alert-dialog-content p,
+  .alert-dialog-content span,
+  .alert-dialog-content td,
+  .alert-dialog-content th {
+    color: inherit;
+  }
+
+  .dialog-content .card,
+  .alert-dialog-content .card {
+    border-color: var(--color-base-300);
+    background-color: color-mix(in oklab, var(--color-base-100) 94%, var(--color-base-200));
+    box-shadow: none;
+  }
+
+  .dialog-content .card-title,
+  .alert-dialog-content .card-title {
+    font-size: 1rem;
+    line-height: 1.35;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .dialog-content label,
+  .alert-dialog-content label {
+    color: color-mix(in oklab, var(--color-base-content) 82%, transparent);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .dialog-content [class*="bg-gradient"],
+  .alert-dialog-content [class*="bg-gradient"] {
+    background-image: none !important;
+    background-color: color-mix(in oklab, var(--color-base-100) 92%, var(--color-base-200)) !important;
+  }
+}
+
+@layer utilities {
+  .lucide-trash-2 {
+    color: var(--destructive) !important;
+  }
+
+  @media (min-width: 1024px) {
+    .grid.gap-3.sm\:gap-4.grid-cols-2.sm\:grid-cols-3.lg\:grid-cols-5 {
+      margin-top: 0 !important;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .grid.gap-4.grid-cols-2.md\:grid-cols-4 {
+      margin-top: 0 !important;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .grid.gap-4.md\:grid-cols-4 {
+      margin-top: 0 !important;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .grid.grid-cols-2.sm\:grid-cols-4.gap-3 {
+      margin-top: 0 !important;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .flex.flex-wrap.gap-3 {
+      margin-top: 0 !important;
+    }
+  }
+
+  .date-input-tight {
+    padding-right: 0.25rem;
+  }
+
+  .date-input-tight::-webkit-calendar-picker-indicator {
+    margin-right: 0;
+    padding: 0;
+  }
+
+  .sales-review-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sales-review-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sales-review-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+  }
+
+  .sales-review-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .table-scroll-wrapper {
+    position: relative;
+  }
+
+  .table-scroll-body > div {
+    scrollbar-width: none;
+  }
+
+  .table-scroll-body > div::-webkit-scrollbar {
+    height: 0;
+  }
+
+  .table-scroll-body > div.table-inner-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .table-scroll-body > div.table-inner-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .table-scroll-body > div.table-inner-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+  }
+
+  .table-scroll-body > div.table-inner-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .table-scroll-bar {
+    height: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .table-scroll-bar::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .table-scroll-bar::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+  }
+
+  .table-scroll-bar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .table-vertical-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .table-vertical-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .table-vertical-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+  }
+
+  .table-vertical-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pt-safe { padding-top: env(safe-area-inset-top, 0); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }
+  .pl-safe { padding-left: env(safe-area-inset-left, 0); }
+  .pr-safe { padding-right: env(safe-area-inset-right, 0); }
+  .px-safe {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+  }
+  .py-safe {
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom, 0); }
+
+  .nav-mb-safe {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
+  }
+
+  .no-bounce {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: auto;
+  }
+
+  .gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+}
