@@ -23,11 +23,18 @@ function createPrismaClient(): PrismaClient {
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+export const getPrismaClient = (): PrismaClient => {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
+};
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(target, prop) {
+    return (getPrismaClient() as any)[prop];
+  },
+});
 
 // ─── Tenant-Scoped Client ───────────────────────────────────
 // Uses Prisma Client Extensions (v7) to auto-filter reads by tenantId.
