@@ -3,7 +3,6 @@ import Script from "next/script";
 
 import "../src/index.css";
 import "lenis/dist/lenis.css";
-import { LenisProvider } from "./_components/lenis-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 export const dynamic = "force-dynamic";
@@ -92,7 +91,7 @@ export default function RootLayout({
         <Script id="theme-bootstrap" strategy="beforeInteractive">
           {themeBootstrapScript}
         </Script>
-        <LenisProvider>{children}</LenisProvider>
+        {children}
         <Toaster position="bottom-right" richColors />
       </body>
     </html>
