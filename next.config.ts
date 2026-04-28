@@ -16,13 +16,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // The legacy src/ Vite tree contains broken imports that would fail the
-  // Vercel build if tsc ran over it. app/ and lib/ are type-clean and should
-  // be verified with `npx tsc --noEmit` locally before push.
+  // Legacy src/ directory has been removed. TypeScript build errors are now
+  // enabled to catch real type issues. Run `npx tsc --noEmit` locally to verify.
   // (Next 16 removed the `eslint` config option — ESLint is no longer
-  // run as part of `next build` at all, so suppressing it is unnecessary.
-  // If you want lint in CI, run `eslint .` directly.)
-  typescript: { ignoreBuildErrors: true },
+  // run as part of `next build` at all. If you want lint in CI, run `eslint .` directly.)
+  typescript: { ignoreBuildErrors: false },
   serverExternalPackages: [
     "bcryptjs",
     "@prisma/client",

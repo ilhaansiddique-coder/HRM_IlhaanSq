@@ -1,4 +1,3 @@
-import type { NextAuthConfig } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 
 // ─── Edge-Safe Config ───────────────────────────────────────
@@ -79,4 +78,4 @@ export default {
       return true;
     },
   },
-} satisfies NextAuthConfig;
+} as const;
