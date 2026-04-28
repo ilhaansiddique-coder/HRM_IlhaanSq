@@ -29,6 +29,8 @@ const nextConfig: NextConfig = {
     "@prisma/adapter-pg",
     "pg",
     "ioredis",
+    "typeorm",
+    "class-validator",
   ],
   // Allow LAN / WSL access during development (e.g., testing from phone on same
   // network, or hitting the dev server from the WSL bridge IP). Without the

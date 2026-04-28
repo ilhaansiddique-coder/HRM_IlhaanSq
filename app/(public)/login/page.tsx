@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn } from "next-auth/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Eye, EyeOff, Package, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
