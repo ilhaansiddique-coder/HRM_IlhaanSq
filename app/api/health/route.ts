@@ -3,7 +3,7 @@
 // Returns { status: "ok" } when app + DB are healthy.
 
 import { NextResponse } from 'next/server';
-import { getPrisma } from '@/lib/db';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -16,7 +16,6 @@ export async function GET() {
 
   // Check 1: Database reachable
   try {
-    const prisma = await getPrisma();
     await prisma.$queryRaw`SELECT 1`;
     checks.database = 'ok';
   } catch (error: unknown) {

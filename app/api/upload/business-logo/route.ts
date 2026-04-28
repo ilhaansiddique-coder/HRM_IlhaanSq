@@ -30,16 +30,6 @@ function ensureAdminRole(role: string | null) {
   }
 }
 
-function ensureAdminRole(role: string | null) {
-  if (!["owner", "admin", "admin"].includes(role ?? "")) {
-    throw new Error("Forbidden");
-  }
-}
-
-function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
-}
-
 export async function POST(req: Request) {
   try {
     const session = await requireTenant();
