@@ -12,11 +12,11 @@ export default {
     error: "/login",
   },
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger }: any) {
       if (user) {
         token.id = user.id as string;
         token.tenantId = (user as any).tenantId ?? null;
@@ -31,7 +31,7 @@ export default {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       if (session.user) {
         session.user.id = token.id as string;
       }
@@ -42,7 +42,7 @@ export default {
       (session as any).mustResetPassword = token.mustResetPassword ?? false;
       return session;
     },
-    async authorized({ auth, request }) {
+    async authorized({ auth, request }: any) {
       const { pathname, origin } = request.nextUrl;
 
       const publicPaths = new Set([
@@ -78,4 +78,4 @@ export default {
       return true;
     },
   },
-} as const;
+};

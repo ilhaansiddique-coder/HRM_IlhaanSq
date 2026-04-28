@@ -89,10 +89,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
   const wb = new ExcelJS.Workbook();
   try {
-    await wb.xlsx.load(buffer);
+    await wb.xlsx.load(uint8Array as any);
   } catch {
     return NextResponse.json(
       {

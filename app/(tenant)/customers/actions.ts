@@ -6,6 +6,7 @@ import {
   updateCustomer,
   deleteCustomer,
   getCustomerHistory,
+  type CustomerStatus,
 } from "@/lib/services/customer.service";
 import {
   getCustomerDueInvoices,
@@ -20,9 +21,9 @@ function parseInput(formData: FormData) {
   // allowed enum back to undefined so we don't violate the DB
   // CHECK constraint.
   const rawStatus = formData.get("status") as string | null;
-  const status =
+  const status: CustomerStatus | undefined =
     rawStatus === "active" || rawStatus === "neutral" || rawStatus === "inactive"
-      ? rawStatus
+      ? (rawStatus as CustomerStatus)
       : undefined;
 
   return {
