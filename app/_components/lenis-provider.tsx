@@ -26,7 +26,7 @@ function isPublicRoute(pathname: string): boolean {
 }
 
 export function LenisProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
   const enabled = isPublicRoute(pathname);
 
   useEffect(() => {
