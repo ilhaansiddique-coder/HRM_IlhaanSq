@@ -1,12 +1,11 @@
+import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { requireTenant } from "@/lib/auth";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { checkRate, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
-const BUCKET = "product-images";
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
   "image/jpeg",
@@ -15,31 +14,11 @@ const ALLOWED_MIME = new Set([
   "image/gif",
 ]);
 
-// Module-scope memoization — first upload in a serverless instance pays the
-// bucket check; subsequent uploads skip it entirely. Saves ~300ms per upload.
-let bucketReady: Promise<void> | null = null;
-
-async function ensureBucket(): Promise<void> {
-  if (bucketReady) return bucketReady;
-  bucketReady = (async () => {
-    const admin = getSupabaseAdmin();
-    const { data, error } = await admin.storage.getBucket(BUCKET);
-    if (data) return;
-    if (error && !/not.*found|does not exist/i.test(error.message)) {
-      bucketReady = null; // allow retry on transient failures
-      throw error;
-    }
-    const { error: createErr } = await admin.storage.createBucket(BUCKET, {
-      public: true,
-      fileSizeLimit: MAX_BYTES,
-    });
-    if (createErr && !/already exists/i.test(createErr.message)) {
-      bucketReady = null;
-      throw createErr;
-    }
-  })();
-  return bucketReady;
-}
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -72,34 +51,34 @@ export async function POST(req: Request) {
     }
     if (file.size > MAX_BYTES) return jsonError("Image too large (max 5MB).", 400);
 
-    try {
-      await ensureBucket();
-    } catch (e) {
-      console.error("[upload/product-image] ensureBucket failed:", e);
-      return jsonError("Image storage is not available right now.", 500);
-    }
-
-    const ext = (file.name.split(".").pop() || "bin")
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
-    const path = `${session.tenantId}/${randomUUID()}.${ext || "bin"}`;
     const bytes = Buffer.from(await file.arrayBuffer());
+    const publicId = `rahedeen/${session.tenantId}/product-${randomUUID()}`;
 
-    const admin = getSupabaseAdmin();
-    const { error: uploadErr } = await admin.storage
-      .from(BUCKET)
-      .upload(path, bytes, {
-        contentType: file.type,
-        cacheControl: "31536000",
-        upsert: false,
-      });
-    if (uploadErr) {
-      console.error("[upload/product-image] upload failed:", uploadErr);
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          folder: "rahedeen/products",
+          resource_type: "auto",
+          quality: "auto",
+          fetch_format: "auto",
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(bytes);
+    });
+
+    if (!uploadResult || typeof uploadResult === 'string') {
       return jsonError("Could not save the image. Please try again.", 500);
     }
 
-    const { data } = admin.storage.from(BUCKET).getPublicUrl(path);
-    return NextResponse.json({ url: data.publicUrl, path });
+    return NextResponse.json({
+      url: (uploadResult as any).secure_url,
+      path: publicId
+    });
   } catch (e) {
     console.error("[upload/product-image] unhandled:", e);
     return jsonError("Upload failed.", 500);
