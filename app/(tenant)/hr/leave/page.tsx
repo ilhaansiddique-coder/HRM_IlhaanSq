@@ -131,7 +131,7 @@ export default async function LeavePage() {
           <CardContent>
             <LeaveRequestForm
               employees={employees.map((e) => ({ id: e.id, name: e.fullName, code: e.empCode }))}
-              types={types}
+              types={types.map((t) => ({ id: t.id, name: t.name, code: t.code, color: t.color }))}
             />
           </CardContent>
         </Card>

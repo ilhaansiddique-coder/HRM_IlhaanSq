@@ -46,7 +46,7 @@ export async function listEmployees(
   tenantId: string,
   filters: { status?: EmploymentStatus; departmentId?: string; search?: string } = {}
 ) {
-  return prisma.employee.findMany({
+  const employees = await prisma.employee.findMany({
     where: {
       tenantId,
       ...(filters.status && { status: filters.status }),
@@ -66,6 +66,15 @@ export async function listEmployees(
     },
     orderBy: { createdAt: "desc" },
   });
+
+  return employees.map((e) => ({
+    ...e,
+    dateOfBirth: e.dateOfBirth ? e.dateOfBirth.toISOString() : null,
+    dateOfJoining: e.dateOfJoining ? e.dateOfJoining.toISOString() : null,
+    dateOfLeaving: e.dateOfLeaving ? e.dateOfLeaving.toISOString() : null,
+    createdAt: e.createdAt.toISOString(),
+    updatedAt: e.updatedAt.toISOString(),
+  }));
 }
 
 export async function getEmployee(tenantId: string, id: string) {

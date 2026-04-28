@@ -49,7 +49,7 @@ export async function listLeaveRequests(
   tenantId: string,
   filters: { status?: LeaveStatus; employeeId?: string } = {}
 ) {
-  return prisma.leaveRequest.findMany({
+  const requests = await prisma.leaveRequest.findMany({
     where: {
       tenantId,
       ...(filters.status && { status: filters.status }),
@@ -61,6 +61,14 @@ export async function listLeaveRequests(
     },
     orderBy: { createdAt: "desc" },
   });
+
+  return requests.map((r) => ({
+    ...r,
+    startDate: r.startDate.toISOString(),
+    endDate: r.endDate.toISOString(),
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  }));
 }
 
 function calculateDays(start: Date, end: Date): number {

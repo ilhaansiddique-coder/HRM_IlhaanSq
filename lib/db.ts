@@ -1,10 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { resolveDatabaseUrl } from "./server-env";
 
 // ─── Singleton Prisma Client ────────────────────────────────
 // Prevents multiple instances in development (hot-reload).
-// Prisma v7 requires a database adapter — using PrismaPg for PostgreSQL.
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
@@ -16,16 +14,11 @@ function createPrismaClient(): PrismaClient {
     );
   }
 
-  const adapter = new PrismaPg({
-    connectionString,
-  });
-
   if (process.env.NODE_ENV !== "production") {
     console.log(`[db] Prisma configured via ${source}.`);
   }
 
   return new PrismaClient({
-    adapter,
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 }

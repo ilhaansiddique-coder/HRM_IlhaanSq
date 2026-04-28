@@ -1,109 +1,26 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { cache } from "react";
-import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
+import { getServerSession } from "next-auth/next";
 import authConfig from "./auth.config";
-import { checkRate } from "./rate-limit";
+import { signIn, signOut } from "next-auth/react";
 
-// ─── Full NextAuth Config (Node Runtime) ────────────────────
-// This file extends auth.config.ts with the Credentials provider
-// (which uses Prisma + bcrypt — both Node-only).
-// Imported by app routes and Server Actions, NEVER by middleware.
+let cache: any;
+let redirect: any;
 
-async function getPrisma() {
-  return (await import("./db")).prisma;
+try {
+  ({ cache } = require("react"));
+  ({ redirect } = require("next/navigation"));
+} catch {
+  // Fallback for Node.js scripts
+  cache = (fn: any) => fn;
+  redirect = () => {};
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  ...authConfig,
-  providers: [
-    Credentials({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const t0 = Date.now();
-        const mark = (label: string) =>
-          console.log(`[auth-timing] ${label}: ${Date.now() - t0}ms`);
+// ─── Get Auth Session (Server-Side) ──────────────────────────
 
-        if (!credentials?.email || !credentials?.password) return null;
-
-        const email = (credentials.email as string).toLowerCase().trim();
-        const password = credentials.password as string;
-
-        const tRate = Date.now();
-        const rate = await checkRate("auth", `auth:${email}`);
-        console.log(`[auth-timing] rate-limit: ${Date.now() - tRate}ms`);
-        if (!rate.allowed) {
-          throw new Error(
-            `Too many login attempts. Try again in ${rate.retryAfterSec}s.`
-          );
-        }
-
-        const tDb = Date.now();
-        const prisma = await getPrisma();
-        const user = await prisma.user.findUnique({
-          where: { email },
-          include: {
-            memberships: {
-              where: { isActive: true },
-              include: {
-                tenant: {
-                  select: { id: true, slug: true, name: true, isActive: true },
-                },
-              },
-              orderBy: { isDefault: "desc" },
-            },
-          },
-        });
-        console.log(`[auth-timing] db-findUser: ${Date.now() - tDb}ms`);
-
-        if (!user) {
-          mark("done(no-user)");
-          return null;
-        }
-
-        const tBcrypt = Date.now();
-        const isValid = await bcrypt.compare(password, user.passwordHash);
-        console.log(`[auth-timing] bcrypt-compare: ${Date.now() - tBcrypt}ms`);
-        if (!isValid) {
-          mark("done(bad-pw)");
-          return null;
-        }
-
-        // Update last sign-in timestamp (fire and forget)
-        prisma.user
-          .update({
-            where: { id: user.id },
-            data: { lastSignInAt: new Date() },
-          })
-          .catch(() => {});
-
-        mark("done(success)");
-
-        const defaultMembership =
-          user.memberships.find((m) => m.isDefault) ?? user.memberships[0];
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.fullName,
-          image: user.image,
-          tenantId: defaultMembership?.tenant.id ?? null,
-          tenantSlug: defaultMembership?.tenant.slug ?? null,
-          role: user.isSuperAdmin
-            ? "superadmin"
-            : (defaultMembership?.role ?? null),
-          isSuperAdmin: user.isSuperAdmin,
-          mustResetPassword: user.mustResetPassword,
-        } as any;
-      },
-    }),
-  ],
+export const auth = cache(async () => {
+  return getServerSession(authConfig);
 });
+
+export { signIn, signOut };
 
 // ─── Session Types ──────────────────────────────────────────
 
@@ -119,9 +36,6 @@ export type AppSession = {
 };
 
 // ─── Cached Session Getter ──────────────────────────────────
-// React `cache()` deduplicates within a single request.
-// No matter how many Server Components call getSession(),
-// the auth check only happens once per request.
 
 export const getSession = cache(async (): Promise<AppSession | null> => {
   const session = await auth();
@@ -182,7 +96,7 @@ export async function hasPermission(
 ): Promise<boolean> {
   if (role === "owner" || role === "admin") return true;
 
-  const prisma = await getPrisma();
+  const { prisma } = await import("./db");
   const permission = await prisma.tenantRolePermission.findUnique({
     where: {
       tenantId_role_permissionKey: {
@@ -201,6 +115,7 @@ export async function hasPermission(
 const SALT_ROUNDS = 12;
 
 export async function hashPassword(password: string): Promise<string> {
+  const bcrypt = await import("bcryptjs");
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
@@ -208,5 +123,6 @@ export async function verifyPassword(
   password: string,
   hash: string
 ): Promise<boolean> {
+  const bcrypt = await import("bcryptjs");
   return bcrypt.compare(password, hash);
 }

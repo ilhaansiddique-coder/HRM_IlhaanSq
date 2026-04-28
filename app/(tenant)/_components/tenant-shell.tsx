@@ -7,7 +7,7 @@ import { NavLink } from "./nav-link";
 import { NewSaleDialog } from "./new-sale-dialog";
 import { NotificationBell } from "./notification-bell";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/client";
+import { signOut } from "next-auth/react";
 import { OptimisticNavProvider, useOptimisticNav } from "./optimistic-nav";
 import type { NotificationItem } from "@/lib/services/notifications.service";
 import {
