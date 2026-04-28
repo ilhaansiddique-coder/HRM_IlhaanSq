@@ -6,6 +6,8 @@ import "lenis/dist/lenis.css";
 import { LenisProvider } from "./_components/lenis-provider";
 import { Toaster } from "@/components/ui/sonner";
 
+export const dynamic = "force-dynamic";
+
 // All typography — body and headings — uses Bricolage Grotesque, which
 // is self-hosted via @font-face declarations in src/index.css pointing at
 // public/fonts/BricolageGrotesque-Variable-*.woff2. No Google Fonts CDN.
