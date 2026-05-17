@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   CalendarClock,
   CheckCircle2,
@@ -315,7 +315,7 @@ function SummaryCard({
   label: string;
   value: string;
   hint: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   tone: keyof typeof SUMMARY_TONES;
 }) {
   return (
@@ -342,7 +342,7 @@ function ContactRow({
   value,
   href,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string | null;
   href?: string | null;

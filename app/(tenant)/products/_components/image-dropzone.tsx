@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import { ImagePlus, Loader2, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { uploadProductImageAction } from "../actions";
 
 type Props = {
   name: string;
@@ -29,6 +30,7 @@ export function ImageDropzone({
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [, startTransition] = useTransition();
 
   const upload = useCallback(async (file: File) => {
     setError(null);
@@ -44,36 +46,17 @@ export function ImageDropzone({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload/product-image", {
-        method: "POST",
-        body: fd,
+      startTransition(async () => {
+        const result = await uploadProductImageAction(fd);
+        setUploading(false);
+        if (result.error) {
+          setError(result.error);
+        } else {
+          setUrl(result.url);
+        }
       });
-
-      const text = await res.text();
-      let payload: { url?: string; error?: string } | null = null;
-      try {
-        payload = text ? JSON.parse(text) : null;
-      } catch {
-        payload = null;
-      }
-
-      if (!res.ok) {
-        const reason =
-          payload?.error ||
-          (res.status === 401 || res.status === 403
-            ? "Not authorized — please sign in again."
-            : res.status === 413
-              ? "File is too large."
-              : `Upload failed (HTTP ${res.status}).`);
-        throw new Error(reason);
-      }
-      if (!payload?.url) {
-        throw new Error("Server did not return an image URL.");
-      }
-      setUrl(payload.url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
-    } finally {
       setUploading(false);
     }
   }, []);

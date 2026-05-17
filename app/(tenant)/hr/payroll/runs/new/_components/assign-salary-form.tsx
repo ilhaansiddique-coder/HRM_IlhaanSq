@@ -76,9 +76,47 @@ export function AssignSalaryForm({
           <Input id="currency" name="currency" defaultValue="BDT" />
         </div>
       </div>
+      <div className="rounded-lg border border-border/60 p-2.5 space-y-2">
+        <p className="text-[11px] text-muted-foreground">
+          Allowance breakdown (per employee). Gross = Basic + these five.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="houseRent" className="text-xs">House Rent</Label>
+            <Input id="houseRent" name="houseRent" type="number" step="0.01" min="0" defaultValue="0" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="health" className="text-xs">Health</Label>
+            <Input id="health" name="health" type="number" step="0.01" min="0" defaultValue="0" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="education" className="text-xs">Education</Label>
+            <Input id="education" name="education" type="number" step="0.01" min="0" defaultValue="0" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="savings" className="text-xs">Savings</Label>
+            <Input id="savings" name="savings" type="number" step="0.01" min="0" defaultValue="0" />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label htmlFor="dailyHand" className="text-xs">Daily Hand Expenses</Label>
+            <Input id="dailyHand" name="dailyHand" type="number" step="0.01" min="0" defaultValue="0" />
+          </div>
+        </div>
+      </div>
       <div className="space-y-1.5">
         <Label htmlFor="effectiveFrom" className="text-xs">Effective From</Label>
-        <Input id="effectiveFrom" name="effectiveFrom" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+        <Input
+          id="effectiveFrom"
+          name="effectiveFrom"
+          type="date"
+          required
+          defaultValue={new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+            .toLocaleDateString("en-CA")}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Use the 1st of the month (or earlier) — payroll only includes salaries
+          effective on/before the period start.
+        </p>
       </div>
       <Button type="submit" className="w-full" disabled={pending || employees.length === 0 || structures.length === 0}>
         {pending && <Loader2 className="h-4 w-4 animate-spin" />}

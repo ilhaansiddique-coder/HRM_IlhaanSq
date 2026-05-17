@@ -187,6 +187,30 @@ export async function listAllTenants() {
   });
 }
 
+export async function updateTenant(
+  tenantId: string,
+  input: { name?: string; slug?: string; plan?: string; isActive?: boolean }
+) {
+  const data: Record<string, unknown> = {};
+  if (input.name !== undefined) data.name = input.name;
+  if (input.slug !== undefined) data.slug = input.slug;
+  if (input.plan !== undefined) data.plan = input.plan;
+  if (input.isActive !== undefined) data.isActive = input.isActive;
+  return prisma.tenant.update({ where: { id: tenantId }, data });
+}
+
+export async function getTenantDetail(tenantId: string) {
+  return prisma.tenant.findUnique({
+    where: { id: tenantId },
+    include: {
+      _count: { select: { members: true, products: true, sales: true, customers: true } },
+      members: { include: { user: { select: { id: true, email: true, fullName: true, phone: true } } }, orderBy: { createdAt: "asc" } },
+      businessSettings: true,
+      systemSettings: true,
+    },
+  });
+}
+
 export async function toggleTenantActive(tenantId: string, isActive: boolean) {
   return prisma.tenant.update({
     where: { id: tenantId },

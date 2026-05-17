@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mail, Phone, Shield, User as UserIcon } from "lucide-react";
 import {
@@ -30,7 +31,7 @@ function ReadOnlyField({
 }: {
   label: string;
   value: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }) {
   return (
     <div className="space-y-2">

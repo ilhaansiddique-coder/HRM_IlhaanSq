@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -172,25 +173,27 @@ export function ProductDialog({
     setError(null);
   }, [open, initial, isEdit]);
 
-  useEffect(() => {
-    if (isEdit || !category?.code) return;
-    let cancelled = false;
+  const { refetch: refetchStyleNumber } = useQuery({
+    queryKey: ["next-style-number", category?.code],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/products/next-style-number?category=${encodeURIComponent(category?.code ?? "")}`
+      );
+      const data = await res.json();
+      if (typeof data?.styleNumber === "number") {
+        setStyleNumber(data.styleNumber);
+      }
+      return data;
+    },
+    enabled: !isEdit && !!category?.code && open,
+  });
+
+  async function refreshStyleNumber() {
+    if (!category?.code) return;
     setFetchingStyle(true);
-    fetch(
-      `/api/products/next-style-number?category=${encodeURIComponent(category.code)}`
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (typeof data?.styleNumber === "number")
-          setStyleNumber(data.styleNumber);
-      })
-      .catch(() => {})
-      .finally(() => !cancelled && setFetchingStyle(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [category?.code, isEdit]);
+    await refetchStyleNumber();
+    setFetchingStyle(false);
+  }
 
   const sku = category?.code
     ? buildSku({ category: category.code, style: styleNumber, color, size })
@@ -210,21 +213,6 @@ export function ProductDialog({
       }, 0),
     [combos, variantsState.rows]
   );
-
-  async function refreshStyleNumber() {
-    if (!category?.code) return;
-    setFetchingStyle(true);
-    try {
-      const res = await fetch(
-        `/api/products/next-style-number?category=${encodeURIComponent(category.code)}`
-      );
-      const data = await res.json();
-      if (typeof data?.styleNumber === "number")
-        setStyleNumber(data.styleNumber);
-    } finally {
-      setFetchingStyle(false);
-    }
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

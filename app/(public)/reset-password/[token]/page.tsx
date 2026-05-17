@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Mail, KeyRound, XCircle, Clock, ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -87,7 +88,7 @@ function Card({
   title,
   description,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   iconBg: string;
   title: string;
   description: string;

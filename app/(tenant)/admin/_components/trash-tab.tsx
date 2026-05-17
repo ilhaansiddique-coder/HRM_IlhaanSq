@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -187,7 +187,7 @@ function ProductTrashList({ items }: { items: any[] }) {
   );
 }
 
-function EmptyState({ icon, label }: { icon: React.ReactNode; label: string }) {
+function EmptyState({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <div className="text-center py-12 text-muted-foreground">
       <div className="flex justify-center mb-2">{icon}</div>

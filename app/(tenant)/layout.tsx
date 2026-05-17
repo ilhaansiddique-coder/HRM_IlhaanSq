@@ -1,4 +1,4 @@
-import { cache } from "react";
+import { cache, type ReactNode } from "react";
 import { cookies } from "next/headers";
 import { requireTenant } from "@/lib/auth";
 import { getCachedBusinessSettings, getCachedSystemSettings } from "@/lib/cache";
@@ -16,7 +16,7 @@ const getPendingTenantCount = cache(async (isSuperAdmin: boolean) => {
 export default async function TenantLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const session = await requireTenant();
 

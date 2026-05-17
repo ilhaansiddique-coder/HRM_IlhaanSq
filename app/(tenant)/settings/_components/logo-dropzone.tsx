@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import { ImagePlus, Loader2, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { uploadBusinessLogoAction } from "../actions";
 
 type Props = {
   name: string;
@@ -22,6 +23,7 @@ export function LogoDropzone({
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [, startTransition] = useTransition();
 
   const upload = useCallback(async (file: File) => {
     setError(null);
@@ -37,30 +39,17 @@ export function LogoDropzone({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload/business-logo", {
-        method: "POST",
-        body: fd,
+      startTransition(async () => {
+        const result = await uploadBusinessLogoAction(fd);
+        setUploading(false);
+        if (result.error) {
+          setError(result.error);
+        } else {
+          setUrl(result.url);
+        }
       });
-      const text = await res.text();
-      let payload: { url?: string; error?: string } | null = null;
-      try {
-        payload = text ? JSON.parse(text) : null;
-      } catch {
-        payload = null;
-      }
-      if (!res.ok) {
-        throw new Error(
-          payload?.error ||
-            (res.status === 401 || res.status === 403
-              ? "Only admins can change the logo."
-              : `Upload failed (HTTP ${res.status}).`)
-        );
-      }
-      if (!payload?.url) throw new Error("Server did not return a URL.");
-      setUrl(payload.url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
-    } finally {
       setUploading(false);
     }
   }, []);

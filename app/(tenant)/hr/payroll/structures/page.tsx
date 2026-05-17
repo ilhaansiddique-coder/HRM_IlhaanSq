@@ -19,6 +19,7 @@ import {
   createSalaryStructureAction,
   addSalaryComponentAction,
   deleteSalaryComponentAction,
+  createStandardStructureAction,
 } from "../../actions-phase2";
 
 export default async function StructuresPage() {
@@ -62,7 +63,7 @@ export default async function StructuresPage() {
                       {s.components.map((c) => (
                         <div key={c.id} className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-sm">
                           <div className="flex items-center gap-2 min-w-0">
-                            <Badge variant={c.type === "earning" ? "default" : "destructive"} className="text-[10px] capitalize">{c.type}</Badge>
+                            <Badge variant={c.type === "earning" ? "default" : c.type === "reimbursement" ? "secondary" : "destructive"} className="text-[10px] capitalize">{c.type}</Badge>
                             <span className="font-medium">{c.name}</span>
                             <span className="font-mono text-xs text-muted-foreground">({c.code})</span>
                             {c.isStatutory && <Badge variant="outline" className="text-[10px]">Statutory</Badge>}
@@ -93,6 +94,7 @@ export default async function StructuresPage() {
                       <SelectContent>
                         <SelectItem value="earning">Earning</SelectItem>
                         <SelectItem value="deduction">Deduction</SelectItem>
+                        <SelectItem value="reimbursement">Reimbursement (paid on top)</SelectItem>
                       </SelectContent>
                     </Select>
                     <Select name="calculationType" defaultValue="fixed">
@@ -130,6 +132,18 @@ export default async function StructuresPage() {
               </div>
               <Button type="submit" className="w-full"><Plus className="h-4 w-4" />Create</Button>
             </form>
+
+            <div className="mt-4 border-t border-border/60 pt-4">
+              <p className="text-xs text-muted-foreground mb-2">
+                Or start from the RaheDeen template — Basic + House Rent + Health
+                + Education + Savings (Gross), plus D.H. Expenses paid on top.
+              </p>
+              <form action={createStandardStructureAction}>
+                <Button type="submit" variant="outline" className="w-full">
+                  <Layers className="h-4 w-4" />Create standard structure
+                </Button>
+              </form>
+            </div>
           </CardContent>
         </Card>
       </div>

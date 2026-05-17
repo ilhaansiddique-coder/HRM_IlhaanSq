@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Check, Plus, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { deriveCategoryCode } from "@/lib/sku";
@@ -27,32 +28,25 @@ function deriveCodePreview(label: string): string {
   return deriveCategoryCode(label);
 }
 
+async function fetchCategories(): Promise<CategoryOption[]> {
+  const res = await fetch("/api/products/categories");
+  const data = await res.json();
+  return Array.isArray(data?.categories) ? data.categories : [];
+}
+
 export function CategoryCombobox({ value, onChange, disabled }: Props) {
-  const [options, setOptions] = useState<CategoryOption[]>([]);
-  const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState<string>(value?.label ?? "");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const { data: options = [], isLoading: loading } = useQuery({
+    queryKey: ["product-categories"],
+    queryFn: fetchCategories,
+  });
+
   useEffect(() => {
     setQuery(value?.label ?? "");
   }, [value?.label]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    fetch("/api/products/categories")
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (Array.isArray(data?.categories)) setOptions(data.categories);
-      })
-      .catch(() => {})
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {

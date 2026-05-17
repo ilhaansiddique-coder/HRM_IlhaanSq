@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Building2 } from "lucide-react";
+import { Plus, Building2, Settings } from "lucide-react";
 import { ToggleTenantButton } from "./_components/toggle-tenant-button";
 import { DeleteTenantButton } from "./_components/delete-tenant-button";
 
@@ -34,7 +34,7 @@ export default async function AllTenantsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-end">
-        <Link href="/super-admin/tenants/create">
+        <Link href="/tenants/create">
           <Button>
             <Plus className="h-4 w-4" />
             Create Tenant
@@ -79,12 +79,14 @@ export default async function AllTenantsPage() {
                       No tenants yet. Create one to get started.
                     </TableCell>
                   </TableRow>
-                ) : (
-                  tenants.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="font-medium">
-                        {t.businessSettings?.businessName ?? t.name}
-                      </TableCell>
+                  ) : (
+                    tenants.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-medium">
+                          <Link href={`/tenants/${t.slug}`} className="hover:underline text-primary">
+                            {t.businessSettings?.businessName ?? t.name}
+                          </Link>
+                        </TableCell>
                       <TableCell className="text-muted-foreground text-xs font-mono">
                         {t.slug}
                       </TableCell>
@@ -104,6 +106,11 @@ export default async function AllTenantsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/tenants/${t.slug}/edit`}>
+                              <Settings className="h-4 w-4" />
+                            </Link>
+                          </Button>
                           <ToggleTenantButton tenantId={t.id} isActive={t.isActive} />
                           <DeleteTenantButton
                             tenantId={t.id}
@@ -137,12 +144,15 @@ export default async function AllTenantsPage() {
           </Card>
         ) : (
           tenants.map((t) => (
-            <Card key={t.id} className="rounded-lg p-3">
+            <Card key={t.id} className="rounded-lg p-3 hover:border-primary/40 transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium leading-tight">
+                  <Link
+                    href={`/tenants/${t.slug}`}
+                    className="font-medium leading-tight text-primary hover:underline"
+                  >
                     {t.businessSettings?.businessName ?? t.name}
-                  </p>
+                  </Link>
                   <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                     {t.slug}
                   </p>
@@ -180,6 +190,11 @@ export default async function AllTenantsPage() {
               </div>
 
               <div className="mt-3 flex items-center justify-end gap-1">
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href={`/tenants/${t.slug}/edit`}>
+                    <Settings className="h-4 w-4" />
+                  </Link>
+                </Button>
                 <ToggleTenantButton tenantId={t.id} isActive={t.isActive} />
                 <DeleteTenantButton
                   tenantId={t.id}

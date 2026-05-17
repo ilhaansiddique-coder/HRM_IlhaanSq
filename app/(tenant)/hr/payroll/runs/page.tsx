@@ -49,8 +49,12 @@ export default async function RunsPage() {
               </TableHeader>
               <TableBody>
                 {runs.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.period.name}</TableCell>
+                  <TableRow key={r.id} className="hover:bg-muted/40">
+                    <TableCell className="font-medium">
+                      <Link href={`/hr/payroll/runs/${r.id}`} className="text-primary hover:underline">
+                        {r.period.name}
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(r.period.payDate).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">{r.employeeCount}</TableCell>
                     <TableCell className="text-right font-medium">{Number(r.totalGross).toLocaleString()}</TableCell>
@@ -79,7 +83,9 @@ export default async function RunsPage() {
             <Card key={r.id} className="rounded-lg p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium leading-tight">{r.period.name}</p>
+                  <Link href={`/hr/payroll/runs/${r.id}`} className="font-medium leading-tight text-primary hover:underline">
+                    {r.period.name}
+                  </Link>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     Pay date: {new Date(r.period.payDate).toLocaleDateString()}
                   </p>

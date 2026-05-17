@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { getRecruitmentStats, listApplications } from "@/lib/services/hr/recruitment.service";
@@ -57,7 +58,7 @@ export default async function RecruitmentOverviewPage() {
   );
 }
 
-function StatCard({ icon, title, value, variant }: { icon: React.ReactNode; title: string; value: number; variant?: "default" | "success" }) {
+function StatCard({ icon, title, value, variant }: { icon: ReactNode; title: string; value: number; variant?: "default" | "success" }) {
   const iconBg = variant === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary";
   return (
     <Card className="border-border/70 bg-card/80">

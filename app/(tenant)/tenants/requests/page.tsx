@@ -1,4 +1,5 @@
 import { requireSuperAdmin } from "@/lib/auth";
+import type { ReactNode } from "react";
 import { listDemoRequests } from "@/lib/services/demo-request.service";
 import {
   Card,
@@ -92,7 +93,7 @@ function InfoRow({
   value,
   mono,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   mono?: boolean;

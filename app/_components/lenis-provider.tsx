@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 
@@ -25,7 +25,7 @@ function isPublicRoute(pathname: string): boolean {
   );
 }
 
-export function LenisProvider({ children }: { children: React.ReactNode }) {
+export function LenisProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
   const enabled = isPublicRoute(pathname);
 

@@ -1,4 +1,5 @@
 import * as React from "react"
+import type { ReactNode } from "react"
 import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
@@ -8,7 +9,7 @@ const THEMES = { light: "", dark: ".dark" } as const
 
 export type ChartConfig = {
   [k in string]: {
-    label?: React.ReactNode
+    label?: ReactNode
     icon?: React.ComponentType
   } & (
     | { color?: string; theme?: never }

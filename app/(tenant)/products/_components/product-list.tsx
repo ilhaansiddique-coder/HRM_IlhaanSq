@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -316,7 +316,7 @@ function StatCard({
   label: string;
   value: string;
   sublabel: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   accent?: "warning" | "danger";
 }) {
   const valueClass =
@@ -347,7 +347,7 @@ function ActionCard({
   label,
   onClick,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   onClick: () => void;
 }) {
@@ -364,7 +364,7 @@ function ActionCardLink({
   label,
   href,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   href: string;
 }) {

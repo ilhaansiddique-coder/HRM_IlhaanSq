@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { requireTenant } from "@/lib/auth";
 import { listAttendance, getAttendanceStats } from "@/lib/services/hr/attendance.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
@@ -222,7 +223,7 @@ function StatCard({
   value,
   variant = "default",
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   value: number | string;
   variant?: "default" | "success" | "warning";

@@ -1,4 +1,4 @@
-import * as React from "react"
+import { useEffect, useState } from "react"
 
 // Bumped 768 → 1024 so iPad-class tablets get the mobile shell
 // (Sheet sidebar + bottom nav) instead of the cramped desktop layout
@@ -16,9 +16,9 @@ export function useIsMobile() {
   // primitive renders <Sheet> on mobile vs. <div ...> on desktop).
   // The useEffect below flips the value AFTER hydration, which is a
   // normal re-render — no warning, no React DOM hydration error.
-  const [isMobile, setIsMobile] = React.useState<boolean>(false)
+  const [isMobile, setIsMobile] = useState<boolean>(false)
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window === 'undefined') return
 
     try {
@@ -58,9 +58,9 @@ export function useIsMobile() {
 // standalone). Use this to render PWA-specific chrome — e.g. a back/refresh
 // button in the header, since Safari's native chrome is hidden in that mode.
 export function useIsStandalone() {
-  const [isStandalone, setIsStandalone] = React.useState(false)
+  const [isStandalone, setIsStandalone] = useState(false)
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window === "undefined") return
     try {
       const mql = window.matchMedia("(display-mode: standalone)")

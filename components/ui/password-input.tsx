@@ -1,19 +1,19 @@
-import * as React from "react";
+import { forwardRef, useState, type ComponentProps } from "react";
 import { Eye, EyeClosed } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type PasswordInputProps = Omit<React.ComponentProps<typeof Input>, "type"> & {
+type PasswordInputProps = Omit<ComponentProps<typeof Input>, "type"> & {
   wrapperClassName?: string;
   toggleClassName?: string;
   visible?: boolean;
   onVisibleChange?: (visible: boolean) => void;
 };
 
-const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
+const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
   ({ className, wrapperClassName, toggleClassName, visible, onVisibleChange, ...props }, ref) => {
-    const [internalVisible, setInternalVisible] = React.useState(false);
+    const [internalVisible, setInternalVisible] = useState(false);
     const isControlled = typeof visible === "boolean";
     const isVisible = isControlled ? visible : internalVisible;
 

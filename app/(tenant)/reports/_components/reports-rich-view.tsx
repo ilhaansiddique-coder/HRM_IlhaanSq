@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   BarChart,
@@ -325,7 +325,7 @@ function KpiCard({
   label: string;
   value: string;
   hint: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   tone: keyof typeof TONE_CLASSES;
 }) {
   return (
@@ -443,7 +443,7 @@ function EmptyState({
   title,
   hint,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   hint: string;
 }) {

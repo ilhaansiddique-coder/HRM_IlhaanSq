@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { getEmployeeStats } from "@/lib/services/hr/employee.service";
@@ -184,7 +185,7 @@ function StatCard({
   href,
   variant = "default",
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   value: number | string;
   hint?: string;

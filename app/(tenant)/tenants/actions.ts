@@ -5,6 +5,7 @@ import {
   toggleTenantActive,
   createTenantWithAdmin,
   hardDeleteTenant,
+  updateTenant,
 } from "@/lib/services/tenant.service";
 import {
   approveDemoRequest,
@@ -68,6 +69,21 @@ export async function rejectRequestAction(requestId: string, reason?: string) {
   revalidatePath("/dashboard");
   revalidatePath("/tenants/requests");
   revalidatePath("/tenants/declined");
+}
+
+export async function updateTenantAction(formData: FormData) {
+  await requireSuperAdmin();
+  const tenantId = formData.get("tenantId") as string;
+  const name = formData.get("name") as string | null;
+  const slug = formData.get("slug") as string | null;
+  const plan = formData.get("plan") as string | null;
+  await updateTenant(tenantId, {
+    ...(name ? { name } : {}),
+    ...(slug ? { slug } : {}),
+    ...(plan ? { plan } : {}),
+  });
+  revalidatePath("/tenants");
+  revalidatePath(`/tenants/${tenantId}`);
 }
 
 export async function createTenantAction(formData: FormData) {

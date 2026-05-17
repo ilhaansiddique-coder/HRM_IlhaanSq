@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   Building2,
   DollarSign,
@@ -135,7 +136,7 @@ function KpiTile({
   footerTone,
 }: {
   variant: Variant;
-  icon: React.ReactNode;
+  icon: ReactNode;
   value: string;
   label: string;
   changePct?: number;

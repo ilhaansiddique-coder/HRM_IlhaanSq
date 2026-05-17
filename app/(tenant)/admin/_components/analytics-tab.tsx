@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrency } from "../../_components/providers";
 import { ArrowUp, ArrowDown, DollarSign, ShoppingCart, Users, TrendingUp, Calendar } from "lucide-react";
@@ -10,7 +11,7 @@ type PeriodMetric = {
   changePercent: number;
 };
 
-const ENTITY_ICONS: Record<string, React.ReactNode> = {
+const ENTITY_ICONS: Record<string, ReactNode> = {
   sale: <ShoppingCart className="h-4 w-4 text-primary" />,
   product: <TrendingUp className="h-4 w-4 text-info" />,
   customer: <Users className="h-4 w-4 text-secondary" />,

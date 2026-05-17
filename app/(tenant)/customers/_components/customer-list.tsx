@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolveDateBounds } from "@/lib/date-range";
 import {
@@ -856,7 +856,7 @@ function KpiCard({
   label: string;
   value: string;
   hint: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   tone: keyof typeof KPI_TONES;
 }) {
   return (

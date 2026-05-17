@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
-import { listSalaryStructures, getPayrollStats } from "@/lib/services/hr/payroll.service";
+import { listSalaryStructures, getPayrollStats, getPayrollPrep } from "@/lib/services/hr/payroll.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,16 +10,20 @@ import { AssignSalaryForm } from "./_components/assign-salary-form";
 
 export default async function NewRunPage() {
   const session = await requireTenant();
-  const [structures, stats, employees] = await Promise.all([
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const [structures, stats, employees, prep] = await Promise.all([
     listSalaryStructures(session.tenantId),
     getPayrollStats(session.tenantId),
     listEmployees(session.tenantId, { status: "active" }),
+    getPayrollPrep(session.tenantId, monthStart, monthEnd),
   ]);
 
   const ready = structures.length > 0 && stats.activeSalaryCount > 0;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/hr/payroll"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
       </div>
@@ -37,14 +41,17 @@ export default async function NewRunPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 items-start">
         <Card className="border-border/70 bg-card/80">
           <CardHeader>
             <CardTitle>Run Payroll for Period</CardTitle>
-            <CardDescription>Calculates payslips for all active employees</CardDescription>
+            <CardDescription>
+              Calculates payslips for all active employees — gross, absence, advance,
+              payable &amp; paid
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <RunPayrollForm disabled={!ready} />
+            <RunPayrollForm disabled={!ready} prep={prep} />
           </CardContent>
         </Card>
 

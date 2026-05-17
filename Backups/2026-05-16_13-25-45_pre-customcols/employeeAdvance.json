@@ -1,0 +1,15 @@
+[
+  {
+    "id": "e4a6d2d7-4f3c-4796-b7f2-07ea4732d5c6",
+    "tenantId": "1f40f470-8124-46f5-88f4-9dbe6873f1e8",
+    "employeeId": "d6005198-8d0d-4d77-989d-0be39c35b3f5",
+    "amount": "1000",
+    "installment": "1000",
+    "outstanding": "0",
+    "reason": null,
+    "status": "cleared",
+    "issuedAt": "2026-05-16T00:00:00.000Z",
+    "createdAt": "2026-05-16T07:04:59.045Z",
+    "updatedAt": "2026-05-16T10:54:24.436Z"
+  }
+]

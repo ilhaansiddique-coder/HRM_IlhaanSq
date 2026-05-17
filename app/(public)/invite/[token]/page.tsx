@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { prisma } from "@/lib/db";
 import { CheckCircle2, XCircle, Clock, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +94,7 @@ function InviteState({
   title,
   description,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   iconBg: string;
   title: string;
   description: string;
@@ -114,7 +115,7 @@ function Row({
   value,
 }: {
   label: string;
-  value: React.ReactNode;
+  value: ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between">

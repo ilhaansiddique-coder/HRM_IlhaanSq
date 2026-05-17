@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCurrency } from "../../_components/providers";
 import {
@@ -1003,7 +1003,7 @@ function ActionIcon({
   onClick: () => void;
   disabled?: boolean;
   destructive?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button
@@ -1033,7 +1033,7 @@ function KpiCard({
   label: string;
   value: string;
   sublabel?: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   accent?: "success" | "warning";
 }) {
   const valueClass =

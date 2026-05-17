@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Dialog,
   DialogContent,
@@ -638,7 +638,7 @@ function KpiCard({
   label: string;
   value: string;
   hint: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   emphasized?: boolean;
 }) {
   return (
@@ -690,7 +690,7 @@ function ActivityStat({
   value,
   accent,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   accent: "primary" | "amber";

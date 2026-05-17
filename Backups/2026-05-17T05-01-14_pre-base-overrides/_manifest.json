@@ -1,0 +1,12 @@
+{
+  "takenAt": "2026-05-17T05:01:18.166Z",
+  "counts": {
+    "payrollPeriod": 1,
+    "payrollRun": 1,
+    "payslip": 2,
+    "payslipLine": 16,
+    "payrollCustomColumn": 0,
+    "employeeAdvance": 1,
+    "advanceRecovery": 1
+  }
+}

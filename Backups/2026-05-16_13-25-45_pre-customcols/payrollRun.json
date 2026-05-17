@@ -1,0 +1,16 @@
+[
+  {
+    "id": "34b5804d-8cc2-4244-aa84-b01300cd803b",
+    "tenantId": "1f40f470-8124-46f5-88f4-9dbe6873f1e8",
+    "periodId": "f046cdf9-11c3-41cd-a3cc-e8ac84ef7aa0",
+    "status": "completed",
+    "totalGross": "50208",
+    "totalDeductions": "4500",
+    "totalNet": "46841.33",
+    "employeeCount": 2,
+    "notes": null,
+    "runBy": "37fc8f3e-7209-42f0-ba0b-b688cd17ac85",
+    "runAt": "2026-05-16T10:54:22.578Z",
+    "completedAt": "2026-05-16T10:54:24.618Z"
+  }
+]

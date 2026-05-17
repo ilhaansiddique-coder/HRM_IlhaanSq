@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArchiveRestore, Download, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -179,7 +179,7 @@ function ClusterIconButton({
   label: string;
   onClick: () => void;
   disabled?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Tooltip>

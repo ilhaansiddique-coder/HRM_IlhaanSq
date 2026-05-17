@@ -1,6 +1,10 @@
 "use server";
 
 import { requireTenant } from "@/lib/auth";
+import { v2 as cloudinary } from "cloudinary";
+import { randomUUID } from "node:crypto";
+import { headers } from "next/headers";
+import { checkRate } from "@/lib/rate-limit";
 import {
   createProduct,
   updateProduct,
@@ -245,4 +249,70 @@ export async function exportProductsCsvAction(): Promise<{ csv: string }> {
 
   const csv = [header.join(","), ...rows].join("\n");
   return { csv };
+}
+
+// ─── Product Image Upload ───────────────────────────────────
+
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const IMAGE_ALLOWED_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+export async function uploadProductImageAction(
+  formData: FormData
+): Promise<{ url: string; error?: string }> {
+  const session = await requireTenant();
+
+  const hdrs = await headers();
+  const xf = hdrs.get("x-forwarded-for");
+  const ip = xf ? xf.split(",")[0].trim() : hdrs.get("x-real-ip") ?? "unknown";
+
+  const rate = await checkRate("upload", `upload:${session.tenantId}:${ip}`);
+  if (!rate.allowed) {
+    return { url: "", error: `Too many uploads. Try again in ${rate.retryAfterSec}s.` };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { url: "", error: "No file provided" };
+  if (!IMAGE_ALLOWED_MIME.has(file.type)) {
+    return { url: "", error: "Unsupported image type. Use JPG, PNG, WebP, or GIF." };
+  }
+  if (file.size > IMAGE_MAX_BYTES) return { url: "", error: "Image too large (max 5MB)." };
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const publicId = `rahedeen/${session.tenantId}/product-${randomUUID()}`;
+
+  const uploadResult = await new Promise<{ secure_url: string } | undefined>(
+    (resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          folder: "rahedeen/products",
+          resource_type: "auto",
+          quality: "auto",
+          fetch_format: "auto",
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result as { secure_url: string } | undefined);
+        }
+      );
+      stream.end(bytes);
+    }
+  );
+
+  if (!uploadResult) {
+    return { url: "", error: "Could not save the image. Please try again." };
+  }
+
+  return { url: uploadResult.secure_url };
 }

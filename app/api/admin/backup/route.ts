@@ -9,5 +9,11 @@ export async function GET() {
   }
 
   const data = await exportTenantData(session.tenantId);
-  return NextResponse.json(data);
+  const filename = `backup-${new Date().toISOString().slice(0, 10)}.json`;
+  return new NextResponse(JSON.stringify(data, null, 2), {
+    headers: {
+      "content-type": "application/json",
+      "content-disposition": `attachment; filename="${filename}"`,
+    },
+  });
 }

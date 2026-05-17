@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { CheckCircle2, Clock, Mail } from "lucide-react";
 import { RequestDemoForm } from "./_components/request-demo-form";
@@ -86,7 +86,7 @@ function Step({
   title,
   description,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   description: string;
 }) {

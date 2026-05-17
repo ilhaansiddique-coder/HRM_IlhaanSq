@@ -1,0 +1,19 @@
+[
+  {
+    "id": "acabbcf6-0438-4524-ac5b-516a825cdec3",
+    "tenantId": "1f40f470-8124-46f5-88f4-9dbe6873f1e8",
+    "name": "New",
+    "shortLabel": "New",
+    "group": "earning",
+    "operation": "add",
+    "sourceField": "basicSalary",
+    "operandKind": "field",
+    "operandField": null,
+    "operandValue": null,
+    "formula": [],
+    "affectsTotal": false,
+    "sortOrder": 0,
+    "createdAt": "2026-05-17T05:42:22.222Z",
+    "updatedAt": "2026-05-17T05:42:22.222Z"
+  }
+]

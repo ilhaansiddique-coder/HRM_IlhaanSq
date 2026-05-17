@@ -1,0 +1,13 @@
+[
+  {
+    "id": "f046cdf9-11c3-41cd-a3cc-e8ac84ef7aa0",
+    "tenantId": "1f40f470-8124-46f5-88f4-9dbe6873f1e8",
+    "name": "May 2026",
+    "periodStart": "2026-05-01T00:00:00.000Z",
+    "periodEnd": "2026-05-31T00:00:00.000Z",
+    "payDate": "2026-05-31T00:00:00.000Z",
+    "status": "locked",
+    "createdAt": "2026-05-16T10:54:22.444Z",
+    "updatedAt": "2026-05-16T10:54:24.741Z"
+  }
+]

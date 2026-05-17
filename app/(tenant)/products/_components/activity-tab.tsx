@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   Copy,
@@ -71,36 +72,17 @@ function actionLabel(action: string): string {
 }
 
 export function ActivityTab({ productId, active }: { productId: string; active: boolean }) {
-  const [data, setData] = useState<ActivityResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ["product-activity", productId],
+    queryFn: async () => {
+      const res = await fetch(`/api/products/${productId}/activity`);
+      if (!res.ok) throw new Error(`Failed to load (HTTP ${res.status})`);
+      return res.json() as Promise<ActivityResponse>;
+    },
+    enabled: active && !!productId,
+  });
 
-  useEffect(() => {
-    if (!active || !productId) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetch(`/api/products/${productId}/activity`)
-      .then(async (r) => {
-        const text = await r.text();
-        if (!r.ok) throw new Error(`Failed to load (HTTP ${r.status})`);
-        return text ? (JSON.parse(text) as ActivityResponse) : null;
-      })
-      .then((res) => {
-        if (cancelled) return;
-        setData(res);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : "Failed to load activity");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [active, productId]);
+  const queryError = error instanceof Error ? error.message : null;
 
   return (
     <div className="space-y-4">
@@ -131,9 +113,9 @@ export function ActivityTab({ productId, active }: { productId: string; active: 
         />
       </div>
 
-      {error ? (
+      {queryError ? (
         <div className="rounded-lg border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
+          {queryError}
         </div>
       ) : loading ? (
         <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
@@ -177,7 +159,7 @@ function StatCard({
   value,
   tone,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   tone: "sky" | "amber" | "emerald";

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   Area,
@@ -428,7 +429,7 @@ function BigKpi({
   value: string;
   hint: string;
   tone: keyof typeof BIG_KPI_TONES;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <Card className="border-border/70 bg-card/80">
@@ -450,7 +451,7 @@ function BigKpi({
   );
 }
 
-function Chip({ icon, text }: { icon: React.ReactNode; text: string }) {
+function Chip({ icon, text }: { icon: ReactNode; text: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
       {icon}

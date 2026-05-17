@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { getPayrollStats, listPayrollRuns } from "@/lib/services/hr/payroll.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Plus, FileText, Layers, CheckCircle2, Calendar } from "lucide-react";
+import { Wallet, Plus, FileText, Layers, CheckCircle2, Calendar, HandCoins } from "lucide-react";
 
 export default async function PayrollOverviewPage() {
   const session = await requireTenant();
@@ -21,6 +22,12 @@ export default async function PayrollOverviewPage() {
             <Button variant="outline">
               <Layers className="h-4 w-4" />
               Structures
+            </Button>
+          </Link>
+          <Link href="/hr/payroll/advances">
+            <Button variant="outline">
+              <HandCoins className="h-4 w-4" />
+              Advances
             </Button>
           </Link>
           <Link href="/hr/payroll/runs/new">
@@ -84,16 +91,20 @@ export default async function PayrollOverviewPage() {
         </CardContent>
       </Card>
 
-      <div className="rounded-lg border border-warning/35 bg-warning/5 p-3 text-xs text-muted-foreground">
-        <strong className="text-warning">Phase 1 Note:</strong> Payroll uses simple gross-minus-deductions math.
-        Country-specific tax engines (NBR, TDS, GOSI, PAYE, FICA, CPF) and statutory reporting (24Q, WPS, RTI) are
-        Phase 2 work — they require region-specific compliance research and integration. The data model is ready for that expansion.
+      <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+        <strong className="text-foreground">Terms of payment:</strong> Gross = Basic + earning
+        allowances. Absence Deduction = (Basic ÷ 30) × absent days. Payable Salary = Gross −
+        Advance − Absence. Amount Paid = Gross − Absence + D.H. Expenses (reimbursements paid
+        on top). Advances recover automatically each run until cleared.
+        <br />
+        <span className="text-warning">Not yet included:</span> country-specific tax engines
+        (NBR, TDS, GOSI, PAYE) and statutory reporting — the data model is ready for that expansion.
       </div>
     </div>
   );
 }
 
-function StatCard({ icon, title, value, hint, variant }: { icon: React.ReactNode; title: string; value: number | string; hint?: string; variant?: "success" }) {
+function StatCard({ icon, title, value, hint, variant }: { icon: ReactNode; title: string; value: number | string; hint?: string; variant?: "success" }) {
   const iconBg = variant === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary";
   return (
     <Card className="border-border/70 bg-card/80">

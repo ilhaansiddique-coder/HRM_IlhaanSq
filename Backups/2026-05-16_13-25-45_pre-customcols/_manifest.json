@@ -1,0 +1,12 @@
+{
+  "takenAt": "2026-05-16T13:25:46.977Z",
+  "reason": "pre custom-columns + paid-status migration",
+  "counts": {
+    "payrollPeriod": 1,
+    "payrollRun": 1,
+    "payslip": 2,
+    "payslipLine": 16,
+    "advanceRecovery": 1,
+    "employeeAdvance": 1
+  }
+}

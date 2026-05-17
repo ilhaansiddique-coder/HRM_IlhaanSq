@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { TrendingUp, ShoppingCart, Users, Package } from "lucide-react";
 
 export function ProductPreview() {
@@ -95,7 +96,7 @@ function KpiCard({
   label: string;
   value: string;
   change: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <div className="rounded-xl border border-border/60 bg-background/40 p-3">

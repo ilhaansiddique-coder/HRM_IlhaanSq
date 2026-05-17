@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { getLearningStats, listEnrollments } from "@/lib/services/hr/learning.service";
@@ -62,7 +63,7 @@ export default async function LearningOverviewPage() {
   );
 }
 
-function StatCard({ icon, title, value, hint, variant }: { icon: React.ReactNode; title: string; value: number | string; hint?: string; variant?: "success" }) {
+function StatCard({ icon, title, value, hint, variant }: { icon: ReactNode; title: string; value: number | string; hint?: string; variant?: "success" }) {
   const iconBg = variant === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary";
   return (
     <Card className="border-border/70 bg-card/80">

@@ -69,6 +69,7 @@ export async function listEmployees(
 
   return employees.map((e) => ({
     ...e,
+    baseSalary: e.baseSalary ? Number(e.baseSalary) : null,
     dob: e.dob ? e.dob.toISOString() : null,
     hireDate: e.hireDate.toISOString(),
     terminationDate: e.terminationDate ? e.terminationDate.toISOString() : null,

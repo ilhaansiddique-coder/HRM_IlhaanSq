@@ -1,0 +1,146 @@
+[
+  {
+    "id": "67e59ba1-bff0-41e1-a6aa-9f3566dec4ed",
+    "payslipId": "2dd93c8e-4a2f-413e-93f4-85a972073cad",
+    "componentName": "Basic Salary",
+    "componentCode": "BASIC",
+    "amount": "20000",
+    "type": "earning",
+    "sortOrder": 0
+  },
+  {
+    "id": "0a0aaba7-30bb-46ac-9e5e-054900cabfc0",
+    "payslipId": "2dd93c8e-4a2f-413e-93f4-85a972073cad",
+    "componentName": "House Rent",
+    "componentCode": "HRENT",
+    "amount": "1000",
+    "type": "earning",
+    "sortOrder": 10
+  },
+  {
+    "id": "12c5c16c-1f6a-497a-9dd8-7841c27b9454",
+    "payslipId": "2dd93c8e-4a2f-413e-93f4-85a972073cad",
+    "componentName": "Health Allowance",
+    "componentCode": "HEALTH",
+    "amount": "1500",
+    "type": "earning",
+    "sortOrder": 20
+  },
+  {
+    "id": "2253d75b-2187-4f95-afba-168a3e9e0b41",
+    "payslipId": "2dd93c8e-4a2f-413e-93f4-85a972073cad",
+    "componentName": "Education Allowance",
+    "componentCode": "EDU",
+    "amount": "1500",
+    "type": "earning",
+    "sortOrder": 30
+  },
+  {
+    "id": "6777e8f6-807a-4253-8a09-7e0d2ba49216",
+    "payslipId": "2dd93c8e-4a2f-413e-93f4-85a972073cad",
+    "componentName": "Savings",
+    "componentCode": "SAV",
+    "amount": "1000",
+    "type": "earning",
+    "sortOrder": 40
+  },
+  {
+    "id": "fc92ecdd-780d-4184-a5cd-fc82129f71d9",
+    "payslipId": "2dd93c8e-4a2f-413e-93f4-85a972073cad",
+    "componentName": "Daily Hand Expenses",
+    "componentCode": "DHEXP",
+    "amount": "2500",
+    "type": "earning",
+    "sortOrder": 50
+  },
+  {
+    "id": "1b9dae9f-347a-4e64-b762-31644bebeaae",
+    "payslipId": "2dd93c8e-4a2f-413e-93f4-85a972073cad",
+    "componentName": "Absence Deduction (1 day)",
+    "componentCode": "ABSENT",
+    "amount": "666.67",
+    "type": "deduction",
+    "sortOrder": 900
+  },
+  {
+    "id": "90836b1e-8a1f-4455-9ee1-15e2b7c573a7",
+    "payslipId": "2dd93c8e-4a2f-413e-93f4-85a972073cad",
+    "componentName": "Advance Recovery",
+    "componentCode": "ADVANCE",
+    "amount": "1000",
+    "type": "deduction",
+    "sortOrder": 910
+  },
+  {
+    "id": "71a446ba-ac23-4222-a511-f32cf96f1ec0",
+    "payslipId": "952e7924-791a-4b75-9506-69688c1c4e57",
+    "componentName": "Basic Salary",
+    "componentCode": "BASIC",
+    "amount": "17000",
+    "type": "earning",
+    "sortOrder": 0
+  },
+  {
+    "id": "99654bf4-b808-4baa-b96b-aaaabb9fab63",
+    "payslipId": "952e7924-791a-4b75-9506-69688c1c4e57",
+    "componentName": "House Rent",
+    "componentCode": "HRENT",
+    "amount": "1000",
+    "type": "earning",
+    "sortOrder": 10
+  },
+  {
+    "id": "132dc87c-b61c-41f0-9e3e-867afb587fc2",
+    "payslipId": "952e7924-791a-4b75-9506-69688c1c4e57",
+    "componentName": "Health Allowance",
+    "componentCode": "HEALTH",
+    "amount": "1250",
+    "type": "earning",
+    "sortOrder": 20
+  },
+  {
+    "id": "cf159269-a108-4161-88bc-76246a445f0f",
+    "payslipId": "952e7924-791a-4b75-9506-69688c1c4e57",
+    "componentName": "Education Allowance",
+    "componentCode": "EDU",
+    "amount": "1200",
+    "type": "earning",
+    "sortOrder": 30
+  },
+  {
+    "id": "332d9ea5-34e0-4f10-b709-f292fa3a2fdb",
+    "payslipId": "952e7924-791a-4b75-9506-69688c1c4e57",
+    "componentName": "Savings",
+    "componentCode": "SAV",
+    "amount": "1000",
+    "type": "earning",
+    "sortOrder": 40
+  },
+  {
+    "id": "5654d697-94f6-4b2c-9aba-ec1cbba60e55",
+    "payslipId": "952e7924-791a-4b75-9506-69688c1c4e57",
+    "componentName": "Daily Hand Expenses",
+    "componentCode": "DHEXP",
+    "amount": "1258",
+    "type": "earning",
+    "sortOrder": 50
+  },
+  {
+    "id": "b6323f05-0f9b-48cd-aeec-a45100d01670",
+    "payslipId": "952e7924-791a-4b75-9506-69688c1c4e57",
+    "componentName": "Extra Duty Payment (2 days)",
+    "componentCode": "EXTRADUTY",
+    "amount": "1133.33",
+    "type": "earning",
+    "sortOrder": 60
+  },
+  {
+    "id": "b9d502dc-4055-4c37-ba9b-03a5c84bed0e",
+    "payslipId": "952e7924-791a-4b75-9506-69688c1c4e57",
+    "componentName": "Absence Deduction (5 days)",
+    "componentCode": "ABSENT",
+    "amount": "2833.33",
+    "type": "deduction",
+    "sortOrder": 900
+  }
+]

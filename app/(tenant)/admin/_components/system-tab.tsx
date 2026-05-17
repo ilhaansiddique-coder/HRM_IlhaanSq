@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -263,10 +264,10 @@ function InfoTile({
   value,
   badge,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
-  badge: React.ReactNode;
+  badge: ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-3 py-2">
@@ -416,17 +417,7 @@ function CourierProviderCard({
 }
 
 function BackupActions() {
-  const handleExport = async () => {
-    const res = await fetch("/api/admin/backup");
-    const data = await res.json();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const backupHref = "/api/admin/backup";
 
   return (
     <div className="space-y-3 pt-2">
@@ -434,9 +425,11 @@ function BackupActions() {
         Export all your data as a JSON file. Useful for backups or migrating to another instance.
       </p>
       <div className="flex gap-2">
-        <Button onClick={handleExport}>
-          <Download className="h-4 w-4" />
-          Export Backup
+        <Button asChild>
+          <a href={backupHref} download>
+            <Download className="h-4 w-4" />
+            Export Backup
+          </a>
         </Button>
         <Button variant="outline" disabled>
           <Upload className="h-4 w-4" />

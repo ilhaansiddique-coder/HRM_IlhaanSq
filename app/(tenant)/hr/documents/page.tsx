@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import {
@@ -173,7 +174,7 @@ export default async function DocumentsOverviewPage() {
   );
 }
 
-function StatCard({ icon, title, value, variant }: { icon: React.ReactNode; title: string; value: number; variant?: "success" | "warning" | "destructive" }) {
+function StatCard({ icon, title, value, variant }: { icon: ReactNode; title: string; value: number; variant?: "success" | "warning" | "destructive" }) {
   const iconBg = variant === "success" ? "bg-success/10 text-success" : variant === "warning" ? "bg-warning/10 text-warning" : variant === "destructive" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary";
   return (
     <Card className="border-border/70 bg-card/80">

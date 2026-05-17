@@ -784,7 +784,7 @@ function TenantSubLink({
   badge,
 }: {
   href: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   active: boolean;
   badge?: number;

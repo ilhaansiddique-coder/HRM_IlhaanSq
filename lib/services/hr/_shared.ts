@@ -21,6 +21,7 @@ type TenantScopedModel =
   | "salaryComponent"
   | "payrollPeriod"
   | "payrollRun"
+  | "employeeAdvance"
   | "attendanceRecord";
 
 /**
