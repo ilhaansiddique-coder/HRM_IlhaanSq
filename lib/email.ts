@@ -198,6 +198,42 @@ export async function sendPasswordResetEmail(input: {
   });
 }
 
+export async function sendApplicationNotification(input: {
+  to: string;
+  applicantName: string;
+  applicantEmail: string;
+  jobTitle: string;
+  tenantName: string;
+  adminUrl: string;
+  phone?: string;
+  notes?: string;
+}) {
+  const html = emailLayout(`
+    <h1 style="font-size:22px;margin:0 0 16px 0;font-weight:bold;">New Job Application</h1>
+    <p>A new candidate has applied for <strong>${escapeHtml(input.jobTitle)}</strong> at ${escapeHtml(input.tenantName)}.</p>
+    <div style="background:#f4f4f5;border:1px solid #e4e4e7;border-radius:8px;padding:16px;margin:20px 0;">
+      <p style="margin:0 0 8px 0;font-size:13px;color:#71717a;">Applicant</p>
+      <p style="margin:0 0 16px 0;font-size:15px;font-weight:600;">${escapeHtml(input.applicantName)}</p>
+      <p style="margin:0 0 8px 0;font-size:13px;color:#71717a;">Email</p>
+      <p style="margin:0 0 16px 0;font-size:15px;font-weight:600;">${escapeHtml(input.applicantEmail)}</p>
+      ${input.phone ? `<p style="margin:0 0 8px 0;font-size:13px;color:#71717a;">Phone</p><p style="margin:0 0 16px 0;font-size:15px;font-weight:600;">${escapeHtml(input.phone)}</p>` : ""}
+      ${input.notes ? `<p style="margin:0 0 8px 0;font-size:13px;color:#71717a;">Notes</p><p style="margin:0 0 16px 0;font-size:14px;color:#3f3f46;">${escapeHtml(input.notes)}</p>` : ""}
+    </div>
+    <p style="margin:24px 0;">
+      <a href="${input.adminUrl}" style="display:inline-block;background:#1f5d47;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Review in Dashboard →</a>
+    </p>
+    <p style="color:#71717a;font-size:13px;">
+      You can manage this application from the recruitment pipeline in your admin dashboard.
+    </p>
+  `);
+
+  return sendEmail({
+    to: input.to,
+    subject: `New application for ${input.jobTitle} — ${input.applicantName}`,
+    html,
+  });
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

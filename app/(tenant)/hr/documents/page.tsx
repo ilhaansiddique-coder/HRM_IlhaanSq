@@ -37,6 +37,7 @@ import {
   signDocumentAction,
   deleteDocumentAction,
 } from "../actions-phase2";
+import { DocumentUploadField } from "./_components/document-upload-field";
 
 export default async function DocumentsOverviewPage() {
   const session = await requireTenant();
@@ -147,9 +148,8 @@ export default async function DocumentsOverviewPage() {
                 <Input id="name" name="name" required placeholder="Employment Contract" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="fileUrl" className="text-xs">File URL</Label>
-                <Input id="fileUrl" name="fileUrl" type="url" placeholder="https://..." />
-                <p className="text-[10px] text-muted-foreground">For now, paste a URL. File upload (S3) is Phase 3 work.</p>
+                <Label className="text-xs">Document file</Label>
+                <DocumentUploadField name="fileUrl" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="expiresAt" className="text-xs">Expiry date</Label>
@@ -166,9 +166,9 @@ export default async function DocumentsOverviewPage() {
       </div>
 
       <div className="rounded-lg border border-warning/35 bg-warning/5 p-3 text-xs text-muted-foreground">
-        <strong className="text-warning">Phase 1 Note:</strong> Documents store a URL (not the actual file) and use a manual &quot;Mark signed&quot;
-        workflow. Real file upload to S3/Supabase Storage and DocuSign / Adobe Sign API integration is Phase 3 work — both need
-        provider credentials and configuration.
+        <strong className="text-warning">Note:</strong> Files (PDF, Word, Excel, or image · up to 15MB) are uploaded to secure
+        cloud storage. Signing still uses a manual &quot;Mark signed&quot; workflow — DocuSign / Adobe Sign API integration is
+        future work that needs provider credentials.
       </div>
     </div>
   );

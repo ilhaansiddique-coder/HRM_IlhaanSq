@@ -18,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Users, Mail, Phone } from "lucide-react";
+import { Plus, Users, Mail, Phone, Pencil, Ban, Trash2 } from "lucide-react";
+import { terminateEmployeeAction, deleteEmployeeAction } from "../actions";
 
 const statusVariants: Record<
   string,
@@ -29,6 +30,8 @@ const statusVariants: Record<
   terminated: "destructive",
   suspended: "outline",
 };
+
+const todayYmd = new Date().toISOString().slice(0, 10);
 
 export default async function EmployeesPage() {
   const session = await requireTenant();
@@ -77,6 +80,7 @@ export default async function EmployeesPage() {
                     <TableHead>Position</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Hired</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -105,12 +109,58 @@ export default async function EmployeesPage() {
                         {e.position?.title ?? <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusVariants[e.status] ?? "outline"} className="capitalize">
-                          {e.status.replace("_", " ")}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {e.approvalStatus === "pending" ? (
+                            <Badge variant="secondary" className="text-[10px]">Pending approval</Badge>
+                          ) : e.approvalStatus === "rejected" ? (
+                            <Badge variant="destructive" className="text-[10px]">Approval rejected</Badge>
+                          ) : (
+                            <Badge variant={statusVariants[e.status] ?? "outline"} className="capitalize">
+                              {e.status.replace("_", " ")}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {new Date(e.hireDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-0.5">
+                          <Link href={`/hr/employees/${e.id}`}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit employee">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                          {e.status !== "terminated" && (
+                            <form action={terminateEmployeeAction}>
+                              <input type="hidden" name="id" value={e.id} />
+                              <input type="hidden" name="terminationDate" value={todayYmd} />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive/70 hover:text-destructive"
+                                type="submit"
+                                title="Terminate employee"
+                              >
+                                <Ban className="h-3.5 w-3.5" />
+                              </Button>
+                            </form>
+                          )}
+                          {e.status === "terminated" && (
+                            <form action={deleteEmployeeAction}>
+                              <input type="hidden" name="id" value={e.id} />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive/70 hover:text-destructive"
+                                type="submit"
+                                title="Delete permanently"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </form>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -122,7 +172,7 @@ export default async function EmployeesPage() {
       </Card>
 
       {/* Mobile: same data as a card stack — name + status header, code,
-          email/phone contact, dept/position, hired date. */}
+          email/phone contact, dept/position, hired date, actions at bottom. */}
       <div className="md:hidden space-y-3">
         <div>
           <p className="text-base font-semibold">All Employees</p>
@@ -149,12 +199,22 @@ export default async function EmployeesPage() {
                     {e.empCode}
                   </p>
                 </div>
-                <Badge
-                  variant={statusVariants[e.status] ?? "outline"}
-                  className="rounded-lg capitalize"
-                >
-                  {e.status.replace("_", " ")}
-                </Badge>
+                {e.approvalStatus === "pending" ? (
+                  <Badge variant="secondary" className="rounded-lg text-[10px]">
+                    Pending approval
+                  </Badge>
+                ) : e.approvalStatus === "rejected" ? (
+                  <Badge variant="destructive" className="rounded-lg text-[10px]">
+                    Approval rejected
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant={statusVariants[e.status] ?? "outline"}
+                    className="rounded-lg capitalize"
+                  >
+                    {e.status.replace("_", " ")}
+                  </Badge>
+                )}
               </div>
 
               <div className="mt-3 space-y-1 text-xs text-muted-foreground">
@@ -185,6 +245,34 @@ export default async function EmployeesPage() {
                     {new Date(e.hireDate).toLocaleDateString()}
                   </span>
                 </div>
+              </div>
+
+              <div className="mt-3 flex items-center gap-1 justify-end border-t border-border/60 pt-3">
+                <Link href={`/hr/employees/${e.id}`}>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                </Link>
+                {e.status !== "terminated" && (
+                  <form action={terminateEmployeeAction}>
+                    <input type="hidden" name="id" value={e.id} />
+                    <input type="hidden" name="terminationDate" value={todayYmd} />
+                    <Button variant="outline" size="sm" className="h-8 text-destructive/70" type="submit">
+                      <Ban className="h-3.5 w-3.5" />
+                      Terminate
+                    </Button>
+                  </form>
+                )}
+                {e.status === "terminated" && (
+                  <form action={deleteEmployeeAction}>
+                    <input type="hidden" name="id" value={e.id} />
+                    <Button variant="outline" size="sm" className="h-8 text-destructive/70" type="submit">
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  </form>
+                )}
               </div>
             </Card>
           ))

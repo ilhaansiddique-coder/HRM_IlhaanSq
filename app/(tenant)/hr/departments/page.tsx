@@ -20,11 +20,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Plus, Trash2 } from "lucide-react";
-import {
-  createDepartmentAction,
-  deleteDepartmentAction,
-} from "../actions";
+import { Building2, Plus } from "lucide-react";
+import { createDepartmentAction } from "../actions";
+import { DepartmentRowActions } from "./_components/department-row-actions";
 
 export default async function DepartmentsPage() {
   const session = await requireTenant();
@@ -74,19 +72,16 @@ export default async function DepartmentsPage() {
                             <Badge variant="outline">{d._count.employees}</Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            {d._count.employees === 0 && (
-                              <form action={deleteDepartmentAction} className="inline">
-                                <input type="hidden" name="id" value={d.id} />
-                                <Button
-                                  type="submit"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </form>
-                            )}
+                            <DepartmentRowActions
+                              department={{
+                                id: d.id,
+                                name: d.name,
+                                code: d.code,
+                                costCenter: d.costCenter,
+                                description: d.description,
+                                employeeCount: d._count.employees,
+                              }}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -136,20 +131,19 @@ export default async function DepartmentsPage() {
                     </div>
                   </div>
 
-                  {d._count.employees === 0 && (
-                    <form action={deleteDepartmentAction} className="mt-3">
-                      <input type="hidden" name="id" value={d.id} />
-                      <Button
-                        type="submit"
-                        variant="outline"
-                        size="sm"
-                        className="w-full rounded-lg text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </Button>
-                    </form>
-                  )}
+                  <div className="mt-3">
+                    <DepartmentRowActions
+                      variant="full"
+                      department={{
+                        id: d.id,
+                        name: d.name,
+                        code: d.code,
+                        costCenter: d.costCenter,
+                        description: d.description,
+                        employeeCount: d._count.employees,
+                      }}
+                    />
+                  </div>
                 </Card>
               ))
             )}

@@ -20,6 +20,7 @@ export type UpdateSystemSettingsInput = {
   timezone?: string;
   dateFormat?: string;
   timeFormat?: string;
+  lateThreshold?: string | null;
 };
 
 export async function updateBusinessSettings(

@@ -108,6 +108,28 @@ export async function createPosition(
   });
 }
 
+export async function updatePosition(
+  tenantId: string,
+  id: string,
+  input: Partial<Parameters<typeof createPosition>[1]>
+) {
+  const existing = await prisma.position.findFirst({ where: { id, tenantId } });
+  if (!existing) throw new Error("Position not found");
+
+  if (input.departmentId !== undefined) {
+    await assertTenantOwns(tenantId, "department", [input.departmentId]);
+  }
+
+  return prisma.position.update({
+    where: { id },
+    data: {
+      ...input,
+      departmentId:
+        input.departmentId === undefined ? undefined : input.departmentId || null,
+    },
+  });
+}
+
 export async function deletePosition(tenantId: string, id: string) {
   const existing = await prisma.position.findFirst({ where: { id, tenantId } });
   if (!existing) throw new Error("Position not found");

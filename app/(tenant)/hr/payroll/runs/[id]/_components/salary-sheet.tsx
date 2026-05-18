@@ -53,6 +53,7 @@ export type Slip = {
   totalSalary: number;
   advanceOutstanding: number; // total outstanding advance balance (read-only)
   advanceRecovered: number;
+  breakPenalty: number;
   absentDays: number;
   absenceDeduction: number;
   absenceReason: string | null;
@@ -139,6 +140,7 @@ const DED_COLS: Col[] = [
   { key: "advanceRecovered", short: "Advance", full: "Advance Recovery", rel: "Recovered this period. Editable — syncs with the Advances page installment for this employee." },
   { key: "absentDays", short: "A. Days", full: "Absent Days", rel: "Number of absent days" },
   { short: "A.D. Deduction", full: "Absence Deduction", rel: "(Basic ÷ 30) × Absent Days" },
+  { key: "breakPenalty", short: "Brk. Penalty", full: "Break Penalty", rel: "Penalty for exceeded break time" },
 ];
 
 // Per-tenant rename overrides for built-in columns (fieldKey → labels).

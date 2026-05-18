@@ -100,6 +100,8 @@ model Tenant {
   leaveTypes      LeaveType[]
   leaveRequests   LeaveRequest[]
   attendanceRecords AttendanceRecord[]
+  breakSessions   BreakSession[]
+  breakPenalties  BreakPenalty[]
 
   // HR Phase 2
   salaryStructures   SalaryStructure[]
@@ -119,6 +121,10 @@ model Tenant {
   enrollments        Enrollment[]
   documentCategories DocumentCategory[]
   employeeDocuments  EmployeeDocument[]
+
+  // Admin: approvals + notification center
+  approvalRequests   ApprovalRequest[]
+  notifications      Notification[]
 
   @@map("tenants")
 }
@@ -577,6 +583,8 @@ model SystemSettings {
   timezone       String   @default("UTC")
   dateFormat     String   @default("DD/MM/YYYY") @map("date_format")
   timeFormat     String   @default("HH:mm") @map("time_format")
+  lateThreshold       String? @map("late_threshold") // HH:mm — check-in after this time is late
+  breakTimeThreshold  Int     @default(60) @map("break_time_threshold") // max break minutes before penalty
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -798,6 +806,14 @@ model Employee {
   terminationDate   DateTime? @map("termination_date") @db.Date
   terminationReason String?   @map("termination_reason")
 
+  // Onboarding approval gate. Existing rows default to `approved`; newly
+  // created employees are forced to `pending` (and status `suspended`) by
+  // the create flow until an owner/admin approves them in /admin.
+  approvalStatus          ApprovalStatus @default(approved) @map("approval_status")
+  approvalDecidedBy       String?        @map("approval_decided_by") @db.Uuid
+  approvalDecidedAt       DateTime?      @map("approval_decided_at")
+  approvalRejectionReason String?        @map("approval_rejection_reason")
+
   // Compensation
   baseSalary        Decimal? @map("base_salary") @db.Decimal(12, 2)
   currency          String   @default("BDT")
@@ -816,6 +832,8 @@ model Employee {
   reports    Employee[]  @relation("ReportingChain")
 
   attendance     AttendanceRecord[]
+  breakSessions  BreakSession[]
+  breakPenalties BreakPenalty[]
   leaveRequests  LeaveRequest[]
   leaveBalances  LeaveBalance[]
   salaries       EmployeeSalary[]
@@ -829,6 +847,7 @@ model Employee {
   @@unique([tenantId, empCode])
   @@unique([tenantId, email])
   @@index([tenantId, status])
+  @@index([tenantId, approvalStatus])
   @@index([tenantId, departmentId])
   @@map("employees")
 }
@@ -920,6 +939,66 @@ model AttendanceRecord {
   @@map("attendance_records")
 }
 
+// ─── BREAK TIME ──────────────────────────────────────────────
+
+enum BreakPenaltyStatus {
+  pending
+  applied
+  waived
+}
+
+enum BreakStatus {
+  active
+  completed
+}
+
+model BreakSession {
+  id          String      @id @default(uuid()) @db.Uuid
+  tenantId    String      @map("tenant_id") @db.Uuid
+  employeeId  String      @map("employee_id") @db.Uuid
+  breakStart  DateTime    @map("break_start")
+  breakEnd    DateTime?   @map("break_end")
+  durationMin Int         @default(0) @map("duration_min")
+  status      BreakStatus @default(active)
+  notes       String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee       Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  breakPenalties BreakPenalty[]
+
+  @@index([tenantId, employeeId])
+  @@index([tenantId, breakStart])
+  @@map("break_sessions")
+}
+
+model BreakPenalty {
+  id               String             @id @default(uuid()) @db.Uuid
+  tenantId         String             @map("tenant_id") @db.Uuid
+  employeeId       String             @map("employee_id") @db.Uuid
+  breakSessionId   String?            @map("break_session_id") @db.Uuid
+  amount           Decimal            @db.Decimal(12, 2)
+  reason           String
+  status           BreakPenaltyStatus @default(pending)
+  appliedAt        DateTime?          @map("applied_at")
+  appliedBy        String?            @map("applied_by") @db.Uuid
+  payslipId        String?            @map("payslip_id") @db.Uuid
+  exceededMinutes  Int                @default(0) @map("exceeded_minutes")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee     Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  breakSession BreakSession? @relation(fields: [breakSessionId], references: [id])
+  payslip      Payslip?      @relation(fields: [payslipId], references: [id])
+
+  @@index([tenantId, employeeId])
+  @@index([tenantId, status])
+  @@index([payslipId])
+  @@map("break_penalties")
+}
+
 
 // ═══════════════════════════════════════════════════════════════
 // HR PHASE 2 — Payroll, Performance, Recruitment, LMS, Documents
@@ -965,6 +1044,7 @@ enum PayrollColumnOperand {
 }
 
 enum AdvanceStatus {
+  pending
   active
   cleared
   cancelled
@@ -1095,8 +1175,9 @@ model Payslip {
   absentDays       Decimal @default(0) @map("absent_days") @db.Decimal(5, 2)
   absenceDeduction Decimal @default(0) @map("absence_deduction") @db.Decimal(12, 2)
   absenceReason    String? @map("absence_reason")
-  advanceRecovered Decimal @default(0) @map("advance_recovered") @db.Decimal(12, 2)
-  reimbursements   Decimal @default(0) @db.Decimal(12, 2)
+  advanceRecovered Decimal  @default(0) @map("advance_recovered") @db.Decimal(12, 2)
+  breakPenalty     Decimal  @default(0) @map("break_penalty") @db.Decimal(12, 2)
+  reimbursements   Decimal  @default(0) @db.Decimal(12, 2)
   payableSalary    Decimal @default(0) @map("payable_salary") @db.Decimal(12, 2)
   amountPaid       Decimal @default(0) @map("amount_paid") @db.Decimal(12, 2)
   currency        String   @default("BDT")
@@ -1109,6 +1190,7 @@ model Payslip {
   lines        PayslipLine[]
   recoveries   AdvanceRecovery[]
   customValues PayslipCustomValue[]
+  breakPenalties BreakPenalty[]
 
   @@unique([runId, employeeId])
   @@index([employeeId])
@@ -1224,6 +1306,11 @@ model EmployeeAdvance {
   reason      String?
   status      AdvanceStatus @default(active)
   issuedAt    DateTime      @map("issued_at") @db.Date
+  // Optional recovery window. When both are set, the advance is recovered
+  // only on payroll runs whose pay period falls within [start, end];
+  // otherwise the default "from the month after issue" rule applies.
+  recoveryStart DateTime?   @map("recovery_start") @db.Date
+  recoveryEnd   DateTime?   @map("recovery_end") @db.Date
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
@@ -1391,6 +1478,15 @@ enum ApplicationStage {
   rejected
 }
 
+// ApprovalType is intentionally a free-form string (not an enum) so new
+// approval kinds can be added in code with NO schema migration.
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
 model JobPosting {
   id              String           @id @default(uuid()) @db.Uuid
   tenantId        String           @map("tenant_id") @db.Uuid
@@ -1453,6 +1549,13 @@ model Application {
   rejectionReason String?          @map("rejection_reason")
   hiredAt         DateTime?        @map("hired_at")
   offerSalary     Decimal?         @map("offer_salary") @db.Decimal(12, 2)
+  // Joining approval gate. Moving an application to `hired` does NOT take
+  // effect until an owner/admin approves the joining in /admin. Null means
+  // no joining decision is pending (normal pipeline stages).
+  joiningStatus     ApprovalStatus? @map("joining_status")
+  joiningDecidedBy  String?         @map("joining_decided_by") @db.Uuid
+  joiningDecidedAt  DateTime?       @map("joining_decided_at")
+  joiningRejectionReason String?    @map("joining_rejection_reason")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1462,6 +1565,75 @@ model Application {
   @@unique([candidateId, jobPostingId])
   @@index([tenantId, stage])
   @@map("applications")
+}
+
+// ─── Admin: approvals inbox ─────────────────────────────────
+// One row per thing awaiting an owner/admin decision. Display fields
+// (title/subtitle) are denormalised so the inbox stays cheap and stable
+// even if the underlying entity changes.
+model ApprovalRequest {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  type        String
+  status      ApprovalStatus @default(pending)
+  entityType  String         @map("entity_type")
+  entityId    String?        @map("entity_id") @db.Uuid
+  title       String
+  subtitle    String?
+  payload     Json?
+  requestedBy String?        @map("requested_by") @db.Uuid
+  requestedByName String?    @map("requested_by_name")
+  decidedBy   String?        @map("decided_by") @db.Uuid
+  decidedByName String?      @map("decided_by_name")
+  decidedAt   DateTime?      @map("decided_at")
+  reason      String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@map("approval_requests")
+}
+
+// ─── Admin: notification center ─────────────────────────────
+// Persisted, tenant-scoped notifications for every notable execution and
+// approval event. Read/unread is tracked per user via NotificationRead.
+model Notification {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  category   String   @default("activity")
+  type       String
+  title      String
+  body       String?
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  link       String?
+  actorId    String?  @map("actor_id") @db.Uuid
+  actorName  String?  @map("actor_name")
+  severity   String   @default("info")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reads  NotificationRead[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, category])
+  @@map("notifications")
+}
+
+model NotificationRead {
+  id             String   @id @default(uuid()) @db.Uuid
+  notificationId String   @map("notification_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  readAt         DateTime @default(now()) @map("read_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+  @@index([userId])
+  @@map("notification_reads")
 }
 
 // ─── LEARNING (LMS) ────────────────────────────────────────

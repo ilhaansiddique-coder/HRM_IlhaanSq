@@ -56,6 +56,7 @@ export default {
         publicPaths.has(pathname) ||
         pathname.startsWith("/invite/") ||
         pathname.startsWith("/reset-password/") ||
+        pathname.startsWith("/careers/") ||
         pathname.startsWith("/_next") ||
         pathname.startsWith("/api/auth") ||
         pathname.startsWith("/icons") ||

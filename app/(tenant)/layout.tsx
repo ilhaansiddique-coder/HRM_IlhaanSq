@@ -10,7 +10,14 @@ import { TenantProviders } from "./_components/providers";
 // React-scoped memoization — deduplicates the query within a single render pass.
 const getPendingTenantCount = cache(async (isSuperAdmin: boolean) => {
   if (!isSuperAdmin) return 0;
-  return prisma.demoRequest.count({ where: { status: "pending" } });
+  // Non-critical badge — a transient DB blip (e.g. Neon cold start) must not
+  // reject the layout's Promise.all and 500 every page. Degrade to 0.
+  try {
+    return await prisma.demoRequest.count({ where: { status: "pending" } });
+  } catch (err) {
+    console.error("[layout] failed to load pending tenant count:", err);
+    return 0;
+  }
 });
 
 export default async function TenantLayout({

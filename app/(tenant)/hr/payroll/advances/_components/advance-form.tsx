@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { createAdvanceAction } from "../../../actions-phase2";
+import { RecoveryWindowField } from "./recovery-window-field";
 
 export function AdvanceForm({
   employees,
@@ -90,6 +91,10 @@ export function AdvanceForm({
         </div>
       </div>
       <div className="space-y-1.5">
+        <Label className="text-xs">Or recover over a period (calendar)</Label>
+        <RecoveryWindowField />
+      </div>
+      <div className="space-y-1.5">
         <Label htmlFor="issuedAt" className="text-xs">Issued on</Label>
         <Input
           id="issuedAt"
@@ -112,10 +117,12 @@ export function AdvanceForm({
         Record Advance
       </Button>
       <p className="text-[11px] text-muted-foreground">
-        Monthly recovery is optional — leave it blank if the employee can&apos;t
-        repay yet. No amount is recovered until an admin sets a monthly figure
-        (use the Edit pencil on the advance). Once set, it&apos;s deducted
-        automatically on each payroll run until the advance is cleared.
+        Both recovery options are optional. Set a fixed{" "}
+        <strong>Monthly recovery</strong>, OR pick a{" "}
+        <strong>recovery period</strong> on the calendar (installment = amount ÷
+        months in that range, and recovery only runs within those months). With
+        neither, nothing is recovered until set via the Edit pencil; with no
+        period, recovery defaults to starting the month after the issue date.
       </p>
     </form>
   );

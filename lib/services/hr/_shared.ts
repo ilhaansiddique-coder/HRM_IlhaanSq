@@ -22,7 +22,9 @@ type TenantScopedModel =
   | "payrollPeriod"
   | "payrollRun"
   | "employeeAdvance"
-  | "attendanceRecord";
+  | "attendanceRecord"
+  | "breakSession"
+  | "breakPenalty";
 
 /**
  * Throws if any id in `ids` does not belong to `tenantId` for the given model.

@@ -586,7 +586,7 @@ export function SalesList({
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-9 w-9 rounded-lg"
+                      className="h-9 w-9 rounded-full"
                       onClick={() => router.refresh()}
                       aria-label="Refresh"
                       title={
@@ -616,7 +616,7 @@ export function SalesList({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 rounded-lg"
+                      className="h-9 rounded-full"
                       disabled={selected.size === 0 || !bulkStatus || pending}
                       onClick={applyBulkStatus}
                     >
@@ -625,7 +625,7 @@ export function SalesList({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 gap-2 rounded-lg"
+                      className="h-9 gap-2 rounded-full"
                       disabled={selected.size === 0}
                       onClick={() => comingSoon("Bulk Print")}
                     >
@@ -1012,7 +1012,7 @@ function ActionIcon({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className={`inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-background transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-background transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
         destructive
           ? "text-destructive hover:bg-destructive/10"
           : "text-foreground hover:bg-muted"

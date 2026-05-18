@@ -2,7 +2,30 @@
 
 import { requireTenant } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { createApprovalRequest } from "@/lib/services/approvals.service";
+import { v2 as cloudinary } from "cloudinary";
+import { randomUUID } from "node:crypto";
+import { headers } from "next/headers";
+import { checkRate } from "@/lib/rate-limit";
 import { publishAdvanceChange, type AdvanceChangeKind } from "@/lib/realtime/bus";
+
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const HR_DOC_MAX_BYTES = 15 * 1024 * 1024;
+const HR_DOC_ALLOWED_MIME = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 // Reconcile the tenant's runs (all non-failed; unpaid payslips only — paid
 // ones stay frozen), revalidate the run + advances pages, then push ONE
@@ -21,8 +44,11 @@ async function syncAdvances(tenantId: string, kind: AdvanceChangeKind) {
 
 import {
   createSalaryStructure,
+  updateSalaryStructure,
   ensureStandardSalaryStructure,
+  seedStandardAllowanceRows,
   addSalaryComponent,
+  updateSalaryComponent,
   deleteSalaryComponent,
   runPayroll,
   updatePayslip,
@@ -50,41 +76,201 @@ import type {
   FormulaRow,
 } from "@/lib/services/hr/payroll.service";
 
-export async function createSalaryStructureAction(formData: FormData) {
-  const session = await requireTenant();
-  await createSalaryStructure(session.tenantId, {
-    name: formData.get("name") as string,
-    description: (formData.get("description") as string) || undefined,
-  });
-  revalidatePath("/hr/payroll/structures");
+// Serializable result so client forms can surface a clear, retryable
+// message instead of the write silently vanishing on a thrown action.
+export type StructureActionResult = { ok: true } | { ok: false; error: string };
+
+// Turn a thrown DB error into a user-facing message. Always logs the raw
+// error server-side for diagnosis. The transient case matters most here:
+// a Neon compute cold start (after autosuspend) throws P1001 and would
+// otherwise lose the write with no indication it didn't save.
+function describeStructureDbError(err: unknown, ctx: string): string {
+  console.error(`[structures] ${ctx} failed:`, err);
+  const code = (err as { code?: string } | null)?.code;
+  if (
+    code === "P1001" || // can't reach DB server (Neon cold start)
+    code === "P1002" || // connection timed out
+    code === "P1008" || // operation timed out
+    code === "P1017" // server closed the connection
+  ) {
+    return "The database is waking up — your change was NOT saved. Please try again in a moment.";
+  }
+  if (code === "P2002") {
+    return "That name or code is already in use. Please pick a different one.";
+  }
+  return "Could not save — something went wrong. Your change was NOT saved; please try again.";
 }
 
-export async function addSalaryComponentAction(formData: FormData) {
-  const session = await requireTenant();
-  await addSalaryComponent(session.tenantId, {
-    structureId: formData.get("structureId") as string,
-    name: formData.get("name") as string,
-    code: formData.get("code") as string,
-    type: formData.get("type") as any,
-    calculationType: formData.get("calculationType") as any,
-    value: parseFloat(formData.get("value") as string),
-    taxable: formData.get("taxable") === "on",
-    isStatutory: formData.get("isStatutory") === "on",
-  });
-  revalidatePath("/hr/payroll/structures");
+// All salary-structure / component mutations are GATED: instead of applying
+// the change they raise a `payroll_config` approval whose payload is the
+// exact service call to run on approval. Nothing changes until approved.
+async function submitPayrollConfig(
+  session: { tenantId: string; userId: string; name: string },
+  op: string,
+  args: unknown[],
+  title: string,
+  subtitle: string
+): Promise<StructureActionResult> {
+  try {
+    await createApprovalRequest({
+      tenantId: session.tenantId,
+      type: "payroll_config",
+      entityType: "SalaryStructure",
+      title,
+      subtitle,
+      requestedBy: session.userId,
+      requestedByName: session.name,
+      payload: { op, args },
+    });
+    revalidatePath("/hr/payroll/structures");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Failed to submit for approval",
+    };
+  }
 }
 
-export async function deleteSalaryComponentAction(formData: FormData) {
+export async function createSalaryStructureAction(
+  formData: FormData
+): Promise<StructureActionResult> {
   const session = await requireTenant();
-  await deleteSalaryComponent(session.tenantId, formData.get("id") as string);
-  revalidatePath("/hr/payroll/structures");
+  const name = formData.get("name") as string;
+  return submitPayrollConfig(
+    session,
+    "createSalaryStructure",
+    [{ name, description: (formData.get("description") as string) || undefined }],
+    name || "Salary structure",
+    "Create salary structure"
+  );
 }
 
-export async function createStandardStructureAction() {
+export async function updateSalaryStructureAction(
+  formData: FormData
+): Promise<StructureActionResult> {
   const session = await requireTenant();
-  await ensureStandardSalaryStructure(session.tenantId);
-  revalidatePath("/hr/payroll/structures");
-  revalidatePath("/hr/payroll");
+  const description = (formData.get("description") as string)?.trim();
+  const name = (formData.get("name") as string).trim();
+  return submitPayrollConfig(
+    session,
+    "updateSalaryStructure",
+    [
+      formData.get("id") as string,
+      {
+        name,
+        description: description ? description : null,
+        isActive: formData.get("isActive") === "true",
+      },
+    ],
+    name || "Salary structure",
+    "Update salary structure"
+  );
+}
+
+export async function addSalaryComponentAction(
+  formData: FormData
+): Promise<StructureActionResult> {
+  const session = await requireTenant();
+  const name = formData.get("name") as string;
+  return submitPayrollConfig(
+    session,
+    "addSalaryComponent",
+    [
+      {
+        structureId: formData.get("structureId") as string,
+        name,
+        code: formData.get("code") as string,
+        type: formData.get("type") as any,
+        calculationType: formData.get("calculationType") as any,
+        value: parseFloat(formData.get("value") as string),
+        taxable: formData.get("taxable") === "on",
+        isStatutory: formData.get("isStatutory") === "on",
+      },
+    ],
+    name || "Salary component",
+    "Add salary component"
+  );
+}
+
+export async function updateSalaryComponentAction(
+  formData: FormData
+): Promise<StructureActionResult> {
+  const session = await requireTenant();
+  return submitPayrollConfig(
+    session,
+    "updateSalaryComponent",
+    [
+      formData.get("id") as string,
+      {
+        name: (formData.get("name") as string) || undefined,
+        code: (formData.get("code") as string) || undefined,
+        type: (formData.get("type") as any) || undefined,
+        calculationType: (formData.get("calculationType") as any) || undefined,
+        value:
+          formData.get("value") !== null && formData.get("value") !== ""
+            ? parseFloat(formData.get("value") as string)
+            : undefined,
+      },
+    ],
+    (formData.get("name") as string) || "Salary component",
+    "Update salary component"
+  );
+}
+
+export async function deleteSalaryComponentAction(
+  formData: FormData
+): Promise<StructureActionResult> {
+  const session = await requireTenant();
+  try {
+    return await submitPayrollConfig(
+      session,
+      "deleteSalaryComponent",
+      [formData.get("id") as string],
+      "Salary component",
+      "Delete salary component"
+    );
+  } catch (err) {
+    return {
+      ok: false,
+      error: describeStructureDbError(err, "deleteComponent"),
+    };
+  }
+}
+
+export async function createStandardStructureAction(): Promise<StructureActionResult> {
+  const session = await requireTenant();
+  try {
+    await ensureStandardSalaryStructure(session.tenantId);
+    revalidatePath("/hr/payroll/structures");
+    revalidatePath("/hr/payroll");
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: describeStructureDbError(err, "createStandard"),
+    };
+  }
+}
+
+export async function seedStandardAllowanceRowsAction(
+  formData: FormData
+): Promise<StructureActionResult> {
+  const session = await requireTenant();
+  try {
+    await seedStandardAllowanceRows(
+      session.tenantId,
+      formData.get("structureId") as string
+    );
+    revalidatePath("/hr/payroll/structures");
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: describeStructureDbError(err, "seedAllowances"),
+    };
+  }
 }
 
 export async function runPayrollAction(formData: FormData) {
@@ -131,19 +317,35 @@ export async function runPayrollAction(formData: FormData) {
     }
   }
 
-  const result = await runPayroll(session.tenantId, {
-    name: formData.get("name") as string,
-    periodStart: new Date(formData.get("periodStart") as string),
-    periodEnd: new Date(formData.get("periodEnd") as string),
-    payDate: new Date(formData.get("payDate") as string),
-    runBy: session.userId,
-    adjustments,
-  });
-  if (!result.ok) {
-    return { ok: false as const, error: result.error };
+  // Gated: deferred. Payroll is NOT run until approved in /admin. The
+  // payload is what the approval handler executes on approval.
+  const name = formData.get("name") as string;
+  try {
+    await createApprovalRequest({
+      tenantId: session.tenantId,
+      type: "payroll_run",
+      entityType: "PayrollRun",
+      title: name || "Payroll run",
+      subtitle: `Period ${formData.get("periodStart")} → ${formData.get("periodEnd")}`,
+      requestedBy: session.userId,
+      requestedByName: session.name,
+      payload: {
+        name,
+        periodStart: new Date(formData.get("periodStart") as string).toISOString(),
+        periodEnd: new Date(formData.get("periodEnd") as string).toISOString(),
+        payDate: new Date(formData.get("payDate") as string).toISOString(),
+        adjustments: adjustments ?? undefined,
+      },
+    });
+  } catch (e) {
+    return {
+      ok: false as const,
+      error: e instanceof Error ? e.message : "Failed to submit for approval",
+    };
   }
   revalidatePath("/hr/payroll/runs");
   revalidatePath("/hr/payroll");
+  revalidatePath("/admin");
   return { ok: true as const };
 }
 
@@ -208,19 +410,54 @@ export async function updatePayslipAction(formData: FormData) {
 
 export async function createAdvanceAction(formData: FormData) {
   const session = await requireTenant();
-  // Monthly recovery is optional at creation — blank/invalid means "no
-  // recovery scheduled yet"; an admin sets it later via the Edit pencil.
+  const amount = parseFloat(formData.get("amount") as string);
+  // Optional recovery window (date-range picker). yyyy-MM-dd → UTC date.
+  const toDate = (k: string) => {
+    const v = (formData.get(k) as string) || "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+    const d = new Date(`${v}T00:00:00.000Z`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+  const recoveryStart = toDate("recoveryStart");
+  const recoveryEnd = toDate("recoveryEnd");
+  const hasWindow =
+    !!recoveryStart && !!recoveryEnd && recoveryEnd >= recoveryStart;
+  // Inclusive month count of the window (e.g. Jan→Mar = 3).
+  const windowMonths = hasWindow
+    ? (recoveryEnd!.getUTCFullYear() * 12 + recoveryEnd!.getUTCMonth()) -
+      (recoveryStart!.getUTCFullYear() * 12 + recoveryStart!.getUTCMonth()) +
+      1
+    : 0;
+  // Recovery inputs are OPTIONAL. Priority:
+  //  1. explicit "Monthly recovery" amount, else
+  //  2. recovery window → installment = amount / windowMonths, else
+  //  3. 0 (set later via Edit).
   const inst = parseFloat(formData.get("installment") as string);
-  await createAdvance(session.tenantId, {
-    employeeId: formData.get("employeeId") as string,
-    amount: parseFloat(formData.get("amount") as string),
-    installment: Number.isFinite(inst) && inst > 0 ? inst : 0,
-    reason: (formData.get("reason") as string) || undefined,
-    issuedAt: new Date(formData.get("issuedAt") as string),
-  });
-  await syncAdvances(session.tenantId, "created");
+  let installment = 0;
+  if (Number.isFinite(inst) && inst > 0) {
+    installment = inst;
+  } else if (hasWindow && windowMonths > 0 && Number.isFinite(amount) && amount > 0) {
+    installment = Math.round((amount / windowMonths) * 100) / 100;
+  }
+  // Gated: createAdvance now creates the advance PENDING + raises an approval.
+  // It is NOT reconciled into payroll until approved in /admin (the approval
+  // handler runs syncAdvances/reconcile on approval).
+  await createAdvance(
+    session.tenantId,
+    {
+      employeeId: formData.get("employeeId") as string,
+      amount,
+      installment,
+      reason: (formData.get("reason") as string) || undefined,
+      issuedAt: new Date(formData.get("issuedAt") as string),
+      recoveryStart: hasWindow ? recoveryStart : null,
+      recoveryEnd: hasWindow ? recoveryEnd : null,
+    },
+    { userId: session.userId, name: session.name }
+  );
   revalidatePath("/hr/payroll/advances");
   revalidatePath("/hr/payroll");
+  revalidatePath("/admin");
 }
 
 export async function cancelAdvanceAction(formData: FormData) {
@@ -271,8 +508,11 @@ export async function assignSalaryAction(formData: FormData) {
     const n = parseFloat(formData.get(k) as string);
     return Number.isFinite(n) && n >= 0 ? n : 0;
   };
-  await assignSalary(session.tenantId, {
-    employeeId: formData.get("employeeId") as string,
+  const employeeId = formData.get("employeeId") as string;
+  // Gated: deferred. The salary is NOT assigned until approved in /admin;
+  // the payload below is what the approval handler runs on approval.
+  const payload = {
+    employeeId,
     structureId: formData.get("structureId") as string,
     baseSalary: parseFloat(formData.get("baseSalary") as string),
     houseRent: num("houseRent"),
@@ -281,9 +521,25 @@ export async function assignSalaryAction(formData: FormData) {
     savings: num("savings"),
     dailyHand: num("dailyHand"),
     currency: (formData.get("currency") as string) || "BDT",
-    effectiveFrom: new Date(formData.get("effectiveFrom") as string),
+    effectiveFrom: new Date(formData.get("effectiveFrom") as string).toISOString(),
+  };
+  const { prisma } = await import("@/lib/db");
+  const emp = await prisma.employee.findFirst({
+    where: { id: employeeId, tenantId: session.tenantId },
+    select: { fullName: true, empCode: true },
+  });
+  await createApprovalRequest({
+    tenantId: session.tenantId,
+    type: "salary_assignment",
+    entityType: "EmployeeSalary",
+    title: emp ? `${emp.fullName} (${emp.empCode})` : "Salary assignment",
+    subtitle: `Base ${payload.baseSalary.toLocaleString()} ${payload.currency}`,
+    requestedBy: session.userId,
+    requestedByName: session.name,
+    payload,
   });
   revalidatePath("/hr/payroll");
+  revalidatePath("/admin");
 }
 
 // ─── PERFORMANCE ────────────────────────────────────────────
@@ -388,7 +644,12 @@ import {
 
 export async function createJobAction(formData: FormData) {
   const session = await requireTenant();
-  await createJobPosting(session.tenantId, {
+  const requestedStatus = (formData.get("status") as string) || "draft";
+
+  // Publishing is gated. A job is ALWAYS created as a draft; if the user
+  // asked for "Open immediately" we instead raise a job_posting_publish
+  // approval — it only goes live once an owner/admin approves it in /admin.
+  const job = await createJobPosting(session.tenantId, {
     title: formData.get("title") as string,
     description: formData.get("description") as string,
     requirements: (formData.get("requirements") as string) || undefined,
@@ -400,20 +661,163 @@ export async function createJobAction(formData: FormData) {
       ? parseFloat(formData.get("salaryMax") as string)
       : undefined,
     location: (formData.get("location") as string) || undefined,
-    status: (formData.get("status") as any) ?? "draft",
+    status: "draft",
   });
+
+  if (requestedStatus === "open") {
+    await createApprovalRequest({
+      tenantId: session.tenantId,
+      type: "job_posting_publish",
+      entityType: "JobPosting",
+      entityId: job.id,
+      title: job.title,
+      subtitle: "Publish job posting",
+      requestedBy: session.userId,
+      requestedByName: session.name,
+    });
+    revalidatePath("/admin");
+  }
+
   revalidatePath("/hr/recruitment/jobs");
   revalidatePath("/hr/recruitment");
 }
 
 export async function changeJobStatusAction(formData: FormData) {
   const session = await requireTenant();
-  await changeJobStatus(
-    session.tenantId,
-    formData.get("id") as string,
-    formData.get("status") as any
-  );
+  const id = formData.get("id") as string;
+  const status = formData.get("status") as string;
+
+  // Gated: publishing a job (→ "open") needs approval. Other transitions
+  // (draft / on_hold / closed) pass through unchanged.
+  if (status === "open") {
+    const { prisma } = await import("@/lib/db");
+    const job = await prisma.jobPosting.findFirst({
+      where: { id, tenantId: session.tenantId },
+      select: { title: true },
+    });
+    await createApprovalRequest({
+      tenantId: session.tenantId,
+      type: "job_posting_publish",
+      entityType: "JobPosting",
+      entityId: id,
+      title: job?.title ?? "Job posting",
+      subtitle: "Publish job posting",
+      requestedBy: session.userId,
+      requestedByName: session.name,
+    });
+    revalidatePath("/hr/recruitment/jobs");
+    revalidatePath("/admin");
+    return;
+  }
+
+  await changeJobStatus(session.tenantId, id, status as any);
   revalidatePath("/hr/recruitment/jobs");
+}
+
+// Gated job EDIT. The edits are NOT applied immediately: the job is
+// unlisted (set to draft so it drops off the recruitment listing) and a
+// job_posting_update approval is raised carrying the new field values.
+// On approval the fields are applied and the job is re-published (open).
+export async function updateJobAction(
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await requireTenant();
+  const id = formData.get("id") as string;
+  if (!id) return { ok: false, error: "Missing job id" };
+  const title = (formData.get("title") as string)?.trim();
+  if (!title || title.length < 2)
+    return { ok: false, error: "Title must be at least 2 characters" };
+
+  const numOrNull = (k: string) => {
+    const v = formData.get(k);
+    if (v == null || v === "") return null;
+    const n = parseFloat(v as string);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const fields = {
+    title,
+    description: (formData.get("description") as string)?.trim() || "",
+    requirements: (formData.get("requirements") as string)?.trim() || null,
+    employmentType: (formData.get("employmentType") as string) || "full_time",
+    salaryMin: numOrNull("salaryMin"),
+    salaryMax: numOrNull("salaryMax"),
+    location: (formData.get("location") as string)?.trim() || null,
+  };
+
+  try {
+    const { prisma } = await import("@/lib/db");
+    const job = await prisma.jobPosting.findFirst({
+      where: { id, tenantId: session.tenantId },
+      select: { id: true },
+    });
+    if (!job) return { ok: false, error: "Job not found" };
+
+    // Unlist while the edit is pending (drops off the recruitment listing).
+    await prisma.jobPosting.update({
+      where: { id },
+      data: { status: "draft" },
+    });
+
+    await createApprovalRequest({
+      tenantId: session.tenantId,
+      type: "job_posting_update",
+      entityType: "JobPosting",
+      entityId: id,
+      title,
+      subtitle: "Edit job posting",
+      requestedBy: session.userId,
+      requestedByName: session.name,
+      payload: { fields },
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to submit for approval",
+    };
+  }
+
+  revalidatePath("/hr/recruitment/jobs");
+  revalidatePath("/hr/recruitment");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+// Gated job DELETE. The job stays until an owner/admin approves the
+// deletion in /admin.
+export async function deleteJobAction(
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
+  const session = await requireTenant();
+  const id = formData.get("id") as string;
+  if (!id) return { ok: false, error: "Missing job id" };
+  try {
+    const { prisma } = await import("@/lib/db");
+    const job = await prisma.jobPosting.findFirst({
+      where: { id, tenantId: session.tenantId },
+      select: { title: true },
+    });
+    if (!job) return { ok: false, error: "Job not found" };
+
+    await createApprovalRequest({
+      tenantId: session.tenantId,
+      type: "job_posting_delete",
+      entityType: "JobPosting",
+      entityId: id,
+      title: job.title,
+      subtitle: "Delete job posting",
+      requestedBy: session.userId,
+      requestedByName: session.name,
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to submit for approval",
+    };
+  }
+  revalidatePath("/hr/recruitment/jobs");
+  revalidatePath("/admin");
+  return { ok: true };
 }
 
 export async function createCandidateAction(formData: FormData) {
@@ -452,9 +856,11 @@ export async function moveStageAction(formData: FormData) {
       offerSalary: formData.get("offerSalary")
         ? parseFloat(formData.get("offerSalary") as string)
         : undefined,
-    }
+    },
+    { userId: session.userId, name: session.name }
   );
   revalidatePath("/hr/recruitment/pipeline");
+  revalidatePath("/admin");
 }
 
 // ─── LEARNING ───────────────────────────────────────────────
@@ -537,14 +943,76 @@ export async function deleteDocCategoryAction(formData: FormData) {
   revalidatePath("/hr/documents/categories");
 }
 
+export async function uploadHrDocumentAction(
+  formData: FormData
+): Promise<{ url: string; name: string; size: number; mime: string; error?: string }> {
+  const session = await requireTenant();
+
+  const hdrs = await headers();
+  const xf = hdrs.get("x-forwarded-for");
+  const ip = xf ? xf.split(",")[0].trim() : hdrs.get("x-real-ip") ?? "unknown";
+
+  const rate = await checkRate("upload", `upload:${session.tenantId}:${ip}`);
+  if (!rate.allowed) {
+    return { url: "", name: "", size: 0, mime: "", error: `Too many uploads. Try again in ${rate.retryAfterSec}s.` };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { url: "", name: "", size: 0, mime: "", error: "No file provided" };
+  if (!HR_DOC_ALLOWED_MIME.has(file.type)) {
+    return { url: "", name: "", size: 0, mime: "", error: "Unsupported file type. Use PDF, Word, Excel, or an image (JPG/PNG/WebP)." };
+  }
+  if (file.size > HR_DOC_MAX_BYTES) {
+    return { url: "", name: "", size: 0, mime: "", error: "File too large (max 15MB)." };
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const publicId = `rahedeen/${session.tenantId}/hr-doc-${randomUUID()}`;
+
+  const uploadResult = await new Promise<{ secure_url: string } | undefined>(
+    (resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          folder: "rahedeen/hr-documents",
+          resource_type: "auto",
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result as { secure_url: string } | undefined);
+        }
+      );
+      stream.end(bytes);
+    }
+  ).catch((e) => {
+    console.error("[uploadHrDocumentAction] cloudinary:", e);
+    return undefined;
+  });
+
+  if (!uploadResult) {
+    return { url: "", name: "", size: 0, mime: "", error: "Could not save the file. Please try again." };
+  }
+
+  return {
+    url: uploadResult.secure_url,
+    name: file.name,
+    size: file.size,
+    mime: file.type,
+  };
+}
+
 export async function createDocumentAction(formData: FormData) {
   const session = await requireTenant();
+  const fileSizeRaw = formData.get("fileSize") as string | null;
+  const fileSize = fileSizeRaw ? Number(fileSizeRaw) : undefined;
   await createDocument(session.tenantId, {
     employeeId: formData.get("employeeId") as string,
     categoryId: (formData.get("categoryId") as string) || undefined,
     name: formData.get("name") as string,
     description: (formData.get("description") as string) || undefined,
     fileUrl: (formData.get("fileUrl") as string) || undefined,
+    mimeType: (formData.get("mimeType") as string) || undefined,
+    fileSize: Number.isFinite(fileSize) ? fileSize : undefined,
     expiresAt: formData.get("expiresAt")
       ? new Date(formData.get("expiresAt") as string)
       : undefined,
@@ -664,18 +1132,27 @@ export async function setPayslipPaidAction(
   if (!allowed)
     return { ok: false, error: "Only owners/admins can confirm payment." };
   const runId = formData.get("runId") as string | null;
+  const payslipId = formData.get("payslipId") as string;
+  const paid = formData.get("paid") === "true";
+  // Gated: deferred. The payslip is NOT marked paid until approved in /admin.
   try {
-    await setPayslipPaid(
-      session.tenantId,
-      formData.get("payslipId") as string,
-      formData.get("paid") === "true",
-      session.userId
-    );
+    await createApprovalRequest({
+      tenantId: session.tenantId,
+      type: "payslip_paid",
+      entityType: "Payslip",
+      entityId: payslipId,
+      title: paid ? "Confirm payslip payment" : "Revert payslip payment",
+      subtitle: null,
+      requestedBy: session.userId,
+      requestedByName: session.name,
+      payload: { payslipId, paid },
+    });
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed" };
   }
   if (runId) revalidatePath(`/hr/payroll/runs/${runId}`);
   revalidatePath("/hr/payroll/runs");
+  revalidatePath("/admin");
   return { ok: true };
 }
 

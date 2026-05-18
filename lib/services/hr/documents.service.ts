@@ -74,6 +74,8 @@ export async function createDocument(
     name: string;
     description?: string;
     fileUrl?: string;
+    mimeType?: string;
+    fileSize?: number;
     expiresAt?: Date;
     uploadedBy?: string;
   }
@@ -89,6 +91,8 @@ export async function createDocument(
       name: input.name,
       description: input.description,
       fileUrl: input.fileUrl,
+      mimeType: input.mimeType,
+      fileSize: input.fileSize,
       expiresAt: input.expiresAt,
       uploadedBy: input.uploadedBy,
     },

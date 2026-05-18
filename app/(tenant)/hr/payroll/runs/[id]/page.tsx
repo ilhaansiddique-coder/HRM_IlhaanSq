@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { refreshRunAdvancesFormAction } from "../../../actions-phase2";
 import { SalarySheet, type Slip, type CustomCol } from "./_components/salary-sheet";
+import { SalarySheetFullView } from "./_components/salary-sheet-full-view";
 import { ColumnManager, type ManagerCol } from "./_components/column-manager";
 import {
   BaseColumnManager,
@@ -102,8 +103,9 @@ export default async function PayrollRunDetailPage({
   const sheetSlips: Slip[] = slips.map((p) => {
     const absence = num(p.absenceDeduction);
     const advance = num(p.advanceRecovered);
+    const breakPenalty = num(p.breakPenalty);
     const otherDeductions =
-      Math.round((num(p.totalDeductions) - absence - advance + Number.EPSILON) * 100) /
+      Math.round((num(p.totalDeductions) - absence - advance - breakPenalty + Number.EPSILON) * 100) /
       100;
     // Base field values keyed by PAYROLL_BASE_FIELDS keys → for custom columns.
     const values: Record<string, number> = {
@@ -118,13 +120,12 @@ export default async function PayrollRunDetailPage({
       extraDutyPayment: num(p.extraDutyPayment),
       totalSalary: num(p.totalSalary),
       advanceRecovered: advance,
+      breakPenalty,
       absentDays: num(p.absentDays),
       absenceDeduction: absence,
       payableSalary: num(p.payableSalary),
     };
     const custom: Record<string, number> = {};
-    // Ordered by sortOrder, so a column's formula can reference any
-    // earlier custom column (its value is injected into `values`).
     for (const c of columnDefs) {
       const v = isManualColumn(c)
         ? manualVals[`${p.id}:${c.id}`] ?? 0
@@ -149,6 +150,7 @@ export default async function PayrollRunDetailPage({
       extraDutyPayment: values.extraDutyPayment,
       totalSalary: values.totalSalary,
       advanceRecovered: advance,
+      breakPenalty: values.breakPenalty,
       advanceOutstanding: advanceOutstandingByEmp.get(p.employeeId) ?? 0,
       absentDays: values.absentDays,
       absenceDeduction: absence,
@@ -206,7 +208,14 @@ export default async function PayrollRunDetailPage({
           <div className="flex items-start justify-between gap-3">
             <CardTitle>{run.period.name} — Salary Sheet</CardTitle>
             {canEdit && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <SalarySheetFullView
+                  title={`${run.period.name} — Salary Sheet`}
+                  slips={sheetSlips}
+                  canEdit={canEdit}
+                  customColumns={customColumns}
+                  baseLabels={baseLabels}
+                />
                 <ColumnManager
                   columns={managerColumns}
                   baseFields={baseFields}

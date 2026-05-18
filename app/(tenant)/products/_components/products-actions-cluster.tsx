@@ -190,7 +190,7 @@ function ClusterIconButton({
           onClick={onClick}
           disabled={disabled}
           aria-label={label}
-          className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
+            className="h-9 w-9 rounded-full border-border/60 bg-background/80"
         >
           {children}
         </Button>

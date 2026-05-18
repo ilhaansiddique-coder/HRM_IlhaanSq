@@ -14,6 +14,7 @@ import {
   recordCustomerPayment,
 } from "@/lib/services/customer-payment.service";
 import { prisma } from "@/lib/db";
+import { createApprovalRequest } from "@/lib/services/approvals.service";
 import { revalidatePath } from "next/cache";
 
 function parseInput(formData: FormData) {
@@ -123,17 +124,30 @@ export async function recordCustomerPaymentAction(formData: FormData) {
     profile?.email?.split("@")[0] ||
     "Unknown User";
 
-  const applied = await recordCustomerPayment(session.tenantId, {
-    customerId,
-    amount,
-    paidByName,
-    paidByUserId: session.userId,
+  // Gated: deferred. The payment is NOT applied to invoices until approved
+  // in /admin. The payload is what the approval handler runs on approval.
+  const customer = await prisma.customer.findFirst({
+    where: { id: customerId, tenantId: session.tenantId },
+    select: { name: true },
+  });
+  await createApprovalRequest({
+    tenantId: session.tenantId,
+    type: "customer_payment",
+    entityType: "Customer",
+    entityId: customerId,
+    title: customer?.name ?? "Customer payment",
+    subtitle: `Payment ${amount.toLocaleString()}`,
+    requestedBy: session.userId,
+    requestedByName: paidByName,
+    payload: { customerId, amount, paidByName, paidByUserId: session.userId },
   });
 
   revalidatePath("/customers");
   revalidatePath("/sales");
   revalidatePath("/invoices");
   revalidatePath("/dashboard");
+  revalidatePath("/admin");
 
-  return applied;
+  // Nothing applied yet — awaiting approval.
+  return [] as Awaited<ReturnType<typeof recordCustomerPayment>>;
 }

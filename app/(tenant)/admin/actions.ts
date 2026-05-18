@@ -17,6 +17,18 @@ import {
 } from "@/lib/services/settings.service";
 import { exportTenantData } from "@/lib/services/backup.service";
 import {
+  approveRequest,
+  rejectRequest,
+  requestChanges,
+  getApprovalDetail,
+  approveJobWithEdits,
+  type ApprovalDetail,
+} from "@/lib/services/approvals.service";
+import {
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "@/lib/services/notifications-center.service";
+import {
   invalidateProductCache,
   invalidateSaleCache,
   invalidateCustomerCache,
@@ -211,4 +223,101 @@ export async function exportBackupAction() {
   const session = await requireTenant();
   ensureAdmin(session.role);
   return exportTenantData(session.tenantId);
+}
+
+// ─── Approvals ──────────────────────────────────────────────
+
+export async function approveRequestAction(formData: FormData) {
+  const session = await requireTenant();
+  ensureAdmin(session.role);
+  await approveRequest(session.tenantId, formData.get("id") as string, {
+    userId: session.userId,
+    name: session.name,
+  });
+  revalidatePath("/admin");
+  revalidatePath("/hr/employees");
+  revalidatePath("/hr/recruitment/pipeline");
+  revalidatePath("/hr/recruitment/jobs");
+}
+
+export async function approvalDetailAction(
+  id: string
+): Promise<ApprovalDetail | { error: string }> {
+  try {
+    const session = await requireTenant();
+    ensureAdmin(session.role);
+    return await getApprovalDetail(session.tenantId, id);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to load details" };
+  }
+}
+
+export async function approveWithEditsAction(formData: FormData) {
+  const session = await requireTenant();
+  ensureAdmin(session.role);
+  await approveJobWithEdits(
+    session.tenantId,
+    formData.get("id") as string,
+    { userId: session.userId, name: session.name },
+    {
+      title: (formData.get("title") as string)?.trim() ?? "",
+      location: (formData.get("location") as string)?.trim() ?? "",
+      employmentType: (formData.get("employmentType") as string) || "full_time",
+      salaryMin: (formData.get("salaryMin") as string) ?? "",
+      salaryMax: (formData.get("salaryMax") as string) ?? "",
+      description: (formData.get("description") as string)?.trim() ?? "",
+      requirements: (formData.get("requirements") as string)?.trim() ?? "",
+    }
+  );
+  revalidatePath("/admin");
+  revalidatePath("/hr/recruitment/jobs");
+  revalidatePath("/hr/recruitment");
+}
+
+export async function requestChangesAction(formData: FormData) {
+  const session = await requireTenant();
+  ensureAdmin(session.role);
+  await requestChanges(
+    session.tenantId,
+    formData.get("id") as string,
+    { userId: session.userId, name: session.name },
+    (formData.get("recommendation") as string) || ""
+  );
+  revalidatePath("/admin");
+  revalidatePath("/hr/recruitment/jobs");
+}
+
+export async function rejectRequestAction(formData: FormData) {
+  const session = await requireTenant();
+  ensureAdmin(session.role);
+  await rejectRequest(
+    session.tenantId,
+    formData.get("id") as string,
+    { userId: session.userId, name: session.name },
+    (formData.get("reason") as string) || undefined
+  );
+  revalidatePath("/admin");
+  revalidatePath("/hr/employees");
+  revalidatePath("/hr/recruitment/pipeline");
+  revalidatePath("/hr/recruitment/jobs");
+}
+
+// ─── Notification center ────────────────────────────────────
+
+export async function markNotificationReadAction(formData: FormData) {
+  const session = await requireTenant();
+  ensureAdmin(session.role);
+  await markNotificationRead(
+    session.tenantId,
+    session.userId,
+    formData.get("id") as string
+  );
+  revalidatePath("/admin");
+}
+
+export async function markAllNotificationsReadAction() {
+  const session = await requireTenant();
+  ensureAdmin(session.role);
+  await markAllNotificationsRead(session.tenantId, session.userId);
+  revalidatePath("/admin");
 }

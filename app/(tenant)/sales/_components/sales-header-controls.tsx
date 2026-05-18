@@ -125,7 +125,7 @@ export function SalesHeaderControls() {
           placeholder="Search invoice, customer..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="h-9 w-72 rounded-lg pl-9"
+          className="h-9 w-72 rounded-full pl-9"
         />
       </div>
 
@@ -137,7 +137,7 @@ export function SalesHeaderControls() {
       {/* All Filters */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="h-9 gap-2 rounded-lg font-normal">
+          <Button variant="outline" className="h-9 gap-2 rounded-full font-normal">
             <ListFilter className="h-4 w-4" />
             <span className="text-sm">All Filters</span>
             {activeFilterCount > 0 && (
@@ -198,7 +198,7 @@ export function SalesHeaderControls() {
       {/* All Users */}
       <Popover onOpenChange={(o) => o && loadUsers()}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="h-9 gap-2 rounded-lg font-normal">
+          <Button variant="outline" className="h-9 gap-2 rounded-full font-normal">
             <User className="h-4 w-4" />
             <span className="text-sm">{userLabel}</span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -208,7 +208,7 @@ export function SalesHeaderControls() {
           <Button
             variant={urlUser === "" ? "default" : "ghost"}
             size="sm"
-            className="w-full justify-start rounded-md"
+            className="w-full justify-start rounded-full"
             onClick={() => writeParam("user", "")}
           >
             All Users
@@ -225,7 +225,7 @@ export function SalesHeaderControls() {
                 key={u.id}
                 variant={urlUser === u.id ? "default" : "ghost"}
                 size="sm"
-                className="w-full justify-start rounded-md"
+                className="w-full justify-start rounded-full"
                 onClick={() => writeParam("user", u.id)}
               >
                 {u.name}

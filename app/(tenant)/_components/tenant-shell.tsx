@@ -6,6 +6,7 @@ import Link from "next/link";
 import { NavLink } from "./nav-link";
 import { NewSaleDialog } from "./new-sale-dialog";
 import { NotificationBell } from "./notification-bell";
+import { NotificationPoller } from "./notification-poller";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { OptimisticNavProvider, useOptimisticNav } from "./optimistic-nav";
@@ -43,12 +44,12 @@ import {
   GraduationCap,
   FolderLock,
   ClipboardCheck,
+  Coffee,
   User,
 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -175,6 +176,7 @@ export function TenantShell({
         </div>
 
         <MobileBottomNav role={role} isSuperAdmin={isSuperAdmin} />
+        <NotificationPoller />
       </SidebarProvider>
     </OptimisticNavProvider>
   );
@@ -215,18 +217,31 @@ function AppSidebar({
       collapsible="icon"
     >
       <SidebarHeader className="px-3 py-3 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
-        <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+        <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2 group-data-[collapsible=icon]:justify-center">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
             {businessName.charAt(0).toUpperCase()}
           </div>
           {!isCollapsed && (
-            <div className="leading-tight min-w-0">
+            <div className="leading-tight min-w-0 flex-1">
               <p className="text-[1rem] font-semibold text-sidebar-foreground leading-tight truncate">
                 {businessName}
               </p>
               <p className="text-[11px] text-muted-foreground">Workspace</p>
             </div>
           )}
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-label={isCollapsed ? "Maximize sidebar" : "Minimize sidebar"}
+            title={isCollapsed ? "Maximize sidebar" : "Minimize sidebar"}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-sidebar-border/70 text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+          >
+            <PanelLeft
+              className={`h-[18px] w-[18px] transition-transform ${
+                isCollapsed ? "rotate-180" : ""
+              }`}
+            />
+          </button>
         </div>
       </SidebarHeader>
       <SidebarSeparator className="mb-2" />
@@ -247,8 +262,8 @@ function AppSidebar({
                     className={navClass(isRouteActive(item.url))}
                   >
                     <NavLink href={item.url}>
-                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors">
-                        <item.icon className="h-[18px] w-[18px] flex-shrink-0" />
+                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center transition-colors">
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
                         {!isCollapsed && <span>{item.title}</span>}
                       </span>
                     </NavLink>
@@ -265,8 +280,8 @@ function AppSidebar({
                       tooltip={isCollapsed ? "HR" : undefined}
                       className={navClass(isInHr)}
                     >
-                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium w-full">
-                        <UserCog className="h-[18px] w-[18px] flex-shrink-0" />
+                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center w-full">
+                        <UserCog className="h-5 w-5 flex-shrink-0" />
                         {!isCollapsed && (
                           <>
                             <span>HR</span>
@@ -288,6 +303,7 @@ function AppSidebar({
                         <TenantSubLink href="/hr/departments" icon={<Building2 className="h-4 w-4" />} label="Departments" active={pathname.startsWith("/hr/departments")} />
                         <TenantSubLink href="/hr/positions" icon={<ClipboardCheck className="h-4 w-4" />} label="Positions" active={pathname.startsWith("/hr/positions")} />
                         <TenantSubLink href="/hr/attendance" icon={<CalendarClock className="h-4 w-4" />} label="Attendance" active={pathname.startsWith("/hr/attendance")} />
+                        <TenantSubLink href="/hr/break" icon={<Coffee className="h-4 w-4" />} label="Break Time" active={pathname.startsWith("/hr/break")} />
                         <TenantSubLink href="/hr/leave" icon={<CalendarDays className="h-4 w-4" />} label="Leave" active={pathname.startsWith("/hr/leave")} />
                         <TenantSubLink href="/hr/payroll" icon={<Wallet className="h-4 w-4" />} label="Payroll" active={pathname.startsWith("/hr/payroll")} />
                         <TenantSubLink href="/hr/performance" icon={<Target className="h-4 w-4" />} label="Performance" active={pathname.startsWith("/hr/performance")} />
@@ -310,8 +326,8 @@ function AppSidebar({
                         tooltip={isCollapsed ? "Tenants" : undefined}
                         className={navClass(isInTenantsAdmin)}
                       >
-                        <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium w-full">
-                          <Building2 className="h-[18px] w-[18px] flex-shrink-0" />
+                        <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center w-full">
+                          <Building2 className="h-5 w-5 flex-shrink-0" />
                           {!isCollapsed && (
                             <>
                               <span>Tenants</span>
@@ -385,8 +401,8 @@ function AppSidebar({
                   className={navClass(isRouteActive("/settings"))}
                 >
                   <NavLink href="/settings">
-                    <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium">
-                      <Settings className="h-[18px] w-[18px]" />
+                    <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                      <Settings className="h-5 w-5" />
                       {!isCollapsed && <span>Settings</span>}
                     </span>
                   </NavLink>
@@ -401,8 +417,8 @@ function AppSidebar({
                     className={navClass(isRouteActive("/admin"))}
                   >
                     <NavLink href="/admin">
-                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium">
-                        <Shield className="h-[18px] w-[18px]" />
+                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                        <Shield className="h-5 w-5" />
                         {!isCollapsed && <span>Administration</span>}
                       </span>
                     </NavLink>
@@ -413,21 +429,6 @@ function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={toggleSidebar}
-              tooltip={isCollapsed ? "Expand sidebar" : undefined}
-              className="flex items-center gap-3 rounded-md px-3 py-2"
-            >
-              <PanelLeft className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span>Collapse</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }
@@ -797,13 +798,13 @@ function TenantSubLink({
         className={
           active
             ? "bg-primary/15 text-primary font-medium"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70"
+            : "text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
         }
       >
         <NavLink href={href}>
-          <span className="flex items-center gap-2 w-full">
+          <span className="flex items-center gap-2.5 w-full text-[0.8125rem] [&>svg]:!h-[18px] [&>svg]:!w-[18px] [&>svg]:flex-shrink-0">
             {icon}
-            <span>{label}</span>
+            <span className="truncate">{label}</span>
             {badge !== undefined && badge > 0 && (
               <Badge variant="default" className="ml-auto h-5 px-1.5 text-[10px]">
                 {badge}

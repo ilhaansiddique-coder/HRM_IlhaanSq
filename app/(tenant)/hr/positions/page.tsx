@@ -26,11 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ClipboardCheck, Plus, Trash2 } from "lucide-react";
-import {
-  createPositionAction,
-  deletePositionAction,
-} from "../actions";
+import { ClipboardCheck, Plus } from "lucide-react";
+import { createPositionAction } from "../actions";
+import { PositionRowActions } from "./_components/position-row-actions";
 
 export default async function PositionsPage() {
   const session = await requireTenant();
@@ -38,6 +36,7 @@ export default async function PositionsPage() {
     listPositions(session.tenantId),
     listDepartments(session.tenantId),
   ]);
+  const deptOptions = departments.map((d) => ({ id: d.id, name: d.name }));
 
   return (
     <div className="space-y-6">
@@ -89,14 +88,20 @@ export default async function PositionsPage() {
                             <Badge variant="outline">{p._count.employees}</Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            {p._count.employees === 0 && (
-                              <form action={deletePositionAction} className="inline">
-                                <input type="hidden" name="id" value={p.id} />
-                                <Button type="submit" variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </form>
-                            )}
+                            <PositionRowActions
+                              departments={deptOptions}
+                              position={{
+                                id: p.id,
+                                title: p.title,
+                                departmentId: p.departmentId,
+                                grade: p.grade,
+                                band: p.band,
+                                jobFamily: p.jobFamily,
+                                isManager: p.isManager,
+                                description: p.description,
+                                employeeCount: p._count.employees,
+                              }}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -160,20 +165,23 @@ export default async function PositionsPage() {
                     </div>
                   </div>
 
-                  {p._count.employees === 0 && (
-                    <form action={deletePositionAction} className="mt-3">
-                      <input type="hidden" name="id" value={p.id} />
-                      <Button
-                        type="submit"
-                        variant="outline"
-                        size="sm"
-                        className="w-full rounded-lg text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </Button>
-                    </form>
-                  )}
+                  <div className="mt-3">
+                    <PositionRowActions
+                      variant="full"
+                      departments={deptOptions}
+                      position={{
+                        id: p.id,
+                        title: p.title,
+                        departmentId: p.departmentId,
+                        grade: p.grade,
+                        band: p.band,
+                        jobFamily: p.jobFamily,
+                        isManager: p.isManager,
+                        description: p.description,
+                        employeeCount: p._count.employees,
+                      }}
+                    />
+                  </div>
                 </Card>
               ))
             )}

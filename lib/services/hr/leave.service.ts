@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import type { LeaveStatus } from "@prisma/client";
 import { assertTenantOwns } from "./_shared";
+import { createApprovalRequest } from "../approvals.service";
 
 // ─── Leave Types ────────────────────────────────────────────
 
@@ -85,7 +86,8 @@ export async function createLeaveRequest(
     startDate: Date;
     endDate: Date;
     reason?: string;
-  }
+  },
+  actor?: { userId: string; name: string }
 ) {
   const days = calculateDays(input.startDate, input.endDate);
   if (input.endDate < input.startDate) {
@@ -95,7 +97,7 @@ export async function createLeaveRequest(
   await assertTenantOwns(tenantId, "employee", [input.employeeId]);
   await assertTenantOwns(tenantId, "leaveType", [input.leaveTypeId]);
 
-  return prisma.leaveRequest.create({
+  const leave = await prisma.leaveRequest.create({
     data: {
       tenantId,
       employeeId: input.employeeId,
@@ -107,6 +109,29 @@ export async function createLeaveRequest(
       status: "pending",
     },
   });
+
+  const [emp, lt] = await Promise.all([
+    prisma.employee.findUnique({
+      where: { id: input.employeeId },
+      select: { fullName: true, empCode: true },
+    }),
+    prisma.leaveType.findUnique({
+      where: { id: input.leaveTypeId },
+      select: { name: true },
+    }),
+  ]);
+  await createApprovalRequest({
+    tenantId,
+    type: "leave_request",
+    entityType: "LeaveRequest",
+    entityId: leave.id,
+    title: emp ? `${emp.fullName} (${emp.empCode})` : "Leave request",
+    subtitle: `${lt?.name ?? "Leave"} · ${days} day${days === 1 ? "" : "s"} · ${input.startDate.toLocaleDateString()}–${input.endDate.toLocaleDateString()}`,
+    requestedBy: actor?.userId,
+    requestedByName: actor?.name,
+  });
+
+  return leave;
 }
 
 export async function approveLeaveRequest(

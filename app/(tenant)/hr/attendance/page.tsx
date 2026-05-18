@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { requireTenant } from "@/lib/auth";
 import { listAttendance, getAttendanceStats } from "@/lib/services/hr/attendance.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
+import { prisma } from "@/lib/db";
 import {
   Card,
   CardContent,
@@ -18,20 +19,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarClock, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
+import { CalendarClock, CheckCircle2, AlertCircle, TrendingUp, Clock } from "lucide-react";
 import { CheckInOutPanel } from "./_components/check-in-out-panel";
+import { LateThresholdForm } from "./_components/late-threshold-form";
 
 export default async function AttendancePage() {
   const session = await requireTenant();
-  const [records, stats, employees] = await Promise.all([
+  const [records, stats, employees, sysSettings] = await Promise.all([
     listAttendance(session.tenantId),
     getAttendanceStats(session.tenantId),
     listEmployees(session.tenantId, { status: "active" }),
+    prisma.systemSettings.findUnique({
+      where: { tenantId: session.tenantId },
+      select: { lateThreshold: true },
+    }),
   ]);
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-5">
         <StatCard
           icon={<CheckCircle2 className="h-4 w-4" />}
           title="Present Today"
@@ -45,6 +51,12 @@ export default async function AttendancePage() {
           variant="warning"
         />
         <StatCard
+          icon={<Clock className="h-4 w-4" />}
+          title="Late Today"
+          value={stats.late}
+          variant="warning"
+        />
+        <StatCard
           icon={<TrendingUp className="h-4 w-4" />}
           title="Attendance Rate"
           value={`${stats.attendanceRate}%`}
@@ -55,6 +67,8 @@ export default async function AttendancePage() {
           value={stats.totalActive}
         />
       </div>
+
+      <LateThresholdForm tenantId={session.tenantId} defaultValue={sysSettings?.lateThreshold ?? ""} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-3">

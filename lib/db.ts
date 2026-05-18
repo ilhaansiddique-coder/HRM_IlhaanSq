@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { resolveDatabaseUrl } from "./server-env";
+import { attachActivityNotifier } from "./activity-notify";
 
 // ─── Singleton Prisma Client ────────────────────────────────
 // Prevents multiple instances in development (hot-reload).
@@ -18,9 +19,14 @@ function createPrismaClient(): PrismaClient {
     console.log(`[db] Prisma configured via ${source}.`);
   }
 
-  return new PrismaClient({
+  const client = new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
+
+  // Turn every meaningful write across the whole app into a notification.
+  attachActivityNotifier(client);
+
+  return client;
 }
 
 export const getPrismaClient = (): PrismaClient => {

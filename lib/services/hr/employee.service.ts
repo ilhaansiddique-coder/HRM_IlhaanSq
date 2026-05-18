@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import type { EmploymentStatus, EmploymentType } from "@prisma/client";
 import { assertTenantOwns } from "./_shared";
+import { createApprovalRequest } from "../approvals.service";
 
 export type CreateEmployeeInput = {
   empCode?: string;
@@ -90,14 +91,21 @@ export async function getEmployee(tenantId: string, id: string) {
   });
 }
 
-export async function createEmployee(tenantId: string, input: CreateEmployeeInput) {
+export async function createEmployee(
+  tenantId: string,
+  input: CreateEmployeeInput,
+  actor?: { userId: string; name: string }
+) {
   await assertTenantOwns(tenantId, "department", [input.departmentId]);
   await assertTenantOwns(tenantId, "position", [input.positionId]);
   await assertTenantOwns(tenantId, "employee", [input.managerId]);
 
   const empCode = input.empCode || (await generateEmpCode(tenantId));
 
-  return prisma.employee.create({
+  // Onboarding gate: a new employee is created PENDING and suspended, so it
+  // is excluded from payroll/attendance/active dropdowns (all of which filter
+  // status = "active") until an owner/admin approves it in /admin.
+  const employee = await prisma.employee.create({
     data: {
       tenantId,
       empCode,
@@ -114,11 +122,26 @@ export async function createEmployee(tenantId: string, input: CreateEmployeeInpu
       positionId: input.positionId || null,
       managerId: input.managerId || null,
       employmentType: input.employmentType ?? "full_time",
+      status: "suspended",
+      approvalStatus: "pending",
       hireDate: input.hireDate,
       baseSalary: input.baseSalary,
       currency: input.currency ?? "BDT",
     },
   });
+
+  await createApprovalRequest({
+    tenantId,
+    type: "employee_onboarding",
+    entityType: "Employee",
+    entityId: employee.id,
+    title: `${employee.fullName} (${employee.empCode})`,
+    subtitle: employee.email,
+    requestedBy: actor?.userId,
+    requestedByName: actor?.name,
+  });
+
+  return employee;
 }
 
 export async function updateEmployee(tenantId: string, input: UpdateEmployeeInput) {
@@ -183,4 +206,13 @@ export async function getEmployeeStats(tenantId: string) {
   ]);
 
   return { total, active, onLeave, terminated, byDept };
+}
+
+export async function deleteEmployee(tenantId: string, id: string) {
+  const existing = await prisma.employee.findFirst({
+    where: { id, tenantId },
+    select: { id: true },
+  });
+  if (!existing) throw new Error("Employee not found");
+  return prisma.employee.delete({ where: { id } });
 }

@@ -98,7 +98,7 @@ export function SalesToolbar({
           placeholder="Search invoice, customer..."
           value={filters.search}
           onChange={(e) => set("search", e.target.value)}
-          className="h-9 pl-9 rounded-lg"
+          className="h-9 pl-9 rounded-full"
         />
       </div>
 
@@ -109,7 +109,7 @@ export function SalesToolbar({
       {/* All Filters */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="h-9 gap-2 rounded-lg font-normal">
+          <Button variant="outline" className="h-9 gap-2 rounded-full font-normal">
             <ListFilter className="h-4 w-4" />
             <span className="text-sm">All Filters</span>
             {activeFilterCount > 0 && (
@@ -191,7 +191,7 @@ export function SalesToolbar({
       {/* All Users */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="h-9 gap-2 rounded-lg font-normal">
+          <Button variant="outline" className="h-9 gap-2 rounded-full font-normal">
             <User className="h-4 w-4" />
             <span className="text-sm">{userLabel}</span>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -201,7 +201,7 @@ export function SalesToolbar({
           <Button
             variant={filters.userId === "" ? "default" : "ghost"}
             size="sm"
-            className="w-full justify-start rounded-md"
+            className="w-full justify-start rounded-full"
             onClick={() => set("userId", "")}
           >
             All Users
@@ -216,7 +216,7 @@ export function SalesToolbar({
                 key={u.id}
                 variant={filters.userId === u.id ? "default" : "ghost"}
                 size="sm"
-                className="w-full justify-start rounded-md"
+                className="w-full justify-start rounded-full"
                 onClick={() => set("userId", u.id)}
               >
                 {u.name}
@@ -235,7 +235,7 @@ export function SalesToolbar({
         <Button
           variant="outline"
           size="icon"
-          className="relative h-9 w-9 rounded-lg"
+          className="relative h-9 w-9 rounded-full"
           onClick={onAlertClick}
           aria-label={`${alertCount} outstanding sales`}
           disabled={alertCount === 0}
@@ -254,7 +254,7 @@ export function SalesToolbar({
         <Button
           variant="outline"
           size="icon"
-          className="h-9 w-9 rounded-lg"
+          className="h-9 w-9 rounded-full"
           onClick={() =>
             set(
               "density",
@@ -270,7 +270,7 @@ export function SalesToolbar({
         {/* New sale */}
         <Button
           size="icon"
-          className="h-9 w-9 rounded-lg"
+          className="h-9 w-9 rounded-full"
           onClick={onNewSale}
           aria-label="New sale"
         >

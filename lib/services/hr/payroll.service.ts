@@ -1,8 +1,70 @@
 import { Prisma, type PayrollPeriod } from "@prisma/client";
 import { prisma } from "../../db";
 import { assertTenantOwns } from "./_shared";
+import { countLateToAbsence } from "./attendance.service";
+import { createApprovalRequest } from "../approvals.service";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+// ─── Structure-driven allowances (constrained 5-slot model) ─────────────
+// The salary sheet, recompute engine and Payslip table are hardwired to a
+// fixed set of codes/columns. Rather than rebuild that, a structure may
+// define an *earning* component for each of these 5 known codes; its rule
+// then drives that allowance for FUTURE runs. Each maps 1:1 to a Payslip
+// column + salary-sheet line code, so the sheet stays untouched. `Basic`
+// is intentionally NOT here — it differs per employee and stays the
+// per-employee anchor (EmployeeSalary.baseSalary).
+const ALLOWANCE_SLOTS = [
+  { code: "HRENT", field: "houseRent", label: "House Rent", sortOrder: 10 },
+  { code: "HEALTH", field: "health", label: "Health Allowance", sortOrder: 20 },
+  { code: "EDU", field: "education", label: "Education Allowance", sortOrder: 30 },
+  { code: "SAV", field: "savings", label: "Savings", sortOrder: 40 },
+  { code: "DHEXP", field: "dailyHand", label: "Daily Hand Expenses", sortOrder: 50 },
+] as const;
+const ALLOWANCE_CODES: readonly string[] = ALLOWANCE_SLOTS.map((s) => s.code);
+
+type AllowanceAmounts = {
+  houseRent: number;
+  health: number;
+  education: number;
+  savings: number;
+  dailyHand: number;
+};
+
+// Resolve the 5 allowance amounts for one employee. Per slot: if the
+// structure defines an earning rule for that code, the rule wins (fixed →
+// flat value; percent_of_basic → basic × value%); otherwise fall back to
+// the employee's own stored amount. So a structure with NO components
+// behaves exactly like today (per-employee), and adding a rule overrides
+// that slot for everyone on the structure. `percent_of_gross` is invalid
+// for an allowance (gross depends on it) → ignored, employee value kept.
+function resolveAllowances(
+  components: ReadonlyArray<{
+    code: string;
+    type: string;
+    calculationType: string;
+    value: Prisma.Decimal | number;
+  }>,
+  basic: number,
+  perEmployee: AllowanceAmounts
+): AllowanceAmounts {
+  const byCode = new Map(
+    components
+      .filter((c) => c.type === "earning" && ALLOWANCE_CODES.includes(c.code))
+      .map((c) => [c.code, c])
+  );
+  const out: AllowanceAmounts = { ...perEmployee };
+  for (const slot of ALLOWANCE_SLOTS) {
+    const c = byCode.get(slot.code);
+    if (!c) continue; // no rule → keep the per-employee amount
+    const v = Number(c.value);
+    if (c.calculationType === "fixed") out[slot.field] = round2(v);
+    else if (c.calculationType === "percent_of_basic")
+      out[slot.field] = round2((basic * v) / 100);
+    // percent_of_gross intentionally unsupported here — keep employee value
+  }
+  return out;
+}
 
 /**
  * RaheDeen "terms of payment" (derived from the company salary sheet):
@@ -41,16 +103,73 @@ export async function createSalaryStructure(
   });
 }
 
+// Edit an existing structure's own fields (not its components). Tenant-scoped
+// so one tenant can't touch another's structure. A duplicate name collides on
+// the @@unique([tenantId, name]) constraint → P2002, surfaced to the user.
+export async function updateSalaryStructure(
+  tenantId: string,
+  id: string,
+  input: { name: string; description: string | null; isActive: boolean }
+) {
+  const existing = await prisma.salaryStructure.findFirst({
+    where: { id, tenantId },
+    select: { id: true },
+  });
+  if (!existing) throw new Error("Structure not found");
+
+  return prisma.salaryStructure.update({
+    where: { id },
+    data: {
+      name: input.name,
+      description: input.description,
+      isActive: input.isActive,
+    },
+  });
+}
+
 const STRUCTURE_NAME = "Standard Monthly Salary (RaheDeen)";
 const STRUCTURE_DESC =
-  "Gross = Basic + House Rent + Health + Education + Savings + Daily Hand Expenses (set per employee). Extra duty added, advance & absence deducted at payroll-run time.";
-// Obsolete fixed-amount components from the earlier model — allowances are now
-// per-employee, so these are stripped to avoid double-counting.
-const OBSOLETE_CODES = ["HRENT", "HEALTH", "EDU", "SAV", "DHEXP"];
+  "Earnings for future payroll runs are driven by this structure's allowance rules (House Rent, Health, Education, Savings, Daily Hand). Basic is per-employee. A slot with no rule falls back to the employee's own amount. Extra duty added, advance & absence deducted at payroll-run time.";
+
+type ComponentType = "earning" | "deduction" | "reimbursement";
+type ComponentCalc = "fixed" | "percent_of_basic" | "percent_of_gross";
+
+// Guard what a component can be. Earnings must use one of the 5 known
+// allowance codes (anything else is silently dropped by the fixed salary
+// sheet, so we reject it loudly) and can't be % of gross (gross depends on
+// the allowance). Deductions are unconstrained — the sheet supports custom
+// deductions. Reimbursements aren't wired into payroll yet.
+function assertValidComponent(input: {
+  type: ComponentType;
+  code: string;
+  calculationType: ComponentCalc;
+}) {
+  if (input.type === "reimbursement") {
+    throw new Error(
+      "Reimbursement components aren't supported in payroll yet."
+    );
+  }
+  if (input.type === "earning") {
+    if (!ALLOWANCE_CODES.includes(input.code.toUpperCase())) {
+      throw new Error(
+        `An earning rule must use a standard allowance code (${ALLOWANCE_CODES.join(
+          ", "
+        )}). Basic is per-employee and isn't a structure rule.`
+      );
+    }
+    if (input.calculationType === "percent_of_gross") {
+      throw new Error(
+        "An allowance can't be % of gross (gross depends on it). Use a fixed amount or % of basic."
+      );
+    }
+  }
+}
 
 /**
- * RaheDeen standard salary "policy" — created idempotently. It carries no
- * fixed allowance components anymore; the breakdown is entered per employee.
+ * RaheDeen standard salary "policy" — created idempotently. The structure
+ * starts with no components; an empty structure keeps the legacy
+ * per-employee behavior. Use seedStandardAllowanceRows to add editable
+ * rules. (We no longer strip the allowance codes — they're meaningful now.)
  */
 export async function ensureStandardSalaryStructure(tenantId: string) {
   const existing = await prisma.salaryStructure.findFirst({
@@ -59,16 +178,6 @@ export async function ensureStandardSalaryStructure(tenantId: string) {
   });
 
   if (existing) {
-    // Strip obsolete fixed allowance components if the structure predates
-    // the per-employee model.
-    const stale = existing.components.filter((c) =>
-      OBSOLETE_CODES.includes(c.code)
-    );
-    if (stale.length > 0) {
-      await prisma.salaryComponent.deleteMany({
-        where: { id: { in: stale.map((c) => c.id) } },
-      });
-    }
     if (existing.description !== STRUCTURE_DESC) {
       await prisma.salaryStructure.update({
         where: { id: existing.id },
@@ -87,14 +196,51 @@ export async function ensureStandardSalaryStructure(tenantId: string) {
   });
 }
 
+// Create any of the 5 standard allowance rules that don't exist yet on the
+// structure, as "% of basic = 0" so they're visible/editable in the table
+// WITHOUT changing pay until the admin sets a value. Idempotent per code.
+export async function seedStandardAllowanceRows(
+  tenantId: string,
+  structureId: string
+) {
+  const structure = await prisma.salaryStructure.findFirst({
+    where: { id: structureId, tenantId },
+    include: { components: { select: { code: true, type: true } } },
+  });
+  if (!structure) throw new Error("Structure not found");
+
+  const existingEarningCodes = new Set(
+    structure.components
+      .filter((c) => c.type === "earning")
+      .map((c) => c.code)
+  );
+  const toCreate = ALLOWANCE_SLOTS.filter(
+    (s) => !existingEarningCodes.has(s.code)
+  );
+  if (toCreate.length === 0) return { created: 0 };
+
+  await prisma.salaryComponent.createMany({
+    data: toCreate.map((s) => ({
+      structureId,
+      name: s.label,
+      code: s.code,
+      type: "earning" as const,
+      calculationType: "percent_of_basic" as const,
+      value: 0,
+      sortOrder: s.sortOrder,
+    })),
+  });
+  return { created: toCreate.length };
+}
+
 export async function addSalaryComponent(
   tenantId: string,
   input: {
     structureId: string;
     name: string;
     code: string;
-    type: "earning" | "deduction" | "reimbursement";
-    calculationType: "fixed" | "percent_of_basic" | "percent_of_gross";
+    type: ComponentType;
+    calculationType: ComponentCalc;
     value: number;
     taxable?: boolean;
     isStatutory?: boolean;
@@ -105,6 +251,19 @@ export async function addSalaryComponent(
   });
   if (!structure) throw new Error("Structure not found");
 
+  const code = input.code.toUpperCase();
+  assertValidComponent({ ...input, code });
+
+  // One earning rule per allowance slot — a second would double-count.
+  if (input.type === "earning") {
+    const dup = await prisma.salaryComponent.findFirst({
+      where: { structureId: input.structureId, type: "earning", code },
+    });
+    if (dup) {
+      throw new Error(`A ${code} earning rule already exists on this structure.`);
+    }
+  }
+
   const last = await prisma.salaryComponent.findFirst({
     where: { structureId: input.structureId },
     orderBy: { sortOrder: "desc" },
@@ -114,13 +273,70 @@ export async function addSalaryComponent(
     data: {
       structureId: input.structureId,
       name: input.name,
-      code: input.code.toUpperCase(),
+      code,
       type: input.type,
       calculationType: input.calculationType,
       value: input.value,
       taxable: input.taxable ?? false,
       isStatutory: input.isStatutory ?? false,
       sortOrder: (last?.sortOrder ?? 0) + 10,
+    },
+  });
+}
+
+// Edit an existing component (the editable table). Re-validates the merged
+// result so e.g. flipping a deduction to an earning still obeys the slot
+// rules. Tenant-scoped via the structure relation.
+export async function updateSalaryComponent(
+  tenantId: string,
+  id: string,
+  input: {
+    name?: string;
+    code?: string;
+    type?: ComponentType;
+    calculationType?: ComponentCalc;
+    value?: number;
+  }
+) {
+  const c = await prisma.salaryComponent.findFirst({
+    where: { id, structure: { tenantId } },
+  });
+  if (!c) throw new Error("Component not found");
+
+  const merged = {
+    type: (input.type ?? c.type) as ComponentType,
+    code: (input.code ?? c.code).toUpperCase(),
+    calculationType: (input.calculationType ??
+      c.calculationType) as ComponentCalc,
+  };
+  assertValidComponent(merged);
+
+  if (merged.type === "earning") {
+    const dup = await prisma.salaryComponent.findFirst({
+      where: {
+        structureId: c.structureId,
+        type: "earning",
+        code: merged.code,
+        id: { not: id },
+      },
+    });
+    if (dup) {
+      throw new Error(
+        `A ${merged.code} earning rule already exists on this structure.`
+      );
+    }
+  }
+
+  return prisma.salaryComponent.update({
+    where: { id },
+    data: {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.code !== undefined ? { code: merged.code } : {}),
+      ...(input.type !== undefined ? { type: input.type } : {}),
+      ...(input.calculationType !== undefined
+        ? { calculationType: input.calculationType }
+        : {}),
+      ...(input.value !== undefined ? { value: input.value } : {}),
     },
   });
 }
@@ -167,7 +383,10 @@ export async function createAdvance(
     installment: number;
     reason?: string;
     issuedAt: Date;
-  }
+    recoveryStart?: Date | null;
+    recoveryEnd?: Date | null;
+  },
+  actor?: { userId: string; name: string }
 ) {
   await assertTenantOwns(tenantId, "employee", [input.employeeId]);
   if (input.amount <= 0) throw new Error("Advance amount must be greater than 0");
@@ -176,8 +395,16 @@ export async function createAdvance(
   // updateAdvance). Only a negative value is invalid.
   if (input.installment < 0)
     throw new Error("Monthly recovery cannot be negative");
+  if (
+    input.recoveryStart &&
+    input.recoveryEnd &&
+    input.recoveryEnd < input.recoveryStart
+  )
+    throw new Error("Recovery end date must be on or after the start date");
 
-  return prisma.employeeAdvance.create({
+  // Gated: created PENDING. Excluded from payroll recovery (which only pulls
+  // status="active") until an owner/admin approves it in /admin.
+  const advance = await prisma.employeeAdvance.create({
     data: {
       tenantId,
       employeeId: input.employeeId,
@@ -185,9 +412,29 @@ export async function createAdvance(
       installment: Math.max(0, input.installment),
       outstanding: input.amount,
       reason: input.reason,
+      status: "pending",
       issuedAt: input.issuedAt,
+      recoveryStart: input.recoveryStart ?? null,
+      recoveryEnd: input.recoveryEnd ?? null,
     },
   });
+
+  const emp = await prisma.employee.findUnique({
+    where: { id: input.employeeId },
+    select: { fullName: true, empCode: true },
+  });
+  await createApprovalRequest({
+    tenantId,
+    type: "employee_advance",
+    entityType: "EmployeeAdvance",
+    entityId: advance.id,
+    title: emp ? `${emp.fullName} (${emp.empCode})` : "Employee advance",
+    subtitle: `Advance ${input.amount.toLocaleString()}${input.reason ? ` · ${input.reason}` : ""}`,
+    requestedBy: actor?.userId,
+    requestedByName: actor?.name,
+  });
+
+  return advance;
 }
 
 export async function cancelAdvance(tenantId: string, id: string) {
@@ -278,6 +525,29 @@ export async function reconcileRunAdvancesForTenant(
  * reflected, and running it repeatedly never double-deducts. Only the
  * advance figure + dependent totals change; earnings/absence are untouched.
  */
+/**
+ * Whether an advance should be recovered on a run with the given pay-period
+ * start. If an explicit recovery window (recoveryStart..recoveryEnd) is set,
+ * recover only when the run's month is within that window (inclusive). With no
+ * window, fall back to the default rule: from the month AFTER it was issued
+ * (never the same month). Pure UTC calendar-month comparison.
+ */
+function advanceRecoverableThisPeriod(
+  adv: {
+    issuedAt: Date;
+    recoveryStart?: Date | null;
+    recoveryEnd?: Date | null;
+  },
+  periodStart: Date
+): boolean {
+  const ym = (d: Date) => d.getUTCFullYear() * 12 + d.getUTCMonth();
+  const pm = ym(periodStart);
+  if (adv.recoveryStart && adv.recoveryEnd) {
+    return pm >= ym(adv.recoveryStart) && pm <= ym(adv.recoveryEnd);
+  }
+  return pm > ym(adv.issuedAt);
+}
+
 export async function refreshRunAdvances(
   tenantId: string,
   runId: string,
@@ -285,9 +555,10 @@ export async function refreshRunAdvances(
 ) {
   const run = await prisma.payrollRun.findFirst({
     where: { id: runId, tenantId },
-    select: { id: true },
+    select: { id: true, period: { select: { periodStart: true } } },
   });
   if (!run) throw new Error("Run not found.");
+  const periodStart = run.period.periodStart;
 
   const payslips = await prisma.payslip.findMany({
     where: { runId, run: { tenantId } },
@@ -346,6 +617,9 @@ export async function refreshRunAdvances(
       });
       let advanceRecovered = 0;
       for (const adv of advances) {
+        // Recover only within the advance's window (or, by default, from the
+        // month after it was issued).
+        if (!advanceRecoverableThisPeriod(adv, periodStart)) continue;
         const outstanding = Number(adv.outstanding);
         const take = round2(Math.min(Number(adv.installment), outstanding));
         if (take <= 0) continue;
@@ -552,13 +826,14 @@ export async function getPayrollPrep(
           position: { select: { title: true } },
         },
       },
+      structure: { include: { components: { orderBy: { sortOrder: "asc" } } } },
     },
     orderBy: { employee: { empCode: "asc" } },
   });
 
   return Promise.all(
     salaries.map(async (s) => {
-      const [absentDays, activeAdvances] = await Promise.all([
+      const [absentDays, lateAbsenceDays, activeAdvances] = await Promise.all([
         prisma.attendanceRecord.count({
           where: {
             employeeId: s.employeeId,
@@ -566,19 +841,31 @@ export async function getPayrollPrep(
             date: { gte: periodStart, lte: periodEnd },
           },
         }),
+        countLateToAbsence(tenantId, s.employeeId, periodStart, periodEnd),
         prisma.employeeAdvance.aggregate({
           where: { tenantId, employeeId: s.employeeId, status: "active", outstanding: { gt: 0 } },
           _sum: { outstanding: true },
         }),
       ]);
+      const totalAbsentDays = absentDays + lateAbsenceDays;
       const basic = Number(s.baseSalary);
+      // Mirror runPayroll: structure rules drive allowances when defined,
+      // else the employee's own amounts — so the prep table preview matches
+      // what the run will actually compute.
+      const a = resolveAllowances(s.structure.components, basic, {
+        houseRent: Number(s.houseRent),
+        health: Number(s.health),
+        education: Number(s.education),
+        savings: Number(s.savings),
+        dailyHand: Number(s.dailyHand),
+      });
       const gross = round2(
         basic +
-          Number(s.houseRent) +
-          Number(s.health) +
-          Number(s.education) +
-          Number(s.savings) +
-          Number(s.dailyHand)
+          a.houseRent +
+          a.health +
+          a.education +
+          a.savings +
+          a.dailyHand
       );
       return {
         employeeId: s.employeeId,
@@ -587,7 +874,7 @@ export async function getPayrollPrep(
         designation: s.employee.position?.title ?? "—",
         baseSalary: basic,
         grossSalary: gross,
-        absentDays,
+        absentDays: totalAbsentDays,
         outstandingAdvance: Number(activeAdvances._sum.outstanding ?? 0),
       };
     })
@@ -690,11 +977,16 @@ export async function runPayroll(
 
   for (const sal of salaries) {
     const basic = Number(sal.baseSalary);
-    const houseRent = Number(sal.houseRent);
-    const health = Number(sal.health);
-    const education = Number(sal.education);
-    const savings = Number(sal.savings);
-    const dailyHand = Number(sal.dailyHand);
+    // Allowances: structure earning rules drive these when defined,
+    // otherwise the employee's own stored amounts (see resolveAllowances).
+    const { houseRent, health, education, savings, dailyHand } =
+      resolveAllowances(sal.structure.components, basic, {
+        houseRent: Number(sal.houseRent),
+        health: Number(sal.health),
+        education: Number(sal.education),
+        savings: Number(sal.savings),
+        dailyHand: Number(sal.dailyHand),
+      });
     const gross = round2(basic + houseRent + health + education + savings + dailyHand);
 
     const lines: Array<{
@@ -743,23 +1035,27 @@ export async function runPayroll(
       otherDeductions += amount;
     }
 
-    // Absence deduction. Defaults: days from attendance, amount = Basic/30 × days.
+    // Absence deduction. Defaults: days from attendance + late conversion, amount = Basic/30 × days.
     // Admin may override either; if so a reason is mandatory.
-    const attendanceDays = await prisma.attendanceRecord.count({
-      where: {
-        employeeId: sal.employeeId,
-        status: "absent",
-        date: { gte: input.periodStart, lte: input.periodEnd },
-      },
-    });
+    const [attendanceDays, lateAbsenceDays] = await Promise.all([
+      prisma.attendanceRecord.count({
+        where: {
+          employeeId: sal.employeeId,
+          status: "absent",
+          date: { gte: input.periodStart, lte: input.periodEnd },
+        },
+      }),
+      countLateToAbsence(tenantId, sal.employeeId, input.periodStart, input.periodEnd),
+    ]);
     const adj = input.adjustments?.[sal.employeeId];
-    const absentDays = adj?.absentDays ?? attendanceDays;
+    const absentDays = adj?.absentDays ?? (attendanceDays + lateAbsenceDays);
     const formulaDeduction = round2((basic / 30) * absentDays);
     const absenceDeduction =
       adj?.deduction !== undefined ? round2(adj.deduction) : formulaDeduction;
     const reason = adj?.reason?.trim() || null;
 
-    const daysChanged = absentDays !== attendanceDays;
+    const computedTotal = attendanceDays + lateAbsenceDays;
+    const daysChanged = absentDays !== computedTotal;
     const amountChanged = absenceDeduction !== formulaDeduction;
     if ((daysChanged || amountChanged) && !reason) {
       throw new Error(
@@ -788,6 +1084,7 @@ export async function runPayroll(
     let advanceRecovered = 0;
     const recoveryPlan: Array<{ advanceId: string; amount: number; newOutstanding: number }> = [];
     for (const adv of advances) {
+      if (!advanceRecoverableThisPeriod(adv, input.periodStart)) continue;
       const outstanding = Number(adv.outstanding);
       const take = round2(Math.min(Number(adv.installment), outstanding));
       if (take <= 0) continue;
@@ -804,7 +1101,28 @@ export async function runPayroll(
       });
     }
 
-    const totalDed = round2(otherDeductions + absenceDeduction + advanceRecovered);
+    // Break time penalty deduction
+    const pendingPenalties = await prisma.breakPenalty.findMany({
+      where: { tenantId, employeeId: sal.employeeId, status: "pending", payslipId: null },
+      orderBy: { createdAt: "asc" },
+    });
+    let breakPenalty = 0;
+    const appliedPenaltyIds: string[] = [];
+    for (const p of pendingPenalties) {
+      breakPenalty = round2(breakPenalty + Number(p.amount));
+      appliedPenaltyIds.push(p.id);
+    }
+    if (breakPenalty > 0) {
+      lines.push({
+        componentName: `Break Time Penalty (${pendingPenalties.length} incident${pendingPenalties.length === 1 ? "" : "s"})`,
+        componentCode: "BREAK",
+        amount: breakPenalty,
+        type: "deduction",
+        sortOrder: 920,
+      });
+    }
+
+    const totalDed = round2(otherDeductions + absenceDeduction + advanceRecovered + breakPenalty);
     const payableSalary = round2(totalSalary - totalDed);
 
     totalGross += gross;
@@ -832,6 +1150,7 @@ export async function runPayroll(
           absenceDeduction,
           absenceReason,
           advanceRecovered,
+          breakPenalty,
           reimbursements: 0,
           payableSalary,
           amountPaid: payableSalary,
@@ -849,6 +1168,18 @@ export async function runPayroll(
           data: {
             outstanding: r.newOutstanding,
             ...(r.newOutstanding <= 0 && { status: "cleared" }),
+          },
+        });
+      }
+
+      for (const pid of appliedPenaltyIds) {
+        await tx.breakPenalty.update({
+          where: { id: pid },
+          data: {
+            status: "applied",
+            appliedAt: new Date(),
+            appliedBy: "system",
+            payslipId: payslip.id,
           },
         });
       }
@@ -1132,6 +1463,7 @@ export const PAYROLL_BASE_FIELDS = [
   { key: "extraDutyPayment", label: "Extra Duty Pay" },
   { key: "totalSalary", label: "Total Salary" },
   { key: "advanceRecovered", label: "Advance Recovery" },
+  { key: "breakPenalty", label: "Break Penalty" },
   { key: "absentDays", label: "Absent Days" },
   { key: "absenceDeduction", label: "Absence Deduction" },
   { key: "payableSalary", label: "Net Payable" },

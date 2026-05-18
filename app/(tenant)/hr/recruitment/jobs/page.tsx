@@ -19,6 +19,8 @@ import {
   createJobAction,
   changeJobStatusAction,
 } from "../../actions-phase2";
+import { CopyJobUrlButton } from "./_components/copy-job-url-button";
+import { JobRowActions } from "./_components/job-row-actions";
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   draft: "outline",
@@ -61,6 +63,21 @@ export default async function JobsPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant={statusVariants[j.status]}>{j.status}</Badge>
+                      {j.status === "open" && <CopyJobUrlButton jobId={j.id} />}
+                      <JobRowActions
+                        job={{
+                          id: j.id,
+                          title: j.title,
+                          location: j.location,
+                          employmentType: j.employmentType,
+                          salaryMin:
+                            j.salaryMin != null ? String(Number(j.salaryMin)) : null,
+                          salaryMax:
+                            j.salaryMax != null ? String(Number(j.salaryMax)) : null,
+                          description: j.description,
+                          requirements: j.requirements,
+                        }}
+                      />
                       <form action={changeJobStatusAction}>
                         <input type="hidden" name="id" value={j.id} />
                         <Select name="status" defaultValue={j.status}>

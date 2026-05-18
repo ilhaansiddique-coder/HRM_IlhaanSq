@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import type { ApplicationStage, JobPostingStatus } from "@prisma/client";
 import { assertTenantOwns } from "./_shared";
+import { createApprovalRequest } from "../approvals.service";
 
 // ─── Job Postings ───────────────────────────────────────────
 
@@ -11,6 +12,15 @@ export async function listJobPostings(tenantId: string, status?: JobPostingStatu
       _count: { select: { applications: true } },
     },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getJobById(jobId: string) {
+  return prisma.jobPosting.findUnique({
+    where: { id: jobId },
+    include: {
+      tenant: { select: { id: true, name: true, slug: true } },
+    },
   });
 }
 
@@ -48,6 +58,50 @@ export async function createJobPosting(
       openedAt: input.status === "open" ? new Date() : null,
     },
   });
+}
+
+export async function updateJobPosting(
+  tenantId: string,
+  id: string,
+  input: {
+    title?: string;
+    description?: string;
+    requirements?: string | null;
+    employmentType?: any;
+    salaryMin?: number | null;
+    salaryMax?: number | null;
+    location?: string | null;
+    status?: JobPostingStatus;
+  }
+) {
+  const j = await prisma.jobPosting.findFirst({ where: { id, tenantId } });
+  if (!j) throw new Error("Job not found");
+  return prisma.jobPosting.update({
+    where: { id },
+    data: {
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.description !== undefined && { description: input.description }),
+      ...(input.requirements !== undefined && { requirements: input.requirements }),
+      ...(input.employmentType !== undefined && {
+        employmentType: input.employmentType,
+      }),
+      ...(input.salaryMin !== undefined && { salaryMin: input.salaryMin }),
+      ...(input.salaryMax !== undefined && { salaryMax: input.salaryMax }),
+      ...(input.location !== undefined && { location: input.location }),
+      ...(input.status !== undefined && {
+        status: input.status,
+        openedAt:
+          input.status === "open" && !j.openedAt ? new Date() : j.openedAt,
+      }),
+    },
+  });
+}
+
+export async function deleteJobPosting(tenantId: string, id: string) {
+  const j = await prisma.jobPosting.findFirst({ where: { id, tenantId } });
+  if (!j) throw new Error("Job not found");
+  // Applications cascade (FK onDelete: Cascade).
+  await prisma.jobPosting.delete({ where: { id } });
 }
 
 export async function changeJobStatus(tenantId: string, id: string, status: JobPostingStatus) {
@@ -139,10 +193,46 @@ export async function moveApplicationStage(
   tenantId: string,
   id: string,
   stage: ApplicationStage,
-  extra?: { rejectionReason?: string; offerSalary?: number }
+  extra?: { rejectionReason?: string; offerSalary?: number },
+  actor?: { userId: string; name: string }
 ) {
-  const app = await prisma.application.findFirst({ where: { id, tenantId } });
+  const app = await prisma.application.findFirst({
+    where: { id, tenantId },
+    include: {
+      candidate: { select: { fullName: true, email: true } },
+      jobPosting: { select: { title: true } },
+    },
+  });
   if (!app) throw new Error("Application not found");
+
+  // Joining gate: moving to "hired" does NOT take effect immediately. It
+  // raises a joining-approval request and parks the application until an
+  // owner/admin approves it in /admin (which then sets stage = hired).
+  if (stage === "hired" && app.joiningStatus !== "approved") {
+    if (app.joiningStatus === "pending") return app; // already awaiting decision
+
+    const updated = await prisma.application.update({
+      where: { id },
+      data: {
+        joiningStatus: "pending",
+        joiningRejectionReason: null,
+        offerSalary: extra?.offerSalary ?? app.offerSalary,
+      },
+    });
+
+    await createApprovalRequest({
+      tenantId,
+      type: "recruitment_joining",
+      entityType: "Application",
+      entityId: app.id,
+      title: app.candidate.fullName,
+      subtitle: `Joining for ${app.jobPosting.title}`,
+      requestedBy: actor?.userId,
+      requestedByName: actor?.name,
+    });
+
+    return updated;
+  }
 
   return prisma.application.update({
     where: { id },

@@ -3,6 +3,7 @@ import { requireTenant } from "@/lib/auth";
 import { listApplications } from "@/lib/services/hr/recruitment.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, GitBranch } from "lucide-react";
 import { PipelineStageMover } from "./_components/pipeline-stage-mover";
 
@@ -51,6 +52,16 @@ export default async function PipelinePage() {
                         <div>
                           <p className="text-sm font-medium leading-tight">{a.candidate.fullName}</p>
                           <p className="text-[10px] text-muted-foreground truncate">{a.jobPosting.title}</p>
+                          {a.joiningStatus === "pending" && (
+                            <Badge variant="secondary" className="mt-1 text-[9px]">
+                              Joining — awaiting admin approval
+                            </Badge>
+                          )}
+                          {a.joiningStatus === "rejected" && (
+                            <Badge variant="destructive" className="mt-1 text-[9px]">
+                              Joining rejected
+                            </Badge>
+                          )}
                         </div>
                         <PipelineStageMover applicationId={a.id} currentStage={a.stage} />
                       </CardContent>

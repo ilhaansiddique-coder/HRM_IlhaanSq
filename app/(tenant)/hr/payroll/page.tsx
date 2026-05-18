@@ -21,7 +21,7 @@ export default async function PayrollOverviewPage() {
           <Link href="/hr/payroll/structures">
             <Button variant="outline">
               <Layers className="h-4 w-4" />
-              Structures
+              Salary Structure
             </Button>
           </Link>
           <Link href="/hr/payroll/advances">

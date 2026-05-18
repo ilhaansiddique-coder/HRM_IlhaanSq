@@ -32,6 +32,31 @@ export default async function AdvancesPage() {
   const statusVariant = (s: string) =>
     s === "active" ? "default" : s === "cleared" ? "secondary" : "outline";
 
+  const mY = (d: Date) =>
+    d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  // Human-readable description of WHEN/over what period the installment is
+  // recovered, so a 0 on the salary sheet for the current month is explained.
+  const recoveryScope = (a: {
+    installment: number;
+    issuedAt: string;
+    recoveryStart?: Date | string | null;
+    recoveryEnd?: Date | string | null;
+  }): string => {
+    if (a.recoveryStart && a.recoveryEnd) {
+      const s = new Date(a.recoveryStart);
+      const e = new Date(a.recoveryEnd);
+      return `${mY(s)} – ${mY(e)}`;
+    }
+    if (a.installment > 0) {
+      const iss = new Date(a.issuedAt);
+      const next = new Date(
+        Date.UTC(iss.getUTCFullYear(), iss.getUTCMonth() + 1, 1)
+      );
+      return `From ${mY(next)}, monthly until cleared`;
+    }
+    return "Not scheduled";
+  };
+
   return (
     <div className="space-y-6">
       <AdvanceLiveRefresh tenantId={session.tenantId} />
@@ -74,12 +99,92 @@ export default async function AdvancesPage() {
                 <p className="text-sm text-muted-foreground">No advances recorded yet</p>
               </div>
             ) : (
+              <>
+              {/* Mobile / tablet: one card per advance (no horizontal scroll) */}
+              <div className="space-y-3 p-3 md:hidden">
+                {advances.map((a) => (
+                  <div
+                    key={a.id}
+                    className="rounded-lg border border-border/60 bg-background/40 p-3"
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">
+                          {a.employee.fullName}
+                        </div>
+                        <div className="font-mono text-[10px] text-muted-foreground">
+                          {a.employee.empCode}
+                        </div>
+                      </div>
+                      <Badge
+                        variant={statusVariant(a.status)}
+                        className="shrink-0 capitalize"
+                      >
+                        {a.status}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+                      <div className="text-muted-foreground">Amount</div>
+                      <div className="text-right tabular-nums">
+                        {a.amount.toLocaleString()}
+                      </div>
+                      <div className="text-muted-foreground">Installment</div>
+                      <div className="text-right tabular-nums">
+                        {a.installment.toLocaleString()}
+                      </div>
+                      <div className="text-muted-foreground">Outstanding</div>
+                      <div className="text-right font-medium tabular-nums text-warning">
+                        {a.outstanding.toLocaleString()}
+                      </div>
+                      <div className="text-muted-foreground">Recovery scope</div>
+                      <div className="text-right text-xs">{recoveryScope(a)}</div>
+                      <div className="text-muted-foreground">Issued</div>
+                      <div className="text-right text-xs">
+                        {new Date(a.issuedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    {a.reason && (
+                      <div className="mt-2 text-[11px] text-muted-foreground">
+                        {a.reason}
+                      </div>
+                    )}
+                    {a.status === "active" && (
+                      <div className="mt-3 flex items-center justify-end gap-2 border-t border-border/40 pt-2">
+                        <EditAdvanceDialog
+                          advance={{
+                            id: a.id,
+                            amount: a.amount,
+                            installment: a.installment,
+                            reason: a.reason ?? null,
+                          }}
+                        />
+                        <form action={cancelAdvanceAction}>
+                          <input type="hidden" name="id" value={a.id} />
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            title="Cancel advance"
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                          </Button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: full table (scrolls horizontally if ever needed) */}
+              <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Employee</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead className="text-right">Installment</TableHead>
+                    <TableHead>Recovery scope</TableHead>
                     <TableHead className="text-right">Outstanding</TableHead>
                     <TableHead>Issued</TableHead>
                     <TableHead>Status</TableHead>
@@ -100,6 +205,9 @@ export default async function AdvancesPage() {
                       </TableCell>
                       <TableCell className="text-right">{a.amount.toLocaleString()}</TableCell>
                       <TableCell className="text-right">{a.installment.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {recoveryScope(a)}
+                      </TableCell>
                       <TableCell className="text-right font-medium text-warning">
                         {a.outstanding.toLocaleString()}
                       </TableCell>
@@ -141,6 +249,8 @@ export default async function AdvancesPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
+              </>
             )}
           </CardContent>
         </Card>

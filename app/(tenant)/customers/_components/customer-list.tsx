@@ -389,7 +389,7 @@ export function CustomerList({
           scroll wrapper — no Card around it (that produced two
           stacked borders with mismatched radii in the screenshot). */}
       <div className="hidden md:block">
-        <Table containerClassName="rounded-md">
+        <Table containerClassName="rounded-full">
           <TableHeader>
               <TableRow>
                 {showTenant && <TableHead>Tenant</TableHead>}
@@ -441,7 +441,7 @@ export function CustomerList({
                     {showTenant && (
                       <TableCell className="text-xs">
                         {customer.tenantName ? (
-                          <span className="rounded-md bg-[#034b28]/10 px-1.5 py-0.5 font-medium capitalize text-[#034b28] dark:text-[#034b28]">
+                          <span className="rounded-full bg-[#034b28]/10 px-1.5 py-0.5 font-medium capitalize text-[#034b28] dark:text-[#034b28]">
                             {customer.tenantName}
                           </span>
                         ) : (
@@ -512,7 +512,7 @@ export function CustomerList({
                         <Button
                           variant="outline"
                           size="icon"
-                          className={`!h-9 !min-h-9 !w-9 rounded-md ${
+                          className={`!h-9 !min-h-9 !w-9 rounded-full ${
                             (customer.creditDue ?? 0) > 0
                               ? "text-amber-600 hover:text-amber-600"
                               : "text-muted-foreground/50"
@@ -535,7 +535,7 @@ export function CustomerList({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="!h-9 !min-h-9 !w-9 rounded-md"
+                          className="!h-9 !min-h-9 !w-9 rounded-full"
                           onClick={() => openHistory(customer)}
                           aria-label={`View history for ${customer.name}`}
                           title="View purchase history"
@@ -545,7 +545,7 @@ export function CustomerList({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="!h-9 !min-h-9 !w-9 rounded-md"
+                          className="!h-9 !min-h-9 !w-9 rounded-full"
                           onClick={() => openEdit(customer)}
                           aria-label={`Edit ${customer.name}`}
                           title="Edit customer"
@@ -555,7 +555,7 @@ export function CustomerList({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="!h-9 !min-h-9 !w-9 rounded-md text-destructive hover:text-destructive"
+                          className="!h-9 !min-h-9 !w-9 rounded-full text-destructive hover:text-destructive"
                           onClick={() => setPendingDelete(customer)}
                           aria-label={`Delete ${customer.name}`}
                           title="Delete customer"
@@ -592,7 +592,7 @@ export function CustomerList({
                   </p>
                   <Badge
                     variant={customer.additionalInfo ? "secondary" : "outline"}
-                    className="shrink-0 rounded-md font-normal"
+                    className="shrink-0 rounded-full font-normal"
                     title={customer.additionalInfo ?? undefined}
                   >
                     <span className="block max-w-[140px] truncate">
@@ -603,7 +603,7 @@ export function CustomerList({
 
                 {showTenant && customer.tenantName && (
                   <div>
-                    <span className="rounded-md bg-[#034b28]/10 px-1.5 py-0.5 text-[11px] font-medium capitalize text-[#034b28] dark:text-[#034b28]">
+                    <span className="rounded-full bg-[#034b28]/10 px-1.5 py-0.5 text-[11px] font-medium capitalize text-[#034b28] dark:text-[#034b28]">
                       {customer.tenantName}
                     </span>
                   </div>
@@ -659,7 +659,7 @@ export function CustomerList({
                   <Button
                     variant="outline"
                     size="icon"
-                    className={`!h-9 !min-h-9 !w-9 rounded-md ${
+                    className={`!h-9 !min-h-9 !w-9 rounded-full ${
                       hasCreditDue
                         ? "text-amber-600 hover:text-amber-600"
                         : "text-muted-foreground/40"
@@ -677,7 +677,7 @@ export function CustomerList({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="!h-9 !min-h-9 !w-9 rounded-md"
+                    className="!h-9 !min-h-9 !w-9 rounded-full"
                     onClick={() => openHistory(customer)}
                     aria-label={`View history for ${customer.name}`}
                   >
@@ -686,7 +686,7 @@ export function CustomerList({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="!h-9 !min-h-9 !w-9 rounded-md"
+                    className="!h-9 !min-h-9 !w-9 rounded-full"
                     onClick={() => openEdit(customer)}
                     aria-label={`Edit ${customer.name}`}
                   >
@@ -695,7 +695,7 @@ export function CustomerList({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="!h-9 !min-h-9 !w-9 rounded-md text-destructive hover:text-destructive"
+                    className="!h-9 !min-h-9 !w-9 rounded-full text-destructive hover:text-destructive"
                     onClick={() => setPendingDelete(customer)}
                     aria-label={`Delete ${customer.name}`}
                   >
@@ -866,7 +866,7 @@ function KpiCard({
           {label}
         </CardTitle>
         <span
-          className={`flex h-7 w-7 items-center justify-center rounded-md ${KPI_TONES[tone]}`}
+          className={`flex h-7 w-7 items-center justify-center rounded-full ${KPI_TONES[tone]}`}
         >
           {icon}
         </span>
