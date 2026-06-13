@@ -13,10 +13,10 @@ export const dynamic = "force-dynamic";
 // public/fonts/BricolageGrotesque-Variable-*.woff2. No Google Fonts CDN.
 
 export const metadata: Metadata = {
-  applicationName: "RaheDeen Inventory",
+  applicationName: "HRM_IlhaanSq",
   title: {
-    default: "RaheDeen Inventory — Wholesale & Retail Management",
-    template: "%s · RaheDeen",
+    default: "HRM_IlhaanSq — Wholesale & Retail Management",
+    template: "%s · HRM_IlhaanSq",
   },
   description:
     "All-in-one inventory, sales, customers, packaging and reporting platform built for wholesale and retail businesses.",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "RaheDeen",
+    title: "HRM_IlhaanSq",
   },
   formatDetection: { telephone: false },
   icons: {

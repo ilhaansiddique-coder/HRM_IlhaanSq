@@ -27,6 +27,7 @@ import { checkIn, checkOut } from "@/lib/services/hr/attendance.service";
 import {
   startBreak,
   endBreak,
+  logBreak,
   createBreakPenalty,
   applyBreakPenalty,
   waiveBreakPenalty,
@@ -371,6 +372,16 @@ export async function endBreakAction(formData: FormData) {
     formData.get("employeeId") as string,
     formData.get("breakSessionId") as string
   );
+  revalidatePath("/hr/break");
+}
+
+export async function logBreakAction(formData: FormData) {
+  const session = await requireTenant();
+  await logBreak(session.tenantId, formData.get("employeeId") as string, {
+    breakStart: new Date(formData.get("breakStart") as string),
+    breakEnd: new Date(formData.get("breakEnd") as string),
+    note: ((formData.get("note") as string | null) ?? "").trim(),
+  });
   revalidatePath("/hr/break");
 }
 

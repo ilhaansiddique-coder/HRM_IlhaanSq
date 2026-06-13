@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────
-// RaheDeen Inventory SaaS — Prisma Schema
+// HRM_IlhaanSq SaaS — Prisma Schema
 // Single source of truth for the entire data model.
 // ──────────────────────────────────────────────────────────────
 
@@ -758,7 +758,7 @@ model Payslip {
   totalEarnings   Decimal  @map("total_earnings") @db.Decimal(12, 2)
   totalDeductions Decimal  @map("total_deductions") @db.Decimal(12, 2)
   netPay          Decimal  @map("net_pay") @db.Decimal(12, 2)
-  // Salary-sheet breakdown (RaheDeen terms of payment)
+  // Salary-sheet breakdown (HRM_IlhaanSq terms of payment)
   houseRent        Decimal @default(0) @map("house_rent") @db.Decimal(12, 2)
   health           Decimal @default(0) @db.Decimal(12, 2)
   education        Decimal @default(0) @db.Decimal(12, 2)

@@ -47,14 +47,14 @@ export async function uploadBusinessLogoAction(
   if (file.size > LOGO_MAX_BYTES) return { url: "", error: "Logo too large (max 2MB)." };
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const publicId = `rahedeen/${session.tenantId}/logo-${randomUUID()}`;
+  const publicId = `hrmilhaansq/${session.tenantId}/logo-${randomUUID()}`;
 
   const uploadResult = await new Promise<{ secure_url: string } | undefined>(
     (resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           public_id: publicId,
-          folder: "rahedeen/logos",
+          folder: "hrmilhaansq/logos",
           resource_type: "auto",
         },
         (error, result) => {

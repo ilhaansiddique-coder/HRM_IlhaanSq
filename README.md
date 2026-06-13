@@ -1,4 +1,4 @@
-# RaheDeen HRM — Multi-Tenant SaaS Human Resource Management
+# HRM_IlhaanSq — Multi-Tenant SaaS Human Resource Management
 
 A commercial-grade, multi-tenant **Human Resource Management System (HRMS)** built on a modern Next.js SaaS stack. The platform lets organizations manage their entire employee lifecycle — onboarding, attendance, leave, payroll, performance, recruitment, learning, and documents — under a single tenant-isolated workspace.
 
@@ -61,9 +61,6 @@ A commercial-grade, multi-tenant **Human Resource Management System (HRMS)** bui
 ```bash
 # Install dependencies
 npm install
-
-# Configure environment variables (see below)
-cp .env.example .env   # if available, otherwise create .env
 
 # Generate the Prisma client and apply migrations
 npx prisma generate
@@ -128,26 +125,6 @@ prisma/
 ├── migrations/        # Migration history
 └── seed.ts            # Seed script
 scripts/               # Admin & security tooling
-```
-
----
-
-## 🔐 Environment Variables
-
-Create a `.env` file with at least the following (names may vary — check usage in code):
-
-```env
-DATABASE_URL=postgresql://user:password@host:5432/dbname
-NEXTAUTH_SECRET=your-secret
-NEXTAUTH_URL=http://localhost:3000
-
-# Optional integrations
-REDIS_URL=
-CLOUDINARY_URL=
-SMTP_HOST=
-SMTP_USER=
-SMTP_PASS=
-SENTRY_DSN=
 ```
 
 ---

@@ -22,7 +22,7 @@ const hostname = process.env.HOSTNAME || "0.0.0.0";
 
 // Same key/shape as lib/realtime/bus.ts so Server Actions and this server
 // share one emitter within the process.
-const BUS_KEY = "__raheDeenRealtimeBus__";
+const BUS_KEY = "__hrmIlhaanSqRealtimeBus__";
 function bus() {
   if (!globalThis[BUS_KEY]) {
     const e = new EventEmitter();

@@ -969,14 +969,14 @@ export async function uploadHrDocumentAction(
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const publicId = `rahedeen/${session.tenantId}/hr-doc-${randomUUID()}`;
+  const publicId = `hrmilhaansq/${session.tenantId}/hr-doc-${randomUUID()}`;
 
   const uploadResult = await new Promise<{ secure_url: string } | undefined>(
     (resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           public_id: publicId,
-          folder: "rahedeen/hr-documents",
+          folder: "hrmilhaansq/hr-documents",
           resource_type: "auto",
         },
         (error, result) => {

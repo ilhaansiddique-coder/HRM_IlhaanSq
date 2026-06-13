@@ -20,10 +20,12 @@ export function PenaltyForm({
   employees,
   breakSessions,
   thresholdMin,
+  onSuccess,
 }: {
   employees: { id: string; name: string; code: string }[];
   breakSessions: { id: string; employeeId: string; employee?: { fullName: string }; breakStart: string; durationMin: number }[];
   thresholdMin: number;
+  onSuccess?: () => void;
 }) {
   const [employeeId, setEmployeeId] = useState("");
   const [breakSessionId, setBreakSessionId] = useState("");
@@ -57,6 +59,7 @@ export function PenaltyForm({
         setAmount("");
         setReason("");
         router.refresh();
+        onSuccess?.();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to create penalty");
       }

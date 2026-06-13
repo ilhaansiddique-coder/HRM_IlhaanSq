@@ -12,7 +12,7 @@ export function Footer() {
                 <Package className="h-4 w-4" />
               </div>
               <span className="text-base font-semibold tracking-tight">
-                RaheDeen Inventory
+                HRM_IlhaanSq
               </span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground max-w-md">
@@ -60,7 +60,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="mailto:hello@rahedeen.com" className="text-muted-foreground hover:text-foreground">
+                <a href="mailto:hello@hrmilhaansq.com" className="text-muted-foreground hover:text-foreground">
                   Contact
                 </a>
               </li>
@@ -76,7 +76,7 @@ export function Footer() {
 
         <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} RaheDeen Inventory. All rights reserved.
+            © {new Date().getFullYear()} HRM_IlhaanSq. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground">
             Built for businesses that value clarity and speed.

@@ -57,7 +57,7 @@ export default async function InvitePage({
               </div>
               <h1 className="text-2xl font-bold tracking-tight">You&apos;re invited!</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Join <span className="text-foreground font-medium">{invite.tenant.name}</span> on RaheDeen
+                Join <span className="text-foreground font-medium">{invite.tenant.name}</span> on HRM_IlhaanSq
               </p>
             </div>
 

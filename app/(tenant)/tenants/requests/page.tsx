@@ -59,7 +59,7 @@ export default async function RequestsPage() {
                     <InfoRow
                       icon={<Globe className="h-3.5 w-3.5" />}
                       label="Requested URL"
-                      value={`rahedeen.app/${req.requestedSlug}`}
+                      value={`hrmilhaansq.app/${req.requestedSlug}`}
                       mono
                     />
                   )}

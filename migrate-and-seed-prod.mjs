@@ -48,8 +48,8 @@ async function migrateAndSeed() {
     console.log("🔄 Creating workspace...");
     const tenant = await prisma.tenant.create({
       data: {
-        slug: "rahedeen-inventory",
-        name: "RaheDeen Inventory",
+        slug: "hrmilhaansq",
+        name: "HRM_IlhaanSq",
         isActive: true,
         plan: "starter",
         createdBy: user.id
@@ -71,7 +71,7 @@ async function migrateAndSeed() {
     await prisma.businessSettings.create({
       data: {
         tenantId: tenant.id,
-        businessName: "RaheDeen Inventory",
+        businessName: "HRM_IlhaanSq",
         createdBy: user.id
       }
     });

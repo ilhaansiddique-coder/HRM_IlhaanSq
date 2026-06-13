@@ -34,7 +34,8 @@ import {
   UserCheck,
 } from "lucide-react";
 import { BreakStartEndPanel } from "./_components/break-start-end-panel";
-import { PenaltyForm } from "./_components/penalty-form";
+import { LogBreakForm } from "./_components/log-break-form";
+import { AddPenaltyDialog } from "./_components/add-penalty-dialog";
 import { PenaltyList } from "./_components/penalty-list";
 import { BreakThresholdForm } from "./_components/break-threshold-form";
 
@@ -63,6 +64,25 @@ export default async function BreakTimePage() {
 
   return (
     <div className="space-y-6">
+      {/* Admin "Add Penalty" opens from the "+" button in the top bar (left of
+          the notification bell). Portals into the TopBar; nothing inline. */}
+      {isAdmin && (
+        <AddPenaltyDialog
+          employees={employees.map((e) => ({
+            id: e.id,
+            name: e.fullName,
+            code: e.empCode,
+          }))}
+          breakSessions={sessions.map((s) => ({
+            id: s.id,
+            employeeId: s.employeeId,
+            breakStart: s.breakStart.toISOString(),
+            durationMin: s.durationMin,
+          }))}
+          thresholdMin={threshold}
+        />
+      )}
+
       <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory xl:grid xl:grid-cols-4 xl:overflow-visible">
         <div className="w-[68vw] max-w-[300px] xl:w-auto xl:max-w-none shrink-0 snap-start">
           <StatCard
@@ -137,6 +157,22 @@ export default async function BreakTimePage() {
                       : null
                   }
                 />
+              </CardContent>
+            </Card>
+          )}
+          {!isAdmin && employeeId && (
+            <Card className="border-border/70 bg-card/80">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Log a Past Break
+                </CardTitle>
+                <CardDescription>
+                  Forgot to use the timer? Record a break from one time to another.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <LogBreakForm employeeId={employeeId} />
               </CardContent>
             </Card>
           )}
@@ -388,27 +424,20 @@ export default async function BreakTimePage() {
             <Card className="border-border/70 bg-card/80">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                  Add Penalty
+                  <Clock className="h-4 w-4 text-primary" />
+                  Log Break
                 </CardTitle>
                 <CardDescription>
-                  Penalize employees for exceeding break time (threshold: {threshold} min)
+                  Record a break for a specific window — from one time to another.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <PenaltyForm
+                <LogBreakForm
                   employees={employees.map((e) => ({
                     id: e.id,
                     name: e.fullName,
                     code: e.empCode,
                   }))}
-                  breakSessions={sessions.map((s) => ({
-                    id: s.id,
-                    employeeId: s.employeeId,
-                    breakStart: s.breakStart.toISOString(),
-                    durationMin: s.durationMin,
-                  }))}
-                  thresholdMin={threshold}
                 />
               </CardContent>
             </Card>

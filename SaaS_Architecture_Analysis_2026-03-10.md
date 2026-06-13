@@ -1,4 +1,4 @@
-﻿# RaheDeen Inventory SaaS - Architecture Analysis
+﻿# HRM_IlhaanSq SaaS - Architecture Analysis
 
 Generated: 2026-03-10
 

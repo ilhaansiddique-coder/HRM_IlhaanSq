@@ -20,10 +20,10 @@ async function main() {
   const passwordHash = await bcrypt.hash("admin123", 12);
 
   const admin = await prisma.user.upsert({
-    where: { email: "admin@rahedeen.com" },
+    where: { email: "admin@hrmilhaansq.com" },
     update: {},
     create: {
-      email: "admin@rahedeen.com",
+      email: "admin@hrmilhaansq.com",
       passwordHash,
       fullName: "Super Admin",
       emailVerified: true,
@@ -88,8 +88,8 @@ async function main() {
 
   console.log("Created default settings");
 
-  // RaheDeen standard salary structure (terms of payment from the company sheet)
-  const STRUCTURE_NAME = "Standard Monthly Salary (RaheDeen)";
+  // HRM_IlhaanSq standard salary structure (terms of payment from the company sheet)
+  const STRUCTURE_NAME = "Standard Monthly Salary (HRM_IlhaanSq)";
   const existingStructure = await prisma.salaryStructure.findFirst({
     where: { tenantId: tenant.id, name: STRUCTURE_NAME },
   });

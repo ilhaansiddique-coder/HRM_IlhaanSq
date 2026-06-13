@@ -53,8 +53,10 @@ export async function startBreak(
 ) {
   await assertTenantOwns(tenantId, "employee", [employeeId]);
 
+  // Reason is optional — a user can just press the button to start a break.
+  // An empty reason is treated as a personal (out-of-duty) break; mentioning
+  // "courier" still marks it as duty time.
   const note = (opts.note ?? "").trim();
-  if (!note) throw new Error("Please enter a reason for the break.");
 
   const { category, isDuty } = classifyBreakReason(note);
 
@@ -69,6 +71,57 @@ export async function startBreak(
       employeeId,
       breakStart: new Date(),
       status: "active",
+      breakCategory: category,
+      isDuty,
+      notes: note,
+    },
+  });
+}
+
+/**
+ * Log a completed break for a specific time window ("from this time to that
+ * time") instead of the live Start/End flow. Used to record a break that was
+ * taken earlier, or for an admin to enter a break on an employee's behalf.
+ * Creates an already-completed session with the duration computed from the
+ * supplied start/end times.
+ */
+export async function logBreak(
+  tenantId: string,
+  employeeId: string,
+  opts: { breakStart: Date; breakEnd: Date; note: string }
+) {
+  await assertTenantOwns(tenantId, "employee", [employeeId]);
+
+  const note = (opts.note ?? "").trim();
+  if (!note) throw new Error("Please enter a reason for the break.");
+
+  if (!(opts.breakStart instanceof Date) || isNaN(opts.breakStart.getTime())) {
+    throw new Error("Please enter a valid break start time.");
+  }
+  if (!(opts.breakEnd instanceof Date) || isNaN(opts.breakEnd.getTime())) {
+    throw new Error("Please enter a valid break end time.");
+  }
+  if (opts.breakEnd.getTime() <= opts.breakStart.getTime()) {
+    throw new Error("Break end time must be after the start time.");
+  }
+  if (opts.breakStart.getTime() > Date.now() + 60_000) {
+    throw new Error("Break start time can't be in the future.");
+  }
+
+  const { category, isDuty } = classifyBreakReason(note);
+  const durationMin =
+    Math.round(
+      ((opts.breakEnd.getTime() - opts.breakStart.getTime()) / 60000) * 100
+    ) / 100;
+
+  return prisma.breakSession.create({
+    data: {
+      tenantId,
+      employeeId,
+      breakStart: opts.breakStart,
+      breakEnd: opts.breakEnd,
+      durationMin,
+      status: "completed",
       breakCategory: category,
       isDuty,
       notes: note,

@@ -252,7 +252,7 @@ export function CreateTenantForm() {
             <div className="space-y-2 rounded-xl border border-success/35 bg-success/5 p-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Workspace URL:</span>
-                <span className="font-mono">rahedeen.app/{success.tenantSlug}</span>
+                <span className="font-mono">hrmilhaansq.app/{success.tenantSlug}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Login email:</span>

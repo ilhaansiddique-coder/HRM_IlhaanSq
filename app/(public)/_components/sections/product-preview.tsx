@@ -26,7 +26,7 @@ export function ProductPreview() {
               <span className="h-2.5 w-2.5 rounded-full bg-warning/60" />
               <span className="h-2.5 w-2.5 rounded-full bg-success/60" />
               <span className="ml-3 text-xs text-muted-foreground font-mono">
-                rahedeen.app/dashboard
+                hrmilhaansq.app/dashboard
               </span>
             </div>
 

@@ -8,8 +8,8 @@ import nodemailer from "nodemailer";
 //   SMTP_PORT=587
 //   SMTP_USER=you@gmail.com
 //   SMTP_PASS=your-app-password
-//   SMTP_FROM_ADDRESS=noreply@rahedeen.com
-//   SMTP_FROM_NAME="RaheDeen Inventory"
+//   SMTP_FROM_ADDRESS=noreply@hrmilhaansq.com
+//   SMTP_FROM_NAME="HRM_IlhaanSq"
 //
 // If SMTP_HOST isn't set, emails are logged to console (dev mode).
 
@@ -60,7 +60,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{
   reason?: string;
 }> {
   const transporter = getTransporter();
-  const fromName = process.env.SMTP_FROM_NAME || "RaheDeen Inventory";
+  const fromName = process.env.SMTP_FROM_NAME || "HRM_IlhaanSq";
   const fromAddress = process.env.SMTP_FROM_ADDRESS || process.env.SMTP_USER;
 
   if (!transporter || !fromAddress) {
@@ -116,7 +116,7 @@ function emailLayout(content: string): string {
               <td style="padding:32px 32px 24px 32px;border-bottom:1px solid #f1f1f3;">
                 <div style="display:inline-flex;align-items:center;gap:8px;">
                   <div style="width:32px;height:32px;background:#1f5d47;border-radius:8px;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:bold;">R</div>
-                  <span style="font-size:16px;font-weight:600;color:#0f172a;">RaheDeen Inventory</span>
+                  <span style="font-size:16px;font-weight:600;color:#0f172a;">HRM_IlhaanSq</span>
                 </div>
               </td>
             </tr>
@@ -127,8 +127,8 @@ function emailLayout(content: string): string {
             </tr>
             <tr>
               <td style="padding:24px 32px;background:#fafafa;border-top:1px solid #f1f1f3;font-size:12px;color:#71717a;text-align:center;">
-                You're receiving this email because you (or someone) requested access to RaheDeen Inventory.<br />
-                If this wasn't you, ignore this email or contact <a href="mailto:support@rahedeen.com" style="color:#1f5d47;">support</a>.
+                You're receiving this email because you (or someone) requested access to HRM_IlhaanSq.<br />
+                If this wasn't you, ignore this email or contact <a href="mailto:support@hrmilhaansq.com" style="color:#1f5d47;">support</a>.
               </td>
             </tr>
           </table>
@@ -148,7 +148,7 @@ export async function sendApprovalEmail(input: {
   const loginUrl = `${APP_URL}/login`;
 
   const html = emailLayout(`
-    <h1 style="font-size:22px;margin:0 0 16px 0;font-weight:bold;">Welcome to RaheDeen, ${escapeHtml(input.fullName)}!</h1>
+    <h1 style="font-size:22px;margin:0 0 16px 0;font-weight:bold;">Welcome to HRM_IlhaanSq, ${escapeHtml(input.fullName)}!</h1>
     <p>Great news — your access request for <strong>${escapeHtml(input.businessName)}</strong> has been approved.</p>
     <p>Here are your temporary login credentials:</p>
     <div style="background:#f4f4f5;border:1px solid #e4e4e7;border-radius:8px;padding:16px;margin:20px 0;">
@@ -170,7 +170,7 @@ export async function sendApprovalEmail(input: {
 
   return sendEmail({
     to: input.to,
-    subject: `Welcome to RaheDeen — your workspace is ready`,
+    subject: `Welcome to HRM_IlhaanSq — your workspace is ready`,
     html,
   });
 }
@@ -209,7 +209,7 @@ export async function sendPasswordResetEmail(input: {
   const html = emailLayout(`
     <h1 style="font-size:22px;margin:0 0 16px 0;font-weight:bold;">Reset your password</h1>
     <p>Hi ${escapeHtml(input.fullName)},</p>
-    <p>We received a request to reset the password for your RaheDeen Inventory account. Click the button below to choose a new password:</p>
+    <p>We received a request to reset the password for your HRM_IlhaanSq account. Click the button below to choose a new password:</p>
     <p style="margin:24px 0;">
       <a href="${input.resetUrl}" style="display:inline-block;background:#1f5d47;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Reset password →</a>
     </p>
@@ -219,7 +219,7 @@ export async function sendPasswordResetEmail(input: {
 
   return sendEmail({
     to: input.to,
-    subject: "Reset your RaheDeen password",
+    subject: "Reset your HRM_IlhaanSq password",
     html,
   });
 }

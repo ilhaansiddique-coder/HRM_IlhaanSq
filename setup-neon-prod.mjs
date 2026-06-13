@@ -52,8 +52,8 @@ async function setupNeon() {
       console.log("\n🔄 Creating workspace...");
       const tenant = await prisma.tenant.create({
         data: {
-          slug: "rahedeen-inventory",
-          name: "RaheDeen Inventory",
+          slug: "hrmilhaansq",
+          name: "HRM_IlhaanSq",
           isActive: true,
           plan: "starter",
           createdBy: user.id
@@ -73,7 +73,7 @@ async function setupNeon() {
       await prisma.businessSettings.create({
         data: {
           tenantId: tenant.id,
-          businessName: "RaheDeen Inventory",
+          businessName: "HRM_IlhaanSq",
           createdBy: user.id
         }
       });
@@ -85,7 +85,7 @@ async function setupNeon() {
       });
 
       console.log("✅ Workspace created!");
-      console.log(`   Workspace: RaheDeen Inventory`);
+      console.log(`   Workspace: HRM_IlhaanSq`);
       console.log(`   User Role: Owner`);
     }
 
@@ -95,7 +95,7 @@ async function setupNeon() {
     console.log(`\n📋 LOGIN CREDENTIALS:`);
     console.log(`   Email: elsiddique@gmail.com`);
     console.log(`   Password: 12345678`);
-    console.log(`\n🔗 Production URL: https://rahedeen-inventory-saas-j2dv368wx.vercel.app`);
+    console.log(`\n🔗 Production URL: https://hrmilhaansq-saas-j2dv368wx.vercel.app`);
     console.log(`\n⏳ Vercel deployment should be finishing now...`);
     console.log(`\n✅ Ready to login!\n`);
 

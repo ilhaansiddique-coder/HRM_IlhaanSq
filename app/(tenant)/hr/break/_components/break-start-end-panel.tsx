@@ -97,10 +97,6 @@ export function BreakStartEndPanel({
 
   function handleStart() {
     setError(null);
-    if (!note.trim()) {
-      setError("Please enter a reason for the break before starting.");
-      return;
-    }
     startTransition(async () => {
       try {
         const fd = new FormData();
@@ -191,7 +187,7 @@ export function BreakStartEndPanel({
             ) : (
               <TimerOff className="h-4 w-4" />
             )}
-            End Break
+            End Break Time
           </Button>
         </div>
       ) : (

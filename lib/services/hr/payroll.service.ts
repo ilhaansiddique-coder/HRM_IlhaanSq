@@ -71,7 +71,7 @@ function resolveAllowances(
 }
 
 /**
- * RaheDeen "terms of payment" (derived from the company salary sheet):
+ * HRM_IlhaanSq "terms of payment" (derived from the company salary sheet):
  *
  *   Gross Salary      = Basic + House Rent + Health + Education + Savings
  *                       + Daily Hand Expenses        (per-employee amounts)
@@ -131,7 +131,7 @@ export async function updateSalaryStructure(
   });
 }
 
-const STRUCTURE_NAME = "Standard Monthly Salary (RaheDeen)";
+const STRUCTURE_NAME = "Standard Monthly Salary (HRM_IlhaanSq)";
 const STRUCTURE_DESC =
   "Earnings for future payroll runs are driven by this structure's allowance rules (House Rent, Health, Education, Savings, Daily Hand). Basic is per-employee. A slot with no rule falls back to the employee's own amount. Extra duty added, advance & absence deducted at payroll-run time.";
 
@@ -170,7 +170,7 @@ function assertValidComponent(input: {
 }
 
 /**
- * RaheDeen standard salary "policy" — created idempotently. The structure
+ * HRM_IlhaanSq standard salary "policy" — created idempotently. The structure
  * starts with no components; an empty structure keeps the legacy
  * per-employee behavior. Use seedStandardAllowanceRows to add editable
  * rules. (We no longer strip the allowance codes — they're meaningful now.)

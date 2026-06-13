@@ -27,7 +27,7 @@ export type AdvanceChangeEvent = {
   employeeId?: string;
 };
 
-const KEY = "__raheDeenRealtimeBus__";
+const KEY = "__hrmIlhaanSqRealtimeBus__";
 type Glob = typeof globalThis & { [KEY]?: EventEmitter };
 
 function bus(): EventEmitter {
