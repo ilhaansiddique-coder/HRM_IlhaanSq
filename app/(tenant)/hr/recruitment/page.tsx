@@ -5,7 +5,8 @@ import { getRecruitmentStats, listApplications } from "@/lib/services/hr/recruit
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, UserPlus, GitBranch, Users, Award, ArrowRight } from "lucide-react";
+import { Briefcase, GitBranch, Users, Award, ArrowRight } from "lucide-react";
+import { NewJobPostingDialog } from "./jobs/_components/new-job-posting-dialog";
 
 export default async function RecruitmentOverviewPage() {
   const session = await requireTenant();
@@ -16,12 +17,9 @@ export default async function RecruitmentOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <div className="flex gap-2">
-          <Link href="/hr/recruitment/candidates"><Button variant="outline"><UserPlus className="h-4 w-4" />Candidates</Button></Link>
-          <Link href="/hr/recruitment/jobs"><Button><Briefcase className="h-4 w-4" />Jobs</Button></Link>
-        </div>
-      </div>
+      {/* New Job Posting form opens from the "+" button in the top bar (left of
+          the notification bell). Candidates and Jobs are now in the sidebar. */}
+      <NewJobPostingDialog />
 
       <div className="grid gap-4 sm:grid-cols-4">
         <StatCard icon={<Briefcase className="h-4 w-4" />} title="Open Jobs" value={stats.openJobs} variant="default" />

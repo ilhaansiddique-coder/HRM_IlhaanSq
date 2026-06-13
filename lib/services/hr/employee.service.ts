@@ -100,6 +100,29 @@ export async function createEmployee(
   await assertTenantOwns(tenantId, "position", [input.positionId]);
   await assertTenantOwns(tenantId, "employee", [input.managerId]);
 
+  // Employees must have a unique email AND phone within the tenant — the
+  // email becomes their login identity for the self-service portal.
+  const email = input.email.toLowerCase().trim();
+  const phone = input.phone?.trim() || null;
+  const dupe = await prisma.employee.findFirst({
+    where: {
+      tenantId,
+      OR: [{ email }, ...(phone ? [{ phone }] : [])],
+    },
+    select: { email: true, phone: true, fullName: true, empCode: true },
+  });
+  if (dupe) {
+    const who = `${dupe.fullName} (${dupe.empCode})`;
+    if (dupe.email === email) {
+      throw new Error(
+        `This email is already used by ${who}. Each employee needs a unique email — it's their login for the staff portal. Use a different email address, or edit that existing employee instead of creating a new one.`
+      );
+    }
+    throw new Error(
+      `This phone number is already used by ${who}. Use a different phone number, or update that employee's record instead of creating a duplicate.`
+    );
+  }
+
   const empCode = input.empCode || (await generateEmpCode(tenantId));
 
   // Onboarding gate: a new employee is created PENDING and suspended, so it
@@ -110,8 +133,8 @@ export async function createEmployee(
       tenantId,
       empCode,
       fullName: input.fullName,
-      email: input.email.toLowerCase().trim(),
-      phone: input.phone,
+      email,
+      phone,
       dob: input.dob ?? null,
       gender: input.gender,
       nationalId: input.nationalId,
@@ -214,5 +237,22 @@ export async function deleteEmployee(tenantId: string, id: string) {
     select: { id: true },
   });
   if (!existing) throw new Error("Employee not found");
-  return prisma.employee.delete({ where: { id } });
+
+  return prisma.$transaction([
+    prisma.leaveRequest.deleteMany({ where: { employeeId: id } }),
+    prisma.leaveBalance.deleteMany({ where: { employeeId: id } }),
+    prisma.attendanceRecord.deleteMany({ where: { employeeId: id } }),
+    prisma.breakSession.deleteMany({ where: { employeeId: id } }),
+    prisma.breakPenalty.deleteMany({ where: { employeeId: id } }),
+    prisma.employeeAdvance.deleteMany({ where: { employeeId: id } }),
+    prisma.employeeDocument.deleteMany({ where: { employeeId: id } }),
+    prisma.employeeSalary.deleteMany({ where: { employeeId: id } }),
+    prisma.enrollment.deleteMany({ where: { employeeId: id } }),
+    prisma.goal.deleteMany({ where: { employeeId: id } }),
+    prisma.review.deleteMany({
+      where: { OR: [{ employeeId: id }, { reviewerId: id }] },
+    }),
+    prisma.employee.updateMany({ where: { managerId: id }, data: { managerId: null } }),
+    prisma.employee.delete({ where: { id } }),
+  ]);
 }

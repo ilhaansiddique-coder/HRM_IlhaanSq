@@ -12,7 +12,6 @@ import Lenis from "lenis";
 const SMOOTH_SCROLL_PREFIXES = [
   "/",
   "/login",
-  "/request-demo",
   "/invite",
   "/reset-password",
   "/onboarding",

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Eye, EyeOff, Package, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,10 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(callbackUrl);
+    const session = await getSession();
+    const destination =
+      (session as any)?.isSuperAdmin ? "/tenants" : callbackUrl;
+    router.push(destination);
     router.refresh();
   }
 
@@ -140,7 +143,7 @@ export default function LoginPage() {
           <div className="mt-6 pt-6 border-t border-border/60">
             <p className="text-sm text-muted-foreground text-center">
               Don&apos;t have an account?{" "}
-              <Link href="/request-demo" className="text-primary hover:underline font-medium">
+              <Link href="/onboarding" className="text-primary hover:underline font-medium">
                 Request access
               </Link>
             </p>

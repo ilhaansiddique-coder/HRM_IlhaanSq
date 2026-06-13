@@ -17,7 +17,7 @@ const PLANS = [
       "Email support",
     ],
     cta: "Get started",
-    href: "/request-demo?plan=starter",
+    href: "/onboarding",
     highlighted: false,
   },
   {
@@ -36,7 +36,7 @@ const PLANS = [
       "Activity logs",
     ],
     cta: "Request access",
-    href: "/request-demo?plan=professional",
+    href: "/onboarding",
     highlighted: true,
   },
   {
@@ -55,7 +55,7 @@ const PLANS = [
       "Custom training",
     ],
     cta: "Contact sales",
-    href: "/request-demo?plan=enterprise",
+    href: "/onboarding",
     highlighted: false,
   },
 ];

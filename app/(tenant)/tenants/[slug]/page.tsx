@@ -90,34 +90,22 @@ export default async function TenantDetailPage({
             tenantSlug={t.slug}
             counts={{
               members: t._count.members,
-              products: t._count.products,
-              sales: t._count.sales,
-              customers: t._count.customers,
+              employees: t._count.employees,
             }}
           />
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <StatCard
           label="Members"
           value={t._count.members}
           icon={<Users className="h-4 w-4" />}
         />
         <StatCard
-          label="Products"
-          value={t._count.products}
-          icon={<Package className="h-4 w-4" />}
-        />
-        <StatCard
-          label="Sales"
-          value={t._count.sales}
-          icon={<ShoppingCart className="h-4 w-4" />}
-        />
-        <StatCard
-          label="Customers"
-          value={t._count.customers}
+          label="Employees"
+          value={t._count.employees}
           icon={<UserRound className="h-4 w-4" />}
         />
       </div>

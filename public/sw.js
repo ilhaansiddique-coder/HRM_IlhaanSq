@@ -1,10 +1,22 @@
-const CACHE_VERSION = "rahestock-pwa-v1";
+const CACHE_VERSION = "rahestock-pwa-v2";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
-const IS_LOCALHOST =
-  self.location.hostname === "localhost" ||
-  self.location.hostname === "127.0.0.1" ||
-  self.location.hostname === "::1";
+// Treat localhost AND private LAN / .local hosts as "dev origins". Next.js dev
+// chunks under /_next/static/ are NOT content-hashed, so caching them serves
+// stale code. On any dev origin the SW is a pure network pass-through; only a
+// real (public, https) production origin gets PWA caching, where /_next/static
+// filenames are content-hashed and therefore safe to cache aggressively.
+const HOSTNAME = self.location.hostname;
+const IS_DEV_ORIGIN =
+  HOSTNAME === "localhost" ||
+  HOSTNAME === "127.0.0.1" ||
+  HOSTNAME === "::1" ||
+  HOSTNAME === "0.0.0.0" ||
+  HOSTNAME.endsWith(".local") ||
+  HOSTNAME.endsWith(".localhost") ||
+  /^10\./.test(HOSTNAME) ||
+  /^192\.168\./.test(HOSTNAME) ||
+  /^172\.(1[6-9]|2\d|3[01])\./.test(HOSTNAME);
 const APP_SHELL_URLS = [
   "/",
   "/manifest.webmanifest",
@@ -34,7 +46,7 @@ const isCacheableAsset = (url) => {
 };
 
 self.addEventListener("install", (event) => {
-  if (IS_LOCALHOST) {
+  if (IS_DEV_ORIGIN) {
     event.waitUntil(self.skipWaiting());
     return;
   }
@@ -69,7 +81,7 @@ self.addEventListener("message", (event) => {
 });
 
 const networkFirst = async (request) => {
-  if (IS_LOCALHOST) {
+  if (IS_DEV_ORIGIN) {
     return fetch(request);
   }
 
@@ -94,7 +106,7 @@ const networkFirst = async (request) => {
 };
 
 const staleWhileRevalidate = async (request) => {
-  if (IS_LOCALHOST) {
+  if (IS_DEV_ORIGIN) {
     return fetch(request);
   }
 

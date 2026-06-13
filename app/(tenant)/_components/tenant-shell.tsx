@@ -1,26 +1,18 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { NavLink } from "./nav-link";
-import { NewSaleDialog } from "./new-sale-dialog";
 import { NotificationBell } from "./notification-bell";
 import { NotificationPoller } from "./notification-poller";
-import { usePathname } from "next/navigation";
+import { RealtimeProvider } from "./realtime-provider";
 import { signOut } from "next-auth/react";
 import { OptimisticNavProvider, useOptimisticNav } from "./optimistic-nav";
 import type { NotificationItem } from "@/lib/services/notifications.service";
 import {
   Home,
-  Package,
-  Warehouse,
-  ShoppingCart,
-  PackageCheck,
   Users,
-  FileText,
-  BarChart3,
-  Bell,
   Settings,
   LogOut,
   Shield,
@@ -31,6 +23,7 @@ import {
   Building2,
   ChevronDown,
   List,
+  Menu,
   Inbox,
   CheckCircle2,
   XCircle,
@@ -42,9 +35,16 @@ import {
   Target,
   UserPlus,
   GraduationCap,
+  BookOpen,
+  Award,
+  Briefcase,
+  Calendar,
+  FileText,
+  HandCoins,
   FolderLock,
   ClipboardCheck,
   Coffee,
+  Tags,
   User,
 } from "lucide-react";
 import {
@@ -69,21 +69,20 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "../dashboard/_components/date-range-picker";
-import { ProductsHeaderControls } from "../products/_components/products-header-controls";
-import { InvoicesHeaderControls } from "../invoices/_components/invoices-header-controls";
-import { InvoicesExportButton } from "../invoices/_components/invoices-export-button";
-import { ProductsActionsCluster } from "../products/_components/products-actions-cluster";
-import { InventoryHeaderControls } from "../inventory/_components/inventory-header-controls";
-import { SalesHeaderControls } from "../sales/_components/sales-header-controls";
-import { SalesCancelledToggle } from "../sales/_components/sales-cancelled-toggle";
-import { ReportsHeaderControls } from "../reports/_components/reports-header-controls";
-import { ReportsExportButton } from "../reports/_components/reports-export-button";
-import { CustomersHeaderControls } from "../customers/_components/customers-header-controls";
-import { CustomersActionsCluster } from "../customers/_components/customers-actions-cluster";
 import {
   Tooltip,
   TooltipContent,
@@ -100,36 +99,21 @@ import {
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Products", url: "/products", icon: Package },
-  { title: "Inventory", url: "/inventory", icon: Warehouse },
-  { title: "Sales", url: "/sales", icon: ShoppingCart },
-  { title: "Packaging", url: "/packaging", icon: PackageCheck },
-  { title: "Customers", url: "/customers", icon: Users },
-  { title: "Invoices", url: "/invoices", icon: FileText },
-  { title: "Reports", url: "/reports", icon: BarChart3 },
-  { title: "Alerts", url: "/alerts", icon: Bell },
 ];
 
 // Mobile bottom-nav entries — shown to every authenticated tenant user
-// regardless of role. Order below matches the spec the user provided
-// (deduplicated across the three reference screenshots). Admin gets
-// appended for owner / admin / superadmin roles below.
+// regardless of role. Admin gets appended for owner / admin / superadmin
+// roles below.
 const baseBottomNavItems = [
   { label: "Dashboard", to: "/dashboard", icon: Home },
-  { label: "Products", to: "/products", icon: Package },
-  { label: "Inventory", to: "/inventory", icon: Warehouse },
-  { label: "Sales", to: "/sales", icon: ShoppingCart },
-  { label: "Packaging", to: "/packaging", icon: PackageCheck },
-  { label: "Customers", to: "/customers", icon: Users },
-  { label: "Reports", to: "/reports", icon: BarChart3 },
-  { label: "Invoices", to: "/invoices", icon: FileText },
-  { label: "Alerts", to: "/alerts", icon: Bell },
+  { label: "HR", to: "/hr", icon: UserCog },
   { label: "Profile", to: "/profile", icon: User },
   { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 export function TenantShell({
   businessName,
+  tenantId,
   userId,
   userName,
   userEmail,
@@ -141,6 +125,7 @@ export function TenantShell({
   children,
 }: {
   businessName: string;
+  tenantId: string;
   userId: string;
   userName: string;
   userEmail: string;
@@ -171,11 +156,18 @@ export function TenantShell({
               role={role}
               notifications={notifications}
             />
-            <main className="flex-1 p-4 nav-mb-safe lg:p-6 min-w-0">{children}</main>
+            <main
+              className={`flex-1 p-4 lg:p-6 min-w-0 ${
+                role === "employee" ? "nav-mb-safe-tall" : "nav-mb-safe"
+              }`}
+            >
+              {children}
+            </main>
           </div>
         </div>
 
         <MobileBottomNav role={role} isSuperAdmin={isSuperAdmin} />
+        <RealtimeProvider tenantId={tenantId} />
         <NotificationPoller />
       </SidebarProvider>
     </OptimisticNavProvider>
@@ -193,11 +185,14 @@ function AppSidebar({
   isSuperAdmin: boolean;
   pendingTenantCount: number;
 }) {
-  const { state, toggleSidebar } = useSidebar();
+  const { state, toggleSidebar, isMobile } = useSidebar();
   const { activePath: pathname } = useOptimisticNav();
-  const isCollapsed = state === "collapsed";
+  // On mobile the sidebar is a full-width drawer — never render the icon-only
+  // collapsed layout there; always show the full menu with labels.
+  const isCollapsed = !isMobile && state === "collapsed";
 
   const isAdmin = role === "owner" || role === "admin" || role === "superadmin";
+  const isEmployee = role === "employee";
   const isRouteActive = (path: string) =>
     pathname === path || pathname.startsWith(`${path}/`);
   const isInTenantsAdmin = pathname.startsWith("/tenants");
@@ -205,10 +200,91 @@ function AppSidebar({
   const isInHr = pathname.startsWith("/hr");
   const [hrOpen, setHrOpen] = useState(isInHr);
 
+  // On mobile, open the top-level groups by default so every menu item is
+  // visible openly in the drawer. Desktop keeps them collapsed unless you're
+  // currently inside that section.
+  useEffect(() => {
+    if (isMobile) {
+      setHrOpen(true);
+      setTenantsOpen(true);
+    }
+  }, [isMobile]);
+
   const navClass = (active: boolean) =>
     active
       ? "bg-primary text-primary-foreground shadow-sm"
       : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground";
+
+  // Employee portal: a stripped sidebar with ONLY the employee's own
+  // self-service surface — Overview, Attendance, Break Time.
+  if (isEmployee) {
+    const employeeMenu = [
+      { title: "Overview", url: "/employee", icon: Home },
+      { title: "Attendance", url: "/hr/attendance", icon: CalendarClock },
+      { title: "Break Time", url: "/hr/break", icon: Coffee },
+      { title: "Payslips", url: "/employee/payslips", icon: Wallet },
+    ];
+    return (
+      <Sidebar
+        data-lenis-prevent
+        className="border-r border-sidebar-border/70 bg-sidebar/95"
+        collapsible="icon"
+      >
+        <SidebarHeader className="px-3 py-3 group-data-[collapsible=icon]:px-2">
+          <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:flex-col">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+              {businessName.charAt(0).toUpperCase()}
+            </div>
+            {!isCollapsed && (
+              <div className="leading-tight min-w-0 flex-1">
+                <p className="text-[1rem] font-semibold text-sidebar-foreground leading-tight truncate">
+                  {businessName}
+                </p>
+                <p className="text-[11px] text-muted-foreground">Employee</p>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              aria-label={isCollapsed ? "Maximize sidebar" : "Minimize sidebar"}
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-sidebar-border/70 text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/70"
+            >
+              <PanelLeft
+                className={`h-[18px] w-[18px] transition-transform ${
+                  isCollapsed ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {employeeMenu.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isRouteActive(item.url)}
+                      tooltip={isCollapsed ? item.title : undefined}
+                      className={navClass(isRouteActive(item.url))}
+                    >
+                      <NavLink href={item.url}>
+                        <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center transition-colors">
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          {!isCollapsed && <span>{item.title}</span>}
+                        </span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar
@@ -271,120 +347,109 @@ function AppSidebar({
                 </SidebarMenuItem>
               ))}
 
-              {/* HR Module — collapsible */}
-              <Collapsible open={hrOpen} onOpenChange={setHrOpen}>
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      isActive={isInHr}
-                      tooltip={isCollapsed ? "HR" : undefined}
-                      className={navClass(isInHr)}
-                    >
-                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center w-full">
-                        <UserCog className="h-5 w-5 flex-shrink-0" />
-                        {!isCollapsed && (
-                          <>
-                            <span>HR</span>
-                            <ChevronDown
-                              className={`h-4 w-4 ml-auto transition-transform ${
-                                hrOpen ? "rotate-180" : ""
-                              }`}
-                            />
-                          </>
-                        )}
-                      </span>
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  {!isCollapsed && (
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        <TenantSubLink href="/hr" icon={<Home className="h-4 w-4" />} label="Overview" active={pathname === "/hr"} />
-                        <TenantSubLink href="/hr/employees" icon={<Users className="h-4 w-4" />} label="Employees" active={pathname.startsWith("/hr/employees")} />
-                        <TenantSubLink href="/hr/departments" icon={<Building2 className="h-4 w-4" />} label="Departments" active={pathname.startsWith("/hr/departments")} />
-                        <TenantSubLink href="/hr/positions" icon={<ClipboardCheck className="h-4 w-4" />} label="Positions" active={pathname.startsWith("/hr/positions")} />
-                        <TenantSubLink href="/hr/attendance" icon={<CalendarClock className="h-4 w-4" />} label="Attendance" active={pathname.startsWith("/hr/attendance")} />
-                        <TenantSubLink href="/hr/break" icon={<Coffee className="h-4 w-4" />} label="Break Time" active={pathname.startsWith("/hr/break")} />
-                        <TenantSubLink href="/hr/leave" icon={<CalendarDays className="h-4 w-4" />} label="Leave" active={pathname.startsWith("/hr/leave")} />
-                        <TenantSubLink href="/hr/payroll" icon={<Wallet className="h-4 w-4" />} label="Payroll" active={pathname.startsWith("/hr/payroll")} />
-                        <TenantSubLink href="/hr/performance" icon={<Target className="h-4 w-4" />} label="Performance" active={pathname.startsWith("/hr/performance")} />
-                        <TenantSubLink href="/hr/recruitment" icon={<UserPlus className="h-4 w-4" />} label="Recruitment" active={pathname.startsWith("/hr/recruitment")} />
-                        <TenantSubLink href="/hr/learning" icon={<GraduationCap className="h-4 w-4" />} label="Learning" active={pathname.startsWith("/hr/learning")} />
-                        <TenantSubLink href="/hr/documents" icon={<FolderLock className="h-4 w-4" />} label="Documents" active={pathname.startsWith("/hr/documents")} />
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  )}
-                </SidebarMenuItem>
-              </Collapsible>
+              {/* HR Module — inline accordion when expanded, flyout dropdown
+                  when the sidebar is collapsed to icons. */}
+              <CollapsibleNavGroup
+                icon={UserCog}
+                label="HR"
+                isActive={isInHr}
+                isCollapsed={isCollapsed}
+                open={hrOpen}
+                onOpenChange={setHrOpen}
+                triggerClassName={navClass(isInHr)}
+                items={[
+                  { href: "/hr", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr" },
+                  { href: "/hr/employees", icon: <Users className="h-4 w-4" />, label: "Employees", active: pathname.startsWith("/hr/employees") },
+                  { href: "/hr/departments", icon: <Building2 className="h-4 w-4" />, label: "Departments", active: pathname.startsWith("/hr/departments") },
+                  { href: "/hr/positions", icon: <ClipboardCheck className="h-4 w-4" />, label: "Positions", active: pathname.startsWith("/hr/positions") },
+                  { href: "/hr/attendance", icon: <CalendarClock className="h-4 w-4" />, label: "Attendance", active: pathname.startsWith("/hr/attendance") },
+                  { href: "/hr/break", icon: <Coffee className="h-4 w-4" />, label: "Break Time", active: pathname.startsWith("/hr/break") },
+                  {
+                    href: "/hr/leave",
+                    icon: <CalendarDays className="h-4 w-4" />,
+                    label: "Leave",
+                    active: pathname.startsWith("/hr/leave"),
+                    children: [
+                      { href: "/hr/leave", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/leave" },
+                      { href: "/hr/leave/types", icon: <Settings className="h-4 w-4" />, label: "Manage Leave Types", active: pathname.startsWith("/hr/leave/types") },
+                    ],
+                  },
+                  {
+                    href: "/hr/payroll",
+                    icon: <Wallet className="h-4 w-4" />,
+                    label: "Payroll",
+                    active: pathname.startsWith("/hr/payroll"),
+                    children: [
+                      { href: "/hr/payroll", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/payroll" },
+                      { href: "/hr/payroll/runs", icon: <FileText className="h-4 w-4" />, label: "Run Payroll", active: pathname.startsWith("/hr/payroll/runs") },
+                      { href: "/hr/payroll/advances", icon: <HandCoins className="h-4 w-4" />, label: "Advances", active: pathname.startsWith("/hr/payroll/advances") },
+                    ],
+                  },
+                  {
+                    href: "/hr/performance",
+                    icon: <Target className="h-4 w-4" />,
+                    label: "Performance",
+                    active: pathname.startsWith("/hr/performance"),
+                    children: [
+                      { href: "/hr/performance", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/performance" },
+                      { href: "/hr/performance/cycles", icon: <Calendar className="h-4 w-4" />, label: "Cycles", active: pathname.startsWith("/hr/performance/cycles") },
+                      { href: "/hr/performance/goals", icon: <Target className="h-4 w-4" />, label: "Goals", active: pathname.startsWith("/hr/performance/goals") },
+                    ],
+                  },
+                  {
+                    href: "/hr/recruitment",
+                    icon: <UserPlus className="h-4 w-4" />,
+                    label: "Recruitment",
+                    active: pathname.startsWith("/hr/recruitment"),
+                    children: [
+                      { href: "/hr/recruitment", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/recruitment" },
+                      { href: "/hr/recruitment/jobs", icon: <Briefcase className="h-4 w-4" />, label: "Jobs", active: pathname.startsWith("/hr/recruitment/jobs") },
+                      { href: "/hr/recruitment/candidates", icon: <Users className="h-4 w-4" />, label: "Candidates", active: pathname.startsWith("/hr/recruitment/candidates") },
+                    ],
+                  },
+                  {
+                    href: "/hr/learning",
+                    icon: <GraduationCap className="h-4 w-4" />,
+                    label: "Learning",
+                    active: pathname.startsWith("/hr/learning"),
+                    children: [
+                      { href: "/hr/learning", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/learning" },
+                      { href: "/hr/learning/courses", icon: <BookOpen className="h-4 w-4" />, label: "Courses", active: pathname.startsWith("/hr/learning/courses") },
+                      { href: "/hr/learning/enrollments", icon: <Award className="h-4 w-4" />, label: "Enrollments", active: pathname.startsWith("/hr/learning/enrollments") },
+                    ],
+                  },
+                  {
+                    href: "/hr/documents",
+                    icon: <FolderLock className="h-4 w-4" />,
+                    label: "Documents",
+                    active: pathname.startsWith("/hr/documents"),
+                    children: [
+                      { href: "/hr/documents", icon: <FolderLock className="h-4 w-4" />, label: "All Documents", active: pathname === "/hr/documents" },
+                      { href: "/hr/documents/categories", icon: <Tags className="h-4 w-4" />, label: "Categories", active: pathname.startsWith("/hr/documents/categories") },
+                    ],
+                  },
+                ]}
+              />
 
               {/* SUPER ADMIN ONLY: Tenants management */}
               {isSuperAdmin && (
-                <Collapsible open={tenantsOpen} onOpenChange={setTenantsOpen}>
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        isActive={isInTenantsAdmin}
-                        tooltip={isCollapsed ? "Tenants" : undefined}
-                        className={navClass(isInTenantsAdmin)}
-                      >
-                        <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center w-full">
-                          <Building2 className="h-5 w-5 flex-shrink-0" />
-                          {!isCollapsed && (
-                            <>
-                              <span>Tenants</span>
-                              {pendingTenantCount > 0 && (
-                                <Badge variant="default" className="ml-auto h-5 px-1.5 text-[10px]">
-                                  {pendingTenantCount}
-                                </Badge>
-                              )}
-                              <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  tenantsOpen ? "rotate-180" : ""
-                                } ${pendingTenantCount > 0 ? "" : "ml-auto"}`}
-                              />
-                            </>
-                          )}
-                        </span>
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    {!isCollapsed && (
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          <TenantSubLink
-                            href="/tenants"
-                            icon={<List className="h-4 w-4" />}
-                            label="All Tenants"
-                            active={pathname === "/tenants"}
-                          />
-                          <TenantSubLink
-                            href="/tenants/requests"
-                            icon={<Inbox className="h-4 w-4" />}
-                            label="Requests"
-                            active={pathname === "/tenants/requests"}
-                            badge={pendingTenantCount > 0 ? pendingTenantCount : undefined}
-                          />
-                          <TenantSubLink
-                            href="/tenants/approved"
-                            icon={<CheckCircle2 className="h-4 w-4" />}
-                            label="Approved"
-                            active={pathname === "/tenants/approved"}
-                          />
-                          <TenantSubLink
-                            href="/tenants/declined"
-                            icon={<XCircle className="h-4 w-4" />}
-                            label="Declined"
-                            active={pathname === "/tenants/declined"}
-                          />
-                          <TenantSubLink
-                            href="/tenants/create"
-                            icon={<Plus className="h-4 w-4" />}
-                            label="Create Tenant"
-                            active={pathname === "/tenants/create"}
-                          />
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    )}
-                  </SidebarMenuItem>
-                </Collapsible>
+                <CollapsibleNavGroup
+                  icon={Building2}
+                  label="Tenants"
+                  isActive={isInTenantsAdmin}
+                  isCollapsed={isCollapsed}
+                  open={tenantsOpen}
+                  onOpenChange={setTenantsOpen}
+                  triggerClassName={navClass(isInTenantsAdmin)}
+                  badge={pendingTenantCount > 0 ? pendingTenantCount : undefined}
+                  items={[
+                    { href: "/tenants", icon: <List className="h-4 w-4" />, label: "All Tenants", active: pathname === "/tenants" },
+                    { href: "/tenants/requests", icon: <Inbox className="h-4 w-4" />, label: "Requests", active: pathname === "/tenants/requests", badge: pendingTenantCount > 0 ? pendingTenantCount : undefined },
+                    { href: "/tenants/approved", icon: <CheckCircle2 className="h-4 w-4" />, label: "Approved", active: pathname === "/tenants/approved" },
+                    { href: "/tenants/declined", icon: <XCircle className="h-4 w-4" />, label: "Declined", active: pathname === "/tenants/declined" },
+                    { href: "/tenants/create", icon: <Plus className="h-4 w-4" />, label: "Create Tenant", active: pathname === "/tenants/create" },
+                  ]}
+                />
               )}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -469,155 +534,30 @@ function TopBar({
     .join("")
     .toUpperCase();
 
-  // Show page-specific controls in the TopBar's left slot:
-  //   /dashboard → DateRangePicker
-  //   /products  → search input + stock filter (URL-synced with ProductList)
-  //   /inventory → search input + stock filter (URL-synced with InventoryFilter)
-  // Right cluster on /products and /inventory: Import / Export / Adjust Stock.
-  const { activePath } = useOptimisticNav();
-  const isDashboard = activePath === "/dashboard";
-  const isProducts =
-    activePath === "/products" || activePath.startsWith("/products/");
-  const isInventory =
-    activePath === "/inventory" || activePath.startsWith("/inventory/");
-  const isSales =
-    activePath === "/sales" || activePath.startsWith("/sales/");
-  const isInvoices =
-    activePath === "/invoices" || activePath.startsWith("/invoices/");
-  const isReports =
-    activePath === "/reports" || activePath.startsWith("/reports/");
-  const isCustomers =
-    activePath === "/customers" || activePath.startsWith("/customers/");
-  // /products and /inventory share the same right-side actions cluster
-  // (Import, Export, Adjust Stock). Both pages care about the same product
-  // operations.
-  const showProductActions = isProducts || isInventory;
-
-  // Cart icon in the TopBar opens the New Sale dialog rather than
-  // navigating to /sales. The dialog is rendered alongside the header
-  // so the Tooltip+Button composition stays clean.
-  const [newSaleOpen, setNewSaleOpen] = useState(false);
-
   return (
     <TooltipProvider delayDuration={150}>
       <header className="sticky top-0 z-30 hidden lg:flex items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 py-3 backdrop-blur lg:px-6">
-        {/* Left — page-specific controls. Hidden on mobile because each
-            page renders its own mobile header below.
-              /dashboard → DateRangePicker
-              /products  → ProductsHeaderControls (search + stock filter) */}
+        {/* Left — the date-range picker. Shown in the same TopBar slot on
+            every tenant page (not just the dashboard) so the date filter is
+            available everywhere. Hidden on mobile because each page renders
+            its own mobile header below. */}
         <div className="flex flex-1 items-center justify-start">
-          {isDashboard && (
-            <div className="hidden lg:block">
-              <DateRangePicker />
-            </div>
-          )}
-          {isProducts && (
-            <div className="hidden lg:block">
-              <ProductsHeaderControls />
-            </div>
-          )}
-          {isInventory && (
-            <div className="hidden lg:block">
-              <InventoryHeaderControls />
-            </div>
-          )}
-          {isSales && (
-            <div className="hidden lg:block">
-              <SalesHeaderControls />
-            </div>
-          )}
-          {isInvoices && (
-            <div className="hidden lg:block">
-              <InvoicesHeaderControls />
-            </div>
-          )}
-          {isReports && (
-            <div className="hidden lg:block">
-              <ReportsHeaderControls />
-            </div>
-          )}
-          {isCustomers && (
-            <div className="hidden lg:block">
-              <CustomersHeaderControls />
-            </div>
-          )}
+          <div className="hidden lg:block">
+            <DateRangePicker />
+          </div>
         </div>
+
+        {/* Page-injected actions (e.g. the Documents "+" upload button) portal
+            into this slot so they appear just left of the notification bell. */}
+        <div id="topbar-action-slot" className="flex items-center gap-1.5" />
 
         {/* Notifications bell — opens a dropdown of recent activity */}
         <NotificationBell notifications={notifications} />
 
-        {/* Invoices export — popover with CSV / PDF options. Sits in
-            the right cluster (after the bell) per the page convention,
-            so its icon spacing matches the bell + new-sale + theme +
-            user buttons that follow. */}
-        {isInvoices && (
-          <div className="hidden lg:block">
-            <InvoicesExportButton />
-          </div>
-        )}
-
-        {/* Reports export — Excel download of the current filtered view.
-            Sits alongside InvoicesExportButton in the right cluster so
-            both pages keep the same icon ordering. */}
-        {isReports && (
-          <div className="hidden lg:block">
-            <ReportsExportButton />
-          </div>
-        )}
-
-        {/* Cancelled-rows toggle — only meaningful on /sales, sits
-            between the bell and the New Sale (+) button. URL-synced
-            with the in-page sales list via the `cancelled` query param. */}
-        {isSales && (
-          <div className="hidden lg:block">
-            <SalesCancelledToggle />
-          </div>
-        )}
-
-        {/* Customers actions cluster — Export / Import / Refresh / +.
-            The `+` here adds a customer (via ?action=add URL flag),
-            replacing the generic New Sale shortcut on this page. */}
-        {isCustomers && (
-          <div className="hidden lg:block">
-            <CustomersActionsCluster />
-          </div>
-        )}
-
-        {/* Page-aware action cluster:
-              /products & /inventory → Import / Export / Adjust Stock
-              /reports*              → none (reports are read-only;
-                                       the New Sale shortcut is noise
-                                       for an analytics surface)
-              /customers             → none (CustomersActionsCluster
-                                       above provides + Add Customer)
-              Elsewhere              → New Sale (cart)
-            Reports / Customers / Add-Product shortcuts were removed —
-            those destinations are reachable from the sidebar, and the
-            global TopBar should stay focused on the current page. */}
-        {showProductActions ? (
-          <ProductsActionsCluster />
-        ) : isReports || isCustomers ? null : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setNewSaleOpen(true)}
-                className="h-9 w-9 rounded-lg border-border/60 bg-background/80"
-                aria-label="New Sale"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">New Sale</TooltipContent>
-          </Tooltip>
-        )}
-
         {/* Theme toggle — single click flips between Light ("light")
             and Dark ("night"). Sun icon shown while in dark mode (a
             click brings the sun back), Moon shown while in light mode
-            (a click summons night). Replaces the previous HoverCard
-            picker. */}
+            (a click summons night). */}
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -678,10 +618,6 @@ function TopBar({
           <span className="lg:hidden">Sign Out</span>
         </button>
       </header>
-
-      {/* New Sale dialog — controlled by the cart icon in the header */}
-      <NewSaleDialog open={newSaleOpen} onOpenChange={setNewSaleOpen} />
-
     </TooltipProvider>
   );
 }
@@ -705,20 +641,29 @@ function MobileBottomNav({
   isSuperAdmin: boolean;
 }) {
   const { activePath: pathname } = useOptimisticNav();
+  const { setOpenMobile } = useSidebar();
   const [show, setShow] = useState(true);
 
   // Build the visible nav set per role:
-  //   - everyone: Dashboard, Products, Sales, Customers, Reports
-  //   - super admin: + Tenants (cross-tenant management)
+  //   - everyone: Dashboard, HR, Profile, Settings
   //   - any admin (owner / admin / super admin): + Admin
-  // (Tenants is intentionally NOT in the mobile bar per the spec —
-  //  super admins reach it via the desktop sidebar.)
+  // (Tenants is intentionally NOT in the mobile bar — super admins
+  //  reach it via the desktop sidebar.)
   const isAdmin =
     role === "owner" || role === "admin" || role === "superadmin" || isSuperAdmin;
-  const items = [
-    ...baseBottomNavItems,
-    ...(isAdmin ? [{ label: "Admin", to: "/admin", icon: Shield }] : []),
-  ];
+  const items =
+    role === "employee"
+      ? [
+          { label: "Overview", to: "/employee", icon: Home },
+          { label: "Attendance", to: "/hr/attendance", icon: CalendarClock },
+          { label: "Break", to: "/hr/break", icon: Coffee },
+          { label: "Payslips", to: "/employee/payslips", icon: Wallet },
+          { label: "Profile", to: "/profile", icon: User },
+        ]
+      : [
+          ...baseBottomNavItems,
+          ...(isAdmin ? [{ label: "Admin", to: "/admin", icon: Shield }] : []),
+        ];
 
   useEffect(() => {
     let lastY = window.scrollY;
@@ -747,6 +692,17 @@ function MobileBottomNav({
       }`}
     >
       <nav className="flex items-center gap-2 overflow-x-auto border-t border-border/70 bg-card px-3 py-1.5 shadow-[0_-6px_20px_-16px_rgba(0,0,0,0.4)] scrollbar-hide">
+        {/* Opens the full sidebar menu as a drawer — gives mobile users the
+            complete desktop menu (HR sub-items, Settings, Admin, Tenants…). */}
+        <button
+          type="button"
+          onClick={() => setOpenMobile(true)}
+          aria-label="Open menu"
+          className="flex min-w-[64px] flex-col items-center gap-0.5 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground flex-shrink-0"
+        >
+          <Menu className="h-5 w-5" />
+          <span>Menu</span>
+        </button>
         {items.map(({ label, to, icon: Icon }) => {
           const active = pathname === to || pathname.startsWith(`${to}/`);
           return (
@@ -774,6 +730,241 @@ function MobileBottomNav({
         </button>
       </nav>
     </div>
+  );
+}
+
+type NavSubItem = {
+  href: string;
+  icon: ReactNode;
+  label: string;
+  active: boolean;
+  badge?: number;
+  // Optional third level: a sub-link that itself owns sub-links (e.g.
+  // HR → Documents → Categories). Rendered as a nested accordion when the
+  // sidebar is expanded, and a nested dropdown sub-menu in the collapsed flyout.
+  children?: NavSubItem[];
+};
+
+// A top-level sidebar entry that owns a set of sub-links (HR, Tenants…).
+//
+// When the sidebar is EXPANDED it renders the familiar inline accordion.
+// When the sidebar is COLLAPSED to icons, an inline accordion is useless —
+// the sidebar's own CSS hides `SidebarMenuSub` (group-data-[collapsible=icon]:
+// hidden), so clicking the trigger toggled invisible content and the menu
+// appeared "dead". In that state we instead anchor the sub-links to the icon
+// as a flyout dropdown, which is the standard shadcn collapsed-sidebar pattern.
+function CollapsibleNavGroup({
+  icon: Icon,
+  label,
+  isActive,
+  isCollapsed,
+  open,
+  onOpenChange,
+  triggerClassName,
+  badge,
+  items,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  isActive: boolean;
+  isCollapsed: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  triggerClassName: string;
+  badge?: number;
+  items: NavSubItem[];
+}) {
+  // Collapsed (icon-only) sidebar: the sub-links can't fit inside the 4rem rail,
+  // so clicking the icon opens them as a flyout panel anchored to the icon. It
+  // uses the sidebar color tokens (bg-sidebar / border-sidebar-border / sidebar-
+  // accent) so it matches the rail in BOTH themes — dark in night mode, light in
+  // light mode — instead of looking like a generic popover.
+  if (isCollapsed) {
+    return (
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              isActive={isActive}
+              tooltip={label}
+              className={triggerClassName}
+            >
+              <span className="flex w-full items-center justify-center group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0">
+                <Icon className="h-5 w-5 flex-shrink-0" />
+              </span>
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="right"
+            align="start"
+            sideOffset={6}
+            className="min-w-52 border-sidebar-border/70 bg-sidebar text-sidebar-foreground shadow-xl"
+          >
+            <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {label}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-sidebar-border/70" />
+            {items.map((item) =>
+              item.children && item.children.length > 0 ? (
+                <DropdownMenuSub key={item.href}>
+                  <DropdownMenuSubTrigger
+                    className={
+                      item.active
+                        ? "cursor-pointer bg-primary/15 text-primary focus:bg-primary/15 focus:text-primary data-[state=open]:bg-primary/15 data-[state=open]:text-primary"
+                        : "cursor-pointer text-sidebar-foreground/85 focus:bg-sidebar-accent/70 focus:text-sidebar-foreground data-[state=open]:bg-sidebar-accent/70 data-[state=open]:text-sidebar-foreground"
+                    }
+                  >
+                    <span className="flex w-full items-center gap-2.5 text-[0.8125rem] [&>svg]:h-4 [&>svg]:w-4 [&>svg]:flex-shrink-0">
+                      {item.icon}
+                      <span className="truncate">{item.label}</span>
+                    </span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="min-w-44 border-sidebar-border/70 bg-sidebar text-sidebar-foreground shadow-xl">
+                    {item.children.map((child) => (
+                      <DropdownMenuItem
+                        key={child.href}
+                        asChild
+                        className={
+                          child.active
+                            ? "cursor-pointer bg-primary/15 text-primary focus:bg-primary/15 focus:text-primary"
+                            : "cursor-pointer text-sidebar-foreground/85 focus:bg-sidebar-accent/70 focus:text-sidebar-foreground"
+                        }
+                      >
+                        <NavLink href={child.href}>
+                          <span className="flex w-full items-center gap-2.5 text-[0.8125rem] [&>svg]:h-4 [&>svg]:w-4 [&>svg]:flex-shrink-0">
+                            {child.icon}
+                            <span className="truncate">{child.label}</span>
+                          </span>
+                        </NavLink>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              ) : (
+                <DropdownMenuItem
+                  key={item.href}
+                  asChild
+                  className={
+                    item.active
+                      ? "cursor-pointer bg-primary/15 text-primary focus:bg-primary/15 focus:text-primary"
+                      : "cursor-pointer text-sidebar-foreground/85 focus:bg-sidebar-accent/70 focus:text-sidebar-foreground"
+                  }
+                >
+                  <NavLink href={item.href}>
+                    <span className="flex w-full items-center gap-2.5 text-[0.8125rem] [&>svg]:h-4 [&>svg]:w-4 [&>svg]:flex-shrink-0">
+                      {item.icon}
+                      <span className="truncate">{item.label}</span>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <Badge variant="default" className="ml-auto h-5 px-1.5 text-[10px]">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </span>
+                  </NavLink>
+                </DropdownMenuItem>
+              )
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    );
+  }
+
+  const hasBadge = badge !== undefined && badge > 0;
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton isActive={isActive} className={triggerClassName}>
+            <span className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium">
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              <span>{label}</span>
+              {hasBadge && (
+                <Badge variant="default" className="ml-auto h-5 px-1.5 text-[10px]">
+                  {badge}
+                </Badge>
+              )}
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""} ${
+                  hasBadge ? "" : "ml-auto"
+                }`}
+              />
+            </span>
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {items.map((item) =>
+              item.children && item.children.length > 0 ? (
+                <TenantSubGroup key={item.href} item={item} />
+              ) : (
+                <TenantSubLink
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={item.label}
+                  active={item.active}
+                  badge={item.badge}
+                />
+              )
+            )}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
+
+// A second-level sub-link that owns its own children (e.g. Documents →
+// Categories). Rendered inside the expanded sidebar accordion as a nested
+// collapsible; defaults to open whenever the current route is inside it.
+function TenantSubGroup({ item }: { item: NavSubItem }) {
+  const children = item.children ?? [];
+  const childActive = children.some((c) => c.active);
+  const [open, setOpen] = useState(item.active || childActive);
+
+  return (
+    <SidebarMenuSubItem>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuSubButton
+            asChild
+            isActive={item.active}
+            className={
+              item.active
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+            }
+          >
+            <button type="button">
+              <span className="flex w-full items-center gap-2.5 text-[0.8125rem] [&>svg]:!h-[18px] [&>svg]:!w-[18px] [&>svg]:flex-shrink-0">
+                {item.icon}
+                <span className="truncate">{item.label}</span>
+                <ChevronDown
+                  className={`ml-auto h-3.5 w-3.5 flex-shrink-0 transition-transform ${
+                    open ? "rotate-180" : ""
+                  }`}
+                />
+              </span>
+            </button>
+          </SidebarMenuSubButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {children.map((child) => (
+              <TenantSubLink
+                key={child.href}
+                href={child.href}
+                icon={child.icon}
+                label={child.label}
+                active={child.active}
+                badge={child.badge}
+              />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarMenuSubItem>
   );
 }
 

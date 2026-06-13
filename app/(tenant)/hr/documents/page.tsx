@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import {
   listDocuments,
@@ -10,20 +9,8 @@ import { listEmployees } from "@/lib/services/hr/employee.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   FolderLock,
-  Plus,
-  Settings,
   CheckCircle2,
   AlertTriangle,
   Clock,
@@ -33,11 +20,10 @@ import {
   FileText,
 } from "lucide-react";
 import {
-  createDocumentAction,
   signDocumentAction,
   deleteDocumentAction,
 } from "../actions-phase2";
-import { DocumentUploadField } from "./_components/document-upload-field";
+import { UploadDocumentDialog } from "./_components/upload-document-dialog";
 
 export default async function DocumentsOverviewPage() {
   const session = await requireTenant();
@@ -50,9 +36,13 @@ export default async function DocumentsOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <Link href="/hr/documents/categories"><Button variant="outline"><Settings className="h-4 w-4" />Categories</Button></Link>
-      </div>
+      {/* The upload form lives in a dialog opened from the "+" button in the top
+          bar (left of the notification bell). This portals its trigger + dialog
+          into the TopBar and renders nothing inline here. */}
+      <UploadDocumentDialog
+        employees={employees.map((e) => ({ id: e.id, fullName: e.fullName }))}
+        categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+      />
 
       <div className="grid gap-4 sm:grid-cols-4">
         <StatCard icon={<FileText className="h-4 w-4" />} title="Total Documents" value={stats.total} />
@@ -61,8 +51,7 @@ export default async function DocumentsOverviewPage() {
         <StatCard icon={<AlertTriangle className="h-4 w-4" />} title="Expired" value={stats.expired} variant="destructive" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card className="border-border/70 bg-card/80">
+      <Card className="border-border/70 bg-card/80">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><FolderLock className="h-5 w-5 text-primary" />All Documents</CardTitle>
             <CardDescription>{documents.length} on file</CardDescription>
@@ -71,7 +60,7 @@ export default async function DocumentsOverviewPage() {
             {documents.length === 0 ? (
               <div className="text-center py-8">
                 <FolderLock className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No documents yet — upload one on the right →</p>
+                <p className="text-sm text-muted-foreground">No documents yet — click the + button in the top bar to upload.</p>
               </div>
             ) : (
               documents.map((d) => {
@@ -122,48 +111,6 @@ export default async function DocumentsOverviewPage() {
             )}
           </CardContent>
         </Card>
-
-        <Card className="border-border/70 bg-card/80 h-fit">
-          <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="h-4 w-4 text-primary" />Upload Document</CardTitle></CardHeader>
-          <CardContent>
-            <form action={createDocumentAction} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Employee *</Label>
-                <Select name="employeeId" required>
-                  <SelectTrigger><SelectValue placeholder="Select employee..." /></SelectTrigger>
-                  <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.id}>{e.fullName}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Category</Label>
-                <Select name="categoryId">
-                  <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                  <SelectContent>
-                    {categories.length === 0 ? <SelectItem value="_none" disabled>No categories</SelectItem> : categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs">Document name *</Label>
-                <Input id="name" name="name" required placeholder="Employment Contract" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Document file</Label>
-                <DocumentUploadField name="fileUrl" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="expiresAt" className="text-xs">Expiry date</Label>
-                <Input id="expiresAt" name="expiresAt" type="date" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="description" className="text-xs">Description</Label>
-                <Textarea id="description" name="description" rows={2} />
-              </div>
-              <Button type="submit" className="w-full"><Plus className="h-4 w-4" />Upload</Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="rounded-lg border border-warning/35 bg-warning/5 p-3 text-xs text-muted-foreground">
         <strong className="text-warning">Note:</strong> Files (PDF, Word, Excel, or image · up to 15MB) are uploaded to secure

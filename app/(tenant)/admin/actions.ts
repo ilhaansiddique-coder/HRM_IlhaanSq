@@ -6,15 +6,8 @@ import {
   adminDeleteUser,
   adminUpdateUser,
   setRolePermission,
-  upsertCourierProvider,
-  permanentDeleteProduct,
-  permanentDeleteSale,
-  permanentDeleteCustomer,
 } from "@/lib/services/admin-users.service";
-import {
-  updateBusinessSettings,
-  updateSystemSettings,
-} from "@/lib/services/settings.service";
+import { updateSystemSettings } from "@/lib/services/settings.service";
 import { exportTenantData } from "@/lib/services/backup.service";
 import {
   approveRequest,
@@ -22,18 +15,14 @@ import {
   requestChanges,
   getApprovalDetail,
   approveJobWithEdits,
+  approveWithPayloadEdits,
+  approveOnboardingDirect,
   type ApprovalDetail,
 } from "@/lib/services/approvals.service";
 import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "@/lib/services/notifications-center.service";
-import {
-  invalidateProductCache,
-  invalidateSaleCache,
-  invalidateCustomerCache,
-  invalidateSettingsCache,
-} from "@/lib/cache";
 import { revalidatePath } from "next/cache";
 
 function ensureAdmin(role: string | null) {
@@ -110,113 +99,6 @@ export async function saveSystemSettingsAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
-// ─── Courier Provider ───────────────────────────────────────
-
-export async function saveCourierProviderAction(formData: FormData) {
-  const session = await requireTenant();
-  ensureAdmin(session.role);
-
-  await upsertCourierProvider(session.tenantId, {
-    provider: formData.get("provider") as string,
-    isEnabled: formData.get("isEnabled") === "true",
-    apiKey: (formData.get("apiKey") as string) || undefined,
-    secretKey: (formData.get("secretKey") as string) || undefined,
-    autoRefresh: formData.get("autoRefresh") === "true",
-    refreshInterval: (formData.get("refreshInterval") as string) || "hourly",
-  });
-  revalidatePath("/admin");
-}
-
-// ─── Trash (permanent delete) ───────────────────────────────
-
-export async function permanentDeleteProductAction(formData: FormData) {
-  const session = await requireTenant();
-  ensureAdmin(session.role);
-  const id = formData.get("id") as string;
-  await permanentDeleteProduct(session.tenantId, id);
-  await invalidateProductCache(session.tenantId, id);
-  revalidatePath("/admin");
-}
-
-export async function permanentDeleteSaleAction(formData: FormData) {
-  const session = await requireTenant();
-  ensureAdmin(session.role);
-  const id = formData.get("id") as string;
-  await permanentDeleteSale(session.tenantId, id);
-  await invalidateSaleCache(session.tenantId);
-  revalidatePath("/admin");
-}
-
-export async function permanentDeleteCustomerAction(formData: FormData) {
-  const session = await requireTenant();
-  ensureAdmin(session.role);
-  const id = formData.get("id") as string;
-  await permanentDeleteCustomer(session.tenantId, id);
-  await invalidateCustomerCache(session.tenantId);
-  revalidatePath("/admin");
-}
-
-// ─── Restore (move from trash) ──────────────────────────────
-
-import { prisma } from "@/lib/db";
-
-export async function restoreProductAction(formData: FormData) {
-  const session = await requireTenant();
-  ensureAdmin(session.role);
-  const id = formData.get("id") as string;
-
-  const owned = await prisma.product.findFirst({
-    where: { id, tenantId: session.tenantId, isDeleted: true },
-    select: { id: true },
-  });
-  if (!owned) throw new Error("Not found");
-
-  await prisma.product.update({
-    where: { id },
-    data: { isDeleted: false, deletedAt: null },
-  });
-  await invalidateProductCache(session.tenantId, id);
-  revalidatePath("/admin");
-}
-
-export async function restoreSaleAction(formData: FormData) {
-  const session = await requireTenant();
-  ensureAdmin(session.role);
-  const id = formData.get("id") as string;
-
-  const owned = await prisma.sale.findFirst({
-    where: { id, tenantId: session.tenantId, isDeleted: true },
-    select: { id: true },
-  });
-  if (!owned) throw new Error("Not found");
-
-  await prisma.sale.update({
-    where: { id },
-    data: { isDeleted: false, deletedAt: null },
-  });
-  await invalidateSaleCache(session.tenantId);
-  revalidatePath("/admin");
-}
-
-export async function restoreCustomerAction(formData: FormData) {
-  const session = await requireTenant();
-  ensureAdmin(session.role);
-  const id = formData.get("id") as string;
-
-  const owned = await prisma.customer.findFirst({
-    where: { id, tenantId: session.tenantId, isDeleted: true },
-    select: { id: true },
-  });
-  if (!owned) throw new Error("Not found");
-
-  await prisma.customer.update({
-    where: { id },
-    data: { isDeleted: false },
-  });
-  await invalidateCustomerCache(session.tenantId);
-  revalidatePath("/admin");
-}
-
 // ─── Backup ─────────────────────────────────────────────────
 
 export async function exportBackupAction() {
@@ -238,6 +120,32 @@ export async function approveRequestAction(formData: FormData) {
   revalidatePath("/hr/employees");
   revalidatePath("/hr/recruitment/pipeline");
   revalidatePath("/hr/recruitment/jobs");
+}
+
+// Activate an employee_onboarding request immediately without the email
+// verify round-trip. Returns the one-time temp password (new account) so the
+// admin can hand it over. Called directly from the client (not a form action).
+export async function activateEmployeeNowAction(id: string): Promise<{
+  ok: boolean;
+  email?: string;
+  tempPassword?: string | null;
+  reused?: boolean;
+  error?: string;
+}> {
+  try {
+    const session = await requireTenant();
+    ensureAdmin(session.role);
+    const res = await approveOnboardingDirect(session.tenantId, id, {
+      userId: session.userId,
+      name: session.name,
+    });
+    revalidatePath("/admin");
+    revalidatePath("/hr/employees");
+    revalidatePath("/hr/payroll");
+    return { ok: true, ...res };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Failed" };
+  }
 }
 
 export async function approvalDetailAction(
@@ -272,6 +180,25 @@ export async function approveWithEditsAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/hr/recruitment/jobs");
   revalidatePath("/hr/recruitment");
+}
+
+export async function approveWithPayloadEditsAction(formData: FormData) {
+  const session = await requireTenant();
+  ensureAdmin(session.role);
+  const id = formData.get("id") as string;
+  const values: Record<string, string> = {};
+  for (const [k, v] of formData.entries()) {
+    if (k !== "id" && typeof v === "string") values[k] = v;
+  }
+  await approveWithPayloadEdits(
+    session.tenantId,
+    id,
+    { userId: session.userId, name: session.name },
+    values
+  );
+  revalidatePath("/admin");
+  revalidatePath("/hr/payroll");
+  revalidatePath("/hr/payroll/runs");
 }
 
 export async function requestChangesAction(formData: FormData) {

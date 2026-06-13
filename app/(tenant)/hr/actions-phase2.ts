@@ -122,7 +122,7 @@ async function submitPayrollConfig(
       requestedByName: session.name,
       payload: { op, args },
     });
-    revalidatePath("/hr/payroll/structures");
+    revalidatePath("/settings");
     revalidatePath("/admin");
     return { ok: true };
   } catch (err) {
@@ -243,7 +243,7 @@ export async function createStandardStructureAction(): Promise<StructureActionRe
   const session = await requireTenant();
   try {
     await ensureStandardSalaryStructure(session.tenantId);
-    revalidatePath("/hr/payroll/structures");
+    revalidatePath("/settings");
     revalidatePath("/hr/payroll");
     return { ok: true };
   } catch (err) {
@@ -263,7 +263,7 @@ export async function seedStandardAllowanceRowsAction(
       session.tenantId,
       formData.get("structureId") as string
     );
-    revalidatePath("/hr/payroll/structures");
+    revalidatePath("/settings");
     return { ok: true };
   } catch (err) {
     return {
@@ -594,6 +594,7 @@ export async function createGoalAction(formData: FormData) {
       : undefined,
   });
   revalidatePath("/hr/performance/goals");
+  revalidatePath("/hr/performance");
 }
 
 export async function updateGoalAction(formData: FormData) {
@@ -887,6 +888,7 @@ export async function createCourseAction(formData: FormData) {
     isPublished: formData.get("isPublished") === "on",
   });
   revalidatePath("/hr/learning/courses");
+  revalidatePath("/hr/learning");
 }
 
 export async function publishCourseAction(formData: FormData) {

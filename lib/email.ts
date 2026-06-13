@@ -175,6 +175,32 @@ export async function sendApprovalEmail(input: {
   });
 }
 
+export async function sendEmployeeOnboardingEmail(input: {
+  to: string;
+  fullName: string;
+  businessName: string;
+  verifyUrl: string;
+}) {
+  const html = emailLayout(`
+    <h1 style="font-size:22px;margin:0 0 16px 0;font-weight:bold;">Welcome aboard, ${escapeHtml(input.fullName)}!</h1>
+    <p>Your employee profile at <strong>${escapeHtml(input.businessName)}</strong> has been approved.</p>
+    <p>To activate your account, verify this email address and set your password:</p>
+    <p style="margin:24px 0;">
+      <a href="${input.verifyUrl}" style="display:inline-block;background:#1f5d47;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Verify email &amp; set password →</a>
+    </p>
+    <p style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:12px;font-size:13px;color:#713f12;margin:20px 0;">
+      You can only sign in after verifying this email. The link expires in 7 days.
+    </p>
+    <p style="font-size:12px;color:#a1a1aa;margin-top:24px;">If the button doesn't work, copy this URL into your browser:<br /><span style="font-family:monospace;word-break:break-all;color:#71717a;">${escapeHtml(input.verifyUrl)}</span></p>
+  `);
+
+  return sendEmail({
+    to: input.to,
+    subject: `Activate your ${input.businessName} employee account`,
+    html,
+  });
+}
+
 export async function sendPasswordResetEmail(input: {
   to: string;
   fullName: string;

@@ -4,6 +4,7 @@ import Script from "next/script";
 
 import "./globals.css";
 import { ToasterProvider } from "./_components/toaster-provider";
+import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ const themeBootstrapScript = `
 (function () {
   try {
     var path = window.location.pathname;
-    var publicPrefixes = ['/', '/login', '/request-demo', '/invite', '/reset-password', '/onboarding'];
+    var publicPrefixes = ['/', '/login', '/invite', '/reset-password', '/onboarding'];
     var isPublic = path === '/' || publicPrefixes.some(function (p) {
       return p !== '/' && (path === p || path.indexOf(p + '/') === 0);
     });
@@ -93,6 +94,7 @@ export default function RootLayout({
         </Script>
         {children}
         <ToasterProvider />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

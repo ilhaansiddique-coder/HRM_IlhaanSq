@@ -38,49 +38,75 @@ import { revalidatePath } from "next/cache";
 
 // ─── Employees ──────────────────────────────────────────────
 
-export async function createEmployeeAction(formData: FormData) {
-  const session = await requireTenant();
-  await createEmployee(session.tenantId, {
-    fullName: formData.get("fullName") as string,
-    email: formData.get("email") as string,
-    phone: (formData.get("phone") as string) || undefined,
-    dob: formData.get("dob") ? new Date(formData.get("dob") as string) : null,
-    gender: (formData.get("gender") as string) || undefined,
-    nationalId: (formData.get("nationalId") as string) || undefined,
-    address: (formData.get("address") as string) || undefined,
-    emergencyContact: (formData.get("emergencyContact") as string) || undefined,
-    emergencyPhone: (formData.get("emergencyPhone") as string) || undefined,
-    departmentId: (formData.get("departmentId") as string) || undefined,
-    positionId: (formData.get("positionId") as string) || undefined,
-    managerId: (formData.get("managerId") as string) || undefined,
-    employmentType: (formData.get("employmentType") as any) ?? "full_time",
-    hireDate: new Date(formData.get("hireDate") as string),
-    baseSalary: formData.get("baseSalary")
-      ? parseFloat(formData.get("baseSalary") as string)
-      : undefined,
-    currency: (formData.get("currency") as string) || "BDT",
-  }, { userId: session.userId, name: session.name });
-  revalidatePath("/hr/employees");
-  revalidatePath("/hr");
-  revalidatePath("/admin");
+type EmployeeActionResult = { ok: boolean; error?: string };
+
+export async function createEmployeeAction(
+  formData: FormData
+): Promise<EmployeeActionResult> {
+  try {
+    const session = await requireTenant();
+    await createEmployee(
+      session.tenantId,
+      {
+        fullName: formData.get("fullName") as string,
+        email: formData.get("email") as string,
+        phone: (formData.get("phone") as string) || undefined,
+        dob: formData.get("dob") ? new Date(formData.get("dob") as string) : null,
+        gender: (formData.get("gender") as string) || undefined,
+        nationalId: (formData.get("nationalId") as string) || undefined,
+        address: (formData.get("address") as string) || undefined,
+        emergencyContact: (formData.get("emergencyContact") as string) || undefined,
+        emergencyPhone: (formData.get("emergencyPhone") as string) || undefined,
+        departmentId: (formData.get("departmentId") as string) || undefined,
+        positionId: (formData.get("positionId") as string) || undefined,
+        managerId: (formData.get("managerId") as string) || undefined,
+        employmentType: (formData.get("employmentType") as any) ?? "full_time",
+        hireDate: new Date(formData.get("hireDate") as string),
+        baseSalary: formData.get("baseSalary")
+          ? parseFloat(formData.get("baseSalary") as string)
+          : undefined,
+        currency: (formData.get("currency") as string) || "BDT",
+      },
+      { userId: session.userId, name: session.name }
+    );
+    revalidatePath("/hr/employees");
+    revalidatePath("/hr");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to create employee",
+    };
+  }
 }
 
-export async function updateEmployeeAction(formData: FormData) {
-  const session = await requireTenant();
-  await updateEmployee(session.tenantId, {
-    id: formData.get("id") as string,
-    fullName: formData.get("fullName") as string,
-    email: formData.get("email") as string,
-    phone: (formData.get("phone") as string) || undefined,
-    departmentId: (formData.get("departmentId") as string) || undefined,
-    positionId: (formData.get("positionId") as string) || undefined,
-    managerId: (formData.get("managerId") as string) || undefined,
-    employmentType: (formData.get("employmentType") as any) ?? undefined,
-    baseSalary: formData.get("baseSalary")
-      ? parseFloat(formData.get("baseSalary") as string)
-      : undefined,
-  });
-  revalidatePath("/hr/employees");
+export async function updateEmployeeAction(
+  formData: FormData
+): Promise<EmployeeActionResult> {
+  try {
+    const session = await requireTenant();
+    await updateEmployee(session.tenantId, {
+      id: formData.get("id") as string,
+      fullName: formData.get("fullName") as string,
+      email: formData.get("email") as string,
+      phone: (formData.get("phone") as string) || undefined,
+      departmentId: (formData.get("departmentId") as string) || undefined,
+      positionId: (formData.get("positionId") as string) || undefined,
+      managerId: (formData.get("managerId") as string) || undefined,
+      employmentType: (formData.get("employmentType") as any) ?? undefined,
+      baseSalary: formData.get("baseSalary")
+        ? parseFloat(formData.get("baseSalary") as string)
+        : undefined,
+    });
+    revalidatePath("/hr/employees");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to update employee",
+    };
+  }
 }
 
 export async function terminateEmployeeAction(formData: FormData) {
@@ -331,7 +357,10 @@ export async function updateLateThresholdAction(formData: FormData) {
 
 export async function startBreakAction(formData: FormData) {
   const session = await requireTenant();
-  await startBreak(session.tenantId, formData.get("employeeId") as string);
+  const note = ((formData.get("note") as string | null) ?? "").trim();
+  await startBreak(session.tenantId, formData.get("employeeId") as string, {
+    note,
+  });
   revalidatePath("/hr/break");
 }
 

@@ -1,12 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -26,36 +24,23 @@ import {
   Users,
   HardDrive,
   Settings,
-  Truck,
   Save,
   Download,
   Upload,
-  RefreshCw,
   AlertTriangle,
-  Eye,
-  EyeOff,
-  KeyRound,
 } from "lucide-react";
-import { useState } from "react";
-import {
-  saveCourierProviderAction,
-  saveSystemSettingsAction,
-} from "../actions";
+import { saveSystemSettingsAction } from "../actions";
 
 export function SystemTab({
   systemStats,
   systemSettings,
-  businessSettings,
-  courierProviders,
 }: {
   systemStats: any;
   systemSettings: any;
   businessSettings: any;
-  courierProviders: any[];
 }) {
   return (
     <div className="space-y-4">
-      {/* System Information */}
       <Accordion type="multiple" defaultValue={["info", "system-settings"]} className="space-y-3">
         <AccordionItem value="info" className="border border-border/60 rounded-lg bg-card/80 px-4">
           <AccordionTrigger className="hover:no-underline">
@@ -97,9 +82,9 @@ export function SystemTab({
               />
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-4 text-xs text-muted-foreground">
-              <Stat label="Products" value={systemStats.productCount} />
-              <Stat label="Customers" value={systemStats.customerCount} />
-              <Stat label="Sales" value={systemStats.saleCount} />
+              <Stat label="Employees" value={systemStats.employeeCount} />
+              <Stat label="Departments" value={systemStats.departmentCount} />
+              <Stat label="Payroll Runs" value={systemStats.payrollRunCount} />
               <Stat label="Activity Logs" value={systemStats.activityLogCount} />
             </div>
           </AccordionContent>
@@ -180,35 +165,6 @@ export function SystemTab({
           </AccordionContent>
         </AccordionItem>
 
-        {/* Courier Settings */}
-        <AccordionItem value="courier" className="border border-border/60 rounded-lg bg-card/80 px-4">
-          <AccordionTrigger className="hover:no-underline">
-            <div className="flex items-center gap-2 text-left">
-              <Truck className="h-5 w-5 text-primary" />
-              <div>
-                <p className="font-semibold">Courier Settings</p>
-                <p className="text-xs text-muted-foreground font-normal">
-                  Configure courier service integrations
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4 pt-2">
-              {(["steadfast", "pathao"] as const).map((provider) => {
-                const existing = courierProviders.find((c) => c.provider === provider);
-                return (
-                  <CourierProviderCard
-                    key={provider}
-                    provider={provider}
-                    existing={existing}
-                  />
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
         {/* Backup */}
         <AccordionItem value="backup" className="border border-border/60 rounded-lg bg-card/80 px-4">
           <AccordionTrigger className="hover:no-underline">
@@ -243,8 +199,8 @@ export function SystemTab({
           <AccordionContent>
             <div className="space-y-3 pt-2">
               <p className="text-sm text-muted-foreground">
-                This will permanently delete all products, sales, customers, and settings for
-                this workspace. This action cannot be undone.
+                This will permanently delete all employees, HR records, and
+                settings for this workspace. This action cannot be undone.
               </p>
               <Button variant="destructive" disabled>
                 <AlertTriangle className="h-4 w-4" />
@@ -287,132 +243,8 @@ function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-center">
       <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
-      <p className="text-base font-semibold">{value.toLocaleString()}</p>
+      <p className="text-base font-semibold">{(value ?? 0).toLocaleString()}</p>
     </div>
-  );
-}
-
-function CourierProviderCard({
-  provider,
-  existing,
-}: {
-  provider: string;
-  existing: any;
-}) {
-  const [enabled, setEnabled] = useState(existing?.isEnabled ?? false);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [showSecret, setShowSecret] = useState(false);
-
-  return (
-    <Card className="border-border/70">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Truck className="h-4 w-4 text-primary" />
-            <CardTitle className="text-base capitalize">{provider}</CardTitle>
-            <Badge variant={enabled ? "default" : "outline"}>
-              {enabled ? "ON" : "OFF"}
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <form action={saveCourierProviderAction} className="space-y-3">
-          <input type="hidden" name="provider" value={provider} />
-          <input type="hidden" name="isEnabled" value={String(enabled)} />
-
-          <div className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-3 py-2">
-            <div>
-              <p className="text-sm font-medium capitalize">{provider} Courier</p>
-              <p className="text-xs text-muted-foreground">
-                {enabled ? "Enabled — Orders can be sent" : "Disabled"}
-              </p>
-            </div>
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
-          </div>
-
-          {enabled && (
-            <>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <KeyRound className="h-3.5 w-3.5" />
-                API Credentials & Auto-Refresh
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="space-y-1">
-                  <Label htmlFor={`${provider}-apiKey`} className="text-xs">
-                    API Key *
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id={`${provider}-apiKey`}
-                      name="apiKey"
-                      type={showApiKey ? "text" : "password"}
-                      defaultValue={existing?.apiKey ?? ""}
-                      placeholder="•••••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    >
-                      {showApiKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`${provider}-secret`} className="text-xs">
-                    Secret Key *
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id={`${provider}-secret`}
-                      name="secretKey"
-                      type={showSecret ? "text" : "password"}
-                      defaultValue={existing?.secretKey ?? ""}
-                      placeholder="•••••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowSecret(!showSecret)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    >
-                      {showSecret ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`${provider}-refresh`} className="text-xs">
-                    Auto-Refresh
-                  </Label>
-                  <Select name="refreshInterval" defaultValue={existing?.refreshInterval ?? "hourly"}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="15min">Every 15 min</SelectItem>
-                      <SelectItem value="30min">Every 30 min</SelectItem>
-                      <SelectItem value="hourly">Every 1 hour</SelectItem>
-                      <SelectItem value="6hours">Every 6 hours</SelectItem>
-                      <SelectItem value="daily">Daily</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <input
-                type="hidden"
-                name="autoRefresh"
-                value={String(existing?.autoRefresh ?? true)}
-              />
-            </>
-          )}
-
-          <Button type="submit" size="sm">
-            <Save className="h-4 w-4" />
-            Save {provider} Settings
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
   );
 }
 

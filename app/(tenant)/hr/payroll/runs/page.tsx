@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
-import { listPayrollRuns } from "@/lib/services/hr/payroll.service";
+import { listPayrollRuns, getPayrollStats, getPayrollPrep } from "@/lib/services/hr/payroll.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,17 +12,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
+import { RunPayrollDialog } from "../_components/run-payroll-dialog";
 
 export default async function RunsPage() {
   const session = await requireTenant();
-  const runs = await listPayrollRuns(session.tenantId);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const [runs, stats, prep] = await Promise.all([
+    listPayrollRuns(session.tenantId),
+    getPayrollStats(session.tenantId),
+    getPayrollPrep(session.tenantId, monthStart, monthEnd),
+  ]);
+  const hasStructure = stats.structureCount > 0;
+  const hasSalary = stats.activeSalaryCount > 0;
 
   return (
     <div className="space-y-6">
+      {/* Run Payroll opens from the "+" button in the top bar (left of the
+          notification bell). The button here goes to the setup / assign-salary
+          page (needed before a first run). */}
+      <RunPayrollDialog hasStructure={hasStructure} hasSalary={hasSalary} prep={prep} />
       <div className="flex items-center justify-between gap-3">
         <Link href="/hr/payroll"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-        <Link href="/hr/payroll/runs/new"><Button><Plus className="h-4 w-4" />Run Payroll</Button></Link>
+        <Link href="/hr/payroll/runs/new"><Button variant="outline">Assign Salary</Button></Link>
       </div>
 
       {/* Desktop: table view. Mobile uses the card stack below. */}

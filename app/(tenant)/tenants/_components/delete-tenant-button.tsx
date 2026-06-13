@@ -21,9 +21,7 @@ type Props = {
   tenantSlug: string;
   counts: {
     members: number;
-    products: number;
-    sales: number;
-    customers: number;
+    employees: number;
   };
 };
 
@@ -85,8 +83,7 @@ export function DeleteTenantButton({
             <DialogDescription>
               This permanently removes{" "}
               <span className="font-medium">{tenantName}</span> and every
-              product, sale, customer, and HR record it owns. It cannot be
-              undone.
+              employee and HR record it owns. It cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
@@ -97,16 +94,8 @@ export function DeleteTenantButton({
                 <span className="font-medium">{counts.members}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Products</span>
-                <span className="font-medium">{counts.products}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Sales</span>
-                <span className="font-medium">{counts.sales}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Customers</span>
-                <span className="font-medium">{counts.customers}</span>
+                <span className="text-muted-foreground">Employees</span>
+                <span className="font-medium">{counts.employees}</span>
               </div>
             </div>
 

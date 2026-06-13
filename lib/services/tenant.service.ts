@@ -44,9 +44,6 @@ export async function createTenant(
           timezone: "Asia/Dhaka",
         },
       },
-      paymentMethods: {
-        create: { name: "Cash", isActive: true },
-      },
     },
   });
 
@@ -179,7 +176,7 @@ export async function listAllTenants() {
   return prisma.tenant.findMany({
     include: {
       _count: {
-        select: { members: true, products: true, sales: true, customers: true },
+        select: { members: true, employees: true },
       },
       businessSettings: { select: { businessName: true } },
     },
@@ -203,7 +200,7 @@ export async function getTenantDetail(tenantId: string) {
   return prisma.tenant.findUnique({
     where: { id: tenantId },
     include: {
-      _count: { select: { members: true, products: true, sales: true, customers: true } },
+      _count: { select: { members: true, employees: true } },
       members: { include: { user: { select: { id: true, email: true, fullName: true, phone: true } } }, orderBy: { createdAt: "asc" } },
       businessSettings: true,
       systemSettings: true,
@@ -236,9 +233,7 @@ export async function getTenantDeletionPreview(tenantId: string) {
         _count: {
           select: {
             members: true,
-            products: true,
-            sales: true,
-            customers: true,
+            employees: true,
           },
         },
       },

@@ -1,43 +1,32 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
-import { getPayrollStats, listPayrollRuns } from "@/lib/services/hr/payroll.service";
+import { getPayrollStats, listPayrollRuns, getPayrollPrep } from "@/lib/services/hr/payroll.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Plus, FileText, Layers, CheckCircle2, Calendar, HandCoins } from "lucide-react";
+import { Wallet, Plus, FileText, Layers, CheckCircle2, Calendar } from "lucide-react";
+import { RunPayrollDialog } from "./_components/run-payroll-dialog";
 
 export default async function PayrollOverviewPage() {
   const session = await requireTenant();
-  const [stats, runs] = await Promise.all([
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const [stats, runs, prep] = await Promise.all([
     getPayrollStats(session.tenantId),
     listPayrollRuns(session.tenantId),
+    getPayrollPrep(session.tenantId, monthStart, monthEnd),
   ]);
+  const hasStructure = stats.structureCount > 0;
+  const hasSalary = stats.activeSalaryCount > 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <div className="flex gap-2">
-          <Link href="/hr/payroll/structures">
-            <Button variant="outline">
-              <Layers className="h-4 w-4" />
-              Salary Structure
-            </Button>
-          </Link>
-          <Link href="/hr/payroll/advances">
-            <Button variant="outline">
-              <HandCoins className="h-4 w-4" />
-              Advances
-            </Button>
-          </Link>
-          <Link href="/hr/payroll/runs/new">
-            <Button>
-              <Plus className="h-4 w-4" />
-              Run Payroll
-            </Button>
-          </Link>
-        </div>
-      </div>
+      {/* Run Payroll opens from the "+" button in the top bar (left of the
+          notification bell). Advances and Salary Structure are now reached via
+          the sidebar (Payroll submenu) and Settings respectively. */}
+      <RunPayrollDialog hasStructure={hasStructure} hasSalary={hasSalary} prep={prep} />
 
       <div className="grid gap-4 sm:grid-cols-4">
         <StatCard icon={<Layers className="h-4 w-4" />} title="Salary Structures" value={stats.structureCount} />

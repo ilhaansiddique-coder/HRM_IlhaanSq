@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { publishRealtime } from "../realtime/bus";
 
 // Admin notification center. Distinct from the lightweight TopBar bell
 // (lib/services/notifications.service.ts, activity-log only). This is a
@@ -38,6 +39,15 @@ export async function createNotification(input: {
         actorName: input.actorName ?? null,
         severity: input.severity ?? "info",
       },
+    });
+    // Push it to every open page for this tenant (instant toast + refresh).
+    publishRealtime({
+      tenantId: input.tenantId,
+      kind: "notification",
+      category: input.category ?? "activity",
+      title: input.title,
+      body: input.body ?? null,
+      severity: input.severity ?? "info",
     });
   } catch (e) {
     // Notifications must never break the originating flow.

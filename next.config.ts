@@ -16,6 +16,14 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Pin the Turbopack workspace root to THIS project. A stray package-lock.json
+  // in the parent folder (/home/contra-digital/Data/Development) made Turbopack
+  // infer the parent — which holds ~20 other projects, zips and a node_modules —
+  // as the root, so it scanned/watched that whole tree and `next dev` hung
+  // forever on the first compile ("Compiling / …" never finishing).
+  turbopack: {
+    root: import.meta.dirname,
+  },
   // Legacy src/ directory has been removed. TypeScript build errors are now
   // enabled to catch real type issues. Run `npx tsc --noEmit` locally to verify.
   // (Next 16 removed the `eslint` config option — ESLint is no longer

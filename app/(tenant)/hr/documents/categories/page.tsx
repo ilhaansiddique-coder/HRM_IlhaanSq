@@ -1,17 +1,12 @@
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listDocumentCategories } from "@/lib/services/hr/documents.service";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Folder } from "lucide-react";
-import {
-  createDocCategoryAction,
-  deleteDocCategoryAction,
-} from "../../actions-phase2";
+import { ArrowLeft, Trash2, Folder } from "lucide-react";
+import { deleteDocCategoryAction } from "../../actions-phase2";
+import { NewCategoryDialog } from "./_components/new-category-dialog";
 
 export default async function CategoriesPage() {
   const session = await requireTenant();
@@ -23,9 +18,13 @@ export default async function CategoriesPage() {
         <Link href="/hr/documents"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader><CardTitle>All Categories ({categories.length})</CardTitle></CardHeader>
+      {/* The new-category form lives in a dialog opened from the "+" button in
+          the top bar (left of the notification bell). This portals its trigger +
+          dialog into the TopBar and renders nothing inline here. */}
+      <NewCategoryDialog />
+
+      <Card className="border-border/70 bg-card/80">
+          <CardHeader><CardTitle>All Employee Contract ({categories.length})</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {categories.length === 0 ? (
               <div className="text-center py-8">
@@ -57,33 +56,6 @@ export default async function CategoriesPage() {
             )}
           </CardContent>
         </Card>
-
-        <Card className="border-border/70 bg-card/80 h-fit">
-          <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="h-4 w-4 text-primary" />New Category</CardTitle></CardHeader>
-          <CardContent>
-            <form action={createDocCategoryAction} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs">Name *</Label>
-                <Input id="name" name="name" required minLength={2} placeholder="Employment Contracts" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="description" className="text-xs">Description</Label>
-                <Textarea id="description" name="description" rows={2} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="retentionDays" className="text-xs">Retention (days)</Label>
-                <Input id="retentionDays" name="retentionDays" type="number" min="0" placeholder="2555" />
-                <p className="text-[10px] text-muted-foreground">Optional. e.g. 2555 = 7 years</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="isRequired" name="isRequired" className="rounded" />
-                <Label htmlFor="isRequired" className="text-xs cursor-pointer">Required for all employees</Label>
-              </div>
-              <Button type="submit" className="w-full"><Plus className="h-4 w-4" />Create</Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

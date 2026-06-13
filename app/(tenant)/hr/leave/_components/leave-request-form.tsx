@@ -18,9 +18,12 @@ import { createLeaveRequestAction } from "../../actions";
 export function LeaveRequestForm({
   employees,
   types,
+  onSuccess,
 }: {
   employees: { id: string; name: string; code: string }[];
   types: { id: string; name: string; code: string }[];
+  // Optional: called after a successful submit (e.g. to close a host dialog).
+  onSuccess?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +34,7 @@ export function LeaveRequestForm({
       try {
         await createLeaveRequestAction(formData);
         (document.getElementById("leave-request-form") as HTMLFormElement)?.reset();
+        onSuccess?.();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to submit");
       }

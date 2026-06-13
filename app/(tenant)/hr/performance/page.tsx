@@ -5,14 +5,17 @@ import { getPerformanceStats, listGoals, listReviewCycles } from "@/lib/services
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Target, Plus, Calendar, MessageSquare, CheckCircle2 } from "lucide-react";
+import { listEmployees } from "@/lib/services/hr/employee.service";
+import { Target, Calendar, MessageSquare, CheckCircle2 } from "lucide-react";
+import { NewGoalDialog } from "./goals/_components/new-goal-dialog";
 
 export default async function PerformanceOverviewPage() {
   const session = await requireTenant();
-  const [stats, goals, cycles] = await Promise.all([
+  const [stats, goals, cycles, employees] = await Promise.all([
     getPerformanceStats(session.tenantId),
     listGoals(session.tenantId),
     listReviewCycles(session.tenantId),
+    listEmployees(session.tenantId, { status: "active" }),
   ]);
 
   const activeCycle = cycles.find((c) => c.status === "active");
@@ -20,12 +23,12 @@ export default async function PerformanceOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <div className="flex gap-2">
-          <Link href="/hr/performance/cycles"><Button variant="outline"><Calendar className="h-4 w-4" />Cycles</Button></Link>
-          <Link href="/hr/performance/goals"><Button><Plus className="h-4 w-4" />New Goal</Button></Link>
-        </div>
-      </div>
+      {/* The New Goal form opens from the "+" button in the top bar (left of the
+          notification bell). Cycles and Goals are now in the sidebar. */}
+      <NewGoalDialog
+        employees={employees.map((e) => ({ id: e.id, fullName: e.fullName, empCode: e.empCode }))}
+        cycles={cycles.map((c) => ({ id: c.id, name: c.name }))}
+      />
 
       <div className="grid gap-4 sm:grid-cols-4">
         <StatCard icon={<Calendar className="h-4 w-4" />} title="Review Cycles" value={stats.cycleCount} hint={`${stats.activeCycles} active`} />

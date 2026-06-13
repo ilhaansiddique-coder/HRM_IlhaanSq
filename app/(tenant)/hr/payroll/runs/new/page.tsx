@@ -5,8 +5,8 @@ import { listEmployees } from "@/lib/services/hr/employee.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
-import { RunPayrollForm } from "./_components/run-payroll-form";
 import { AssignSalaryForm } from "./_components/assign-salary-form";
+import { RunPayrollDialog } from "../../_components/run-payroll-dialog";
 
 export default async function NewRunPage() {
   const session = await requireTenant();
@@ -24,6 +24,9 @@ export default async function NewRunPage() {
 
   return (
     <div className="space-y-6">
+      {/* Run Payroll opens from the "+" button in the top bar (left of the
+          notification bell). This page handles the salary-assignment setup. */}
+      <RunPayrollDialog hasStructure={structures.length > 0} hasSalary={stats.activeSalaryCount > 0} prep={prep} />
       <div className="flex items-center gap-3">
         <Link href="/hr/payroll"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
       </div>
@@ -35,39 +38,27 @@ export default async function NewRunPage() {
             <CardDescription>You need a salary structure AND at least one employee with a salary assigned before running payroll.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            {structures.length === 0 && <p>· No salary structures — <Link href="/hr/payroll/structures" className="text-primary underline">create one</Link></p>}
+            {structures.length === 0 && <p>· No salary structures — <Link href="/settings" className="text-primary underline">create one in Settings</Link></p>}
             {stats.activeSalaryCount === 0 && structures.length > 0 && <p>· No employees have a salary assigned — use the form below</p>}
           </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle>Run Payroll for Period</CardTitle>
-            <CardDescription>
-              Calculates payslips for all active employees — gross, absence, advance,
-              payable &amp; paid
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RunPayrollForm disabled={!ready} prep={prep} />
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle>Assign Salary to Employee</CardTitle>
-            <CardDescription>Link an employee to a salary structure</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AssignSalaryForm
-              employees={employees.map((e) => ({ id: e.id, name: e.fullName, code: e.empCode }))}
-              structures={structures.map((s) => ({ id: s.id, name: s.name }))}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="border-border/70 bg-card/80 max-w-xl">
+        <CardHeader>
+          <CardTitle>Assign Salary to Employee</CardTitle>
+          <CardDescription>
+            Link an employee to a salary structure. Once at least one employee has
+            a salary, use the <strong>+</strong> in the top bar to run payroll.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AssignSalaryForm
+            employees={employees.map((e) => ({ id: e.id, name: e.fullName, code: e.empCode }))}
+            structures={structures.map((s) => ({ id: s.id, name: s.name }))}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

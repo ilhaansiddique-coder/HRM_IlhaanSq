@@ -1,6 +1,7 @@
 import { cache, type ReactNode } from "react";
 import { cookies } from "next/headers";
-import { requireTenant } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth";
 import { getCachedBusinessSettings, getCachedSystemSettings } from "@/lib/cache";
 import { prisma } from "@/lib/db";
 import { getRecentNotifications } from "@/lib/services/notifications.service";
@@ -25,7 +26,12 @@ export default async function TenantLayout({
 }: {
   children: ReactNode;
 }) {
-  const session = await requireTenant();
+  const session = await requireAuth();
+
+  // Non-super-admin users must have a tenant — redirect to onboarding if not.
+  if (!session.isSuperAdmin && (!session.tenantId || !session.tenantSlug)) {
+    redirect("/onboarding");
+  }
 
   // Source the sidebar's open/closed state from a per-user cookie, written
   // by SidebarProvider's setOpen on every toggle. Reading it here means SSR
@@ -45,8 +51,8 @@ export default async function TenantLayout({
     notifications,
     freshUser,
   ] = await Promise.all([
-    getCachedBusinessSettings(session.tenantId),
-    getCachedSystemSettings(session.tenantId),
+    session.tenantId ? getCachedBusinessSettings(session.tenantId).catch(() => null) : null,
+    session.tenantId ? getCachedSystemSettings(session.tenantId).catch(() => null) : null,
     getPendingTenantCount(session.isSuperAdmin),
     getRecentNotifications(
       session.isSuperAdmin ? null : session.tenantId,
@@ -60,7 +66,7 @@ export default async function TenantLayout({
     prisma.user.findUnique({
       where: { id: session.userId },
       select: { fullName: true, email: true },
-    }),
+    }).catch(() => null),
   ]);
 
   return (
@@ -71,6 +77,7 @@ export default async function TenantLayout({
     >
       <TenantShell
         businessName={businessSettings?.businessName ?? "My Business"}
+        tenantId={session.tenantId ?? ""}
         userId={session.userId}
         userName={freshUser?.fullName ?? session.name}
         userEmail={freshUser?.email ?? session.email}

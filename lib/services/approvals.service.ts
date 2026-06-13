@@ -356,24 +356,36 @@ async function applyDecision(
   switch (req.type) {
     case "employee_onboarding": {
       if (!req.entityId) return;
-      await prisma.employee.update({
-        where: { id: req.entityId },
-        data:
-          decision === "approved"
-            ? {
-                approvalStatus: "approved",
-                status: "active",
-                approvalDecidedBy: decider.userId,
-                approvalDecidedAt: now,
-                approvalRejectionReason: null,
-              }
-            : {
-                approvalStatus: "rejected",
-                approvalDecidedBy: decider.userId,
-                approvalDecidedAt: now,
-                approvalRejectionReason: reason ?? null,
-              },
-      });
+      if (decision === "approved") {
+        // Approved, but NOT active yet — the employee must verify their
+        // email + set a password first. Email verification flips status to
+        // "active". (Decision: admin approve → email verify → active.)
+        await prisma.employee.update({
+          where: { id: req.entityId },
+          data: {
+            approvalStatus: "approved",
+            approvalDecidedBy: decider.userId,
+            approvalDecidedAt: now,
+            approvalRejectionReason: null,
+          },
+        });
+        try {
+          const onboarding = await import("./employee-onboarding.service");
+          await onboarding.provisionEmployeeAccount(tenantId, req.entityId);
+        } catch (e) {
+          console.error("[approvals] employee provisioning failed:", e);
+        }
+      } else {
+        await prisma.employee.update({
+          where: { id: req.entityId },
+          data: {
+            approvalStatus: "rejected",
+            approvalDecidedBy: decider.userId,
+            approvalDecidedAt: now,
+            approvalRejectionReason: reason ?? null,
+          },
+        });
+      }
       return;
     }
 
@@ -483,18 +495,6 @@ async function applyDecision(
       await payroll.assignSalary(tenantId, {
         ...p,
         effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(),
-      } as never);
-      return;
-    }
-
-    case "customer_payment": {
-      if (decision !== "approved") return;
-      const cps = await import("./customer-payment.service");
-      await cps.recordCustomerPayment(tenantId, {
-        customerId: p.customerId,
-        amount: Number(p.amount),
-        paidByName: p.paidByName,
-        paidByUserId: p.paidByUserId ?? decider.userId,
       } as never);
       return;
     }
@@ -689,6 +689,127 @@ export async function approveJobWithEdits(
     type: `approval.${req.type}.approved`,
     title: `${req.title} — approved (admin-edited)`,
     body: "Approved with changes written by the admin.",
+    entityType: req.entityType,
+    entityId: req.entityId,
+    link: "/admin",
+    actorId: decider.userId,
+    actorName: decider.name,
+    severity: "success",
+  });
+
+  return updated;
+}
+
+// Approve an employee_onboarding request WITHOUT the email round-trip: provision
+// the account + mark the employee active immediately, then resolve the request.
+// Returns a one-time temp password (for a new account) so the admin can hand it
+// over. Used when SMTP isn't configured or the admin wants instant activation.
+export async function approveOnboardingDirect(
+  tenantId: string,
+  id: string,
+  decider: { userId: string; name: string }
+): Promise<{ email: string; tempPassword: string | null; reused: boolean }> {
+  const req = await prisma.approvalRequest.findFirst({ where: { id, tenantId } });
+  if (!req) throw new Error("Request not found");
+  if (req.type !== "employee_onboarding")
+    throw new Error("Not an employee onboarding request");
+  if (req.status !== "pending") throw new Error("This request is already decided");
+  if (!req.entityId) throw new Error("No employee linked to this request");
+
+  const onboarding = await import("./employee-onboarding.service");
+  const result = await onboarding.activateEmployeeWithoutEmail(
+    tenantId,
+    req.entityId,
+    decider
+  );
+
+  await prisma.approvalRequest.update({
+    where: { id },
+    data: {
+      status: "approved",
+      decidedBy: decider.userId,
+      decidedByName: decider.name,
+      decidedAt: new Date(),
+      reason: "Activated directly (no email verification)",
+    },
+  });
+
+  return result;
+}
+
+// Admin approves a deferred-action approval (salary assignment / payroll
+// run) with their OWN adjusted figures. Non-editable parts of the original
+// payload (employee/structure ids, per-employee payroll adjustments) are
+// preserved; only the admin-editable fields are overlaid.
+export async function approveWithPayloadEdits(
+  tenantId: string,
+  id: string,
+  decider: { userId: string; name: string },
+  values: Record<string, string>
+) {
+  const req = await prisma.approvalRequest.findFirst({
+    where: { id, tenantId },
+  });
+  if (!req) throw new Error("Approval request not found");
+  if (req.status !== "pending")
+    throw new Error("This request has already been decided");
+
+  const p = (req.payload ?? {}) as Record<string, any>;
+  const numOr = (v: string, d = 0) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : d;
+  };
+
+  if (req.type === "salary_assignment") {
+    const payroll = await import("./hr/payroll.service");
+    await payroll.assignSalary(tenantId, {
+      employeeId: p.employeeId,
+      structureId: p.structureId,
+      baseSalary: numOr(values.baseSalary),
+      houseRent: numOr(values.houseRent),
+      health: numOr(values.health),
+      education: numOr(values.education),
+      savings: numOr(values.savings),
+      dailyHand: numOr(values.dailyHand),
+      currency: values.currency || "BDT",
+      effectiveFrom: values.effectiveFrom
+        ? new Date(values.effectiveFrom)
+        : new Date(),
+    } as never);
+  } else if (req.type === "payroll_run") {
+    const payroll = await import("./hr/payroll.service");
+    const result: any = await payroll.runPayroll(tenantId, {
+      name: values.name || p.name || "Payroll run",
+      periodStart: new Date(values.periodStart || p.periodStart),
+      periodEnd: new Date(values.periodEnd || p.periodEnd),
+      payDate: new Date(values.payDate || p.payDate),
+      runBy: decider.userId,
+      adjustments: p.adjustments ?? undefined,
+    } as never);
+    if (result && result.ok === false) {
+      throw new Error(result.error || "Payroll run failed");
+    }
+  } else {
+    throw new Error("This approval does not support editable approval");
+  }
+
+  const updated = await prisma.approvalRequest.update({
+    where: { id },
+    data: {
+      status: "approved",
+      decidedBy: decider.userId,
+      decidedByName: decider.name,
+      decidedAt: new Date(),
+      reason: "Approved with admin edits",
+    },
+  });
+
+  await createNotification({
+    tenantId,
+    category: "approval",
+    type: `approval.${req.type}.approved`,
+    title: `${req.title} — approved (admin-edited)`,
+    body: "Approved with figures adjusted by the admin.",
     entityType: req.entityType,
     entityId: req.entityId,
     link: "/admin",

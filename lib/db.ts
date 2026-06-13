@@ -48,117 +48,19 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
 //
 // Usage:
 //   const db = tenantDb("tenant-uuid");
-//   const products = await db.product.findMany({ where: { isDeleted: false } });
+//   const logs = await db.activityLog.findMany({ where: { ... } });
 //   // ^ tenantId is auto-injected into the where clause
 
 export function tenantDb(tenantId: string) {
   return prisma.$extends({
     query: {
       // Auto-inject tenantId for reads on all tenant-scoped models
-      product: {
-        async findMany({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async findFirst({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async findUnique({ args, query }) {
-          args.where = { ...args.where, tenantId } as any;
-          return query(args);
-        },
-        async count({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async aggregate({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async update({ args, query }) {
-          args.where = { ...args.where, tenantId } as any;
-          return query(args);
-        },
-        async updateMany({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async delete({ args, query }) {
-          args.where = { ...args.where, tenantId } as any;
-          return query(args);
-        },
-        async deleteMany({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-      },
-      customer: {
-        async findMany({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async findFirst({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async count({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async update({ args, query }) {
-          args.where = { ...args.where, tenantId } as any;
-          return query(args);
-        },
-        async updateMany({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-      },
-      sale: {
-        async findMany({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async findFirst({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async count({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async aggregate({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async update({ args, query }) {
-          args.where = { ...args.where, tenantId } as any;
-          return query(args);
-        },
-      },
-      inventoryLog: {
-        async findMany({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-        async count({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-      },
       activityLog: {
         async findMany({ args, query }) {
           args.where = { ...args.where, tenantId };
           return query(args);
         },
         async count({ args, query }) {
-          args.where = { ...args.where, tenantId };
-          return query(args);
-        },
-      },
-      paymentMethod: {
-        async findMany({ args, query }) {
           args.where = { ...args.where, tenantId };
           return query(args);
         },

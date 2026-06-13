@@ -19,8 +19,11 @@ import { RecoveryWindowField } from "./recovery-window-field";
 
 export function AdvanceForm({
   employees,
+  onSuccess,
 }: {
   employees: { id: string; name: string; code: string }[];
+  // Optional: called after a successful submit (e.g. to close a host dialog).
+  onSuccess?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -37,6 +40,7 @@ export function AdvanceForm({
         setTimeout(() => setSuccess(false), 2000);
         (document.getElementById("advance-form") as HTMLFormElement)?.reset();
         router.refresh();
+        onSuccess?.();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed");
       }

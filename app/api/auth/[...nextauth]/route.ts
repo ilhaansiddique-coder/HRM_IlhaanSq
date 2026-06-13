@@ -63,6 +63,15 @@ const authOptions = {
         const defaultMembership =
           user.memberships.find((m) => m.isDefault) ?? user.memberships[0];
 
+        // Login gate — ONLY for employee-portal accounts: they must verify
+        // their email (set their password via the onboarding link) first.
+        // Scoped to role "employee" so existing staff/admins are unaffected.
+        if (defaultMembership?.role === "employee" && !user.emailVerified) {
+          throw new Error(
+            "Verify your email first. Open the activation link we sent to set your password."
+          );
+        }
+
         return {
           id: user.id,
           email: user.email,

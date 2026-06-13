@@ -60,11 +60,19 @@ export function EmployeeForm({
     setError(null);
     startTransition(async () => {
       try {
+        let res: { ok: boolean; error?: string };
         if (mode === "edit" && employeeId) {
           formData.set("id", employeeId);
-          await updateEmployeeAction(formData);
+          res = await updateEmployeeAction(formData);
         } else {
-          await createEmployeeAction(formData);
+          res = await createEmployeeAction(formData);
+        }
+        if (!res.ok) {
+          setError(
+            res.error ??
+              `Failed to ${mode === "edit" ? "update" : "create"} employee`
+          );
+          return;
         }
         router.push("/hr/employees");
         router.refresh();

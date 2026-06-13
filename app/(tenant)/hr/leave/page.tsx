@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listLeaveRequests, listLeaveTypes } from "@/lib/services/hr/leave.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
@@ -9,12 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarDays, Settings, CheckCircle2, XCircle } from "lucide-react";
-import { LeaveRequestForm } from "./_components/leave-request-form";
+import { CalendarDays } from "lucide-react";
 import { LeaveActions } from "./_components/leave-actions";
+import { SubmitLeaveDialog } from "./_components/submit-leave-dialog";
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   pending: "secondary",
@@ -37,14 +35,12 @@ export default async function LeavePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <Link href="/hr/leave/types">
-          <Button variant="outline">
-            <Settings className="h-4 w-4" />
-            Manage Leave Types
-          </Button>
-        </Link>
-      </div>
+      {/* Submit Leave Request opens from the "+" button in the top bar (left of
+          the notification bell). Manage Leave Types is now in the sidebar. */}
+      <SubmitLeaveDialog
+        employees={employees.map((e) => ({ id: e.id, name: e.fullName, code: e.empCode }))}
+        types={types.map((t) => ({ id: t.id, name: t.name, code: t.code }))}
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Pending" count={pending.length} variant="warning" />
@@ -52,8 +48,7 @@ export default async function LeavePage() {
         <StatCard label="Rejected" count={rejected.length} variant="muted" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card className="border-border/70 bg-card/80">
+      <Card className="border-border/70 bg-card/80">
           <CardHeader>
             <CardTitle>Leave Requests</CardTitle>
             <CardDescription>All requests in your workspace</CardDescription>
@@ -122,20 +117,6 @@ export default async function LeavePage() {
             </Tabs>
           </CardContent>
         </Card>
-
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle>Submit Request</CardTitle>
-            <CardDescription>Apply for leave on behalf of an employee</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LeaveRequestForm
-              employees={employees.map((e) => ({ id: e.id, name: e.fullName, code: e.empCode }))}
-              types={types.map((t) => ({ id: t.id, name: t.name, code: t.code, color: t.color }))}
-            />
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

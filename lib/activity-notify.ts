@@ -1,4 +1,5 @@
 import type { PrismaClient, Prisma } from "@prisma/client";
+import { publishRealtime } from "./realtime/bus";
 
 // Global write → notification bridge.
 //
@@ -109,6 +110,15 @@ export function attachActivityNotifier(client: PrismaClient) {
           entityId: entityId ? String(entityId) : null,
           severity: SEVERITY[action] ?? "info",
         },
+      });
+      // Instant push to every open page for this tenant.
+      publishRealtime({
+        tenantId,
+        kind: "notification",
+        category: "activity",
+        title: `${humanizeModel(model)} ${VERB[action]}`,
+        body: typeof label === "string" ? label : null,
+        severity: SEVERITY[action] ?? "info",
       });
     } catch {
       // Notifications must never break the originating write.

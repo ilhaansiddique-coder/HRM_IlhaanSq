@@ -63,29 +63,37 @@ export default async function BreakTimePage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-4">
-        <StatCard
-          icon={<Coffee className="h-4 w-4" />}
-          title="On Break Now"
-          value={stats.activeBreaks}
-          variant="warning"
-        />
-        <StatCard
-          icon={<Clock className="h-4 w-4" />}
-          title="Completed Today"
-          value={stats.completedToday}
-          variant="success"
-        />
-        <StatCard
-          icon={<Timer className="h-4 w-4" />}
-          title="Avg Duration (min)"
-          value={stats.avgDurationMin}
-        />
-        <StatCard
-          icon={<UserCheck className="h-4 w-4" />}
-          title="Active Workforce"
-          value={stats.totalEmployees}
-        />
+      <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory xl:grid xl:grid-cols-4 xl:overflow-visible">
+        <div className="w-[68vw] max-w-[300px] xl:w-auto xl:max-w-none shrink-0 snap-start">
+          <StatCard
+            icon={<Coffee className="h-4 w-4" />}
+            title="On Break Now"
+            value={stats.activeBreaks}
+            variant="warning"
+          />
+        </div>
+        <div className="w-[68vw] max-w-[300px] xl:w-auto xl:max-w-none shrink-0 snap-start">
+          <StatCard
+            icon={<Clock className="h-4 w-4" />}
+            title="Completed Today"
+            value={stats.completedToday}
+            variant="success"
+          />
+        </div>
+        <div className="w-[68vw] max-w-[300px] xl:w-auto xl:max-w-none shrink-0 snap-start">
+          <StatCard
+            icon={<Timer className="h-4 w-4" />}
+            title="Avg Duration (min)"
+            value={stats.avgDurationMin}
+          />
+        </div>
+        <div className="w-[68vw] max-w-[300px] xl:w-auto xl:max-w-none shrink-0 snap-start">
+          <StatCard
+            icon={<UserCheck className="h-4 w-4" />}
+            title="Active Workforce"
+            value={stats.totalEmployees}
+          />
+        </div>
       </div>
 
       {isAdmin && (
@@ -99,8 +107,39 @@ export default async function BreakTimePage() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div
+        className={
+          isAdmin ? "grid gap-6 lg:grid-cols-[1fr_360px]" : "space-y-6"
+        }
+      >
         <div className="space-y-3">
+          {!isAdmin && employeeId && (
+            <Card className="border-border/70 bg-card/80">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Coffee className="h-4 w-4 text-primary" />
+                  Break Time
+                </CardTitle>
+                <CardDescription>Start or end your break</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <BreakStartEndPanel
+                  employeeId={employeeId}
+                  thresholdMin={threshold}
+                  activeBreak={
+                    activeBreak
+                      ? {
+                          id: activeBreak.id,
+                          breakStart: activeBreak.breakStart.toISOString(),
+                          breakCategory: activeBreak.breakCategory,
+                          notes: activeBreak.notes,
+                        }
+                      : null
+                  }
+                />
+              </CardContent>
+            </Card>
+          )}
           <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
             <CardHeader>
               <CardTitle>Break Sessions</CardTitle>
@@ -125,6 +164,7 @@ export default async function BreakTimePage() {
                         <TableHead>Start</TableHead>
                         <TableHead>End</TableHead>
                         <TableHead className="text-right">Duration</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -163,6 +203,21 @@ export default async function BreakTimePage() {
                           </TableCell>
                           <TableCell>
                             <Badge
+                              variant={s.isDuty ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {s.isDuty
+                                ? "Courier · duty"
+                                : "Personal · out of duty"}
+                            </Badge>
+                            {s.notes ? (
+                              <p className="mt-1 max-w-[220px] truncate text-[11px] text-muted-foreground">
+                                {s.notes}
+                              </p>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
                               variant={s.status === "active" ? "secondary" : "outline"}
                               className="capitalize text-xs"
                             >
@@ -191,7 +246,8 @@ export default async function BreakTimePage() {
                 <span className="text-sm">No break sessions recorded yet.</span>
               </Card>
             ) : (
-              sessions.map((s) => (
+              <div className="grid grid-cols-2 gap-3">
+                {sessions.map((s) => (
                 <Card key={s.id} className="rounded-lg p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -243,8 +299,27 @@ export default async function BreakTimePage() {
                       </span>
                     </div>
                   </div>
+                  <div className="mt-2">
+                    <Badge
+                      variant={s.isDuty ? "default" : "secondary"}
+                      className="rounded-lg text-[11px]"
+                    >
+                      {s.isDuty
+                        ? "Courier · duty"
+                        : "Personal · out of duty"}
+                    </Badge>
+                    {s.notes ? (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        <span className="text-muted-foreground/70">
+                          Reason:{" "}
+                        </span>
+                        {s.notes}
+                      </p>
+                    ) : null}
+                  </div>
                 </Card>
-              ))
+                ))}
+              </div>
             )}
           </div>
 
@@ -309,31 +384,6 @@ export default async function BreakTimePage() {
         </div>
 
         <div className="space-y-4">
-          {!isAdmin && employeeId && (
-            <Card className="border-border/70 bg-card/80">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Coffee className="h-4 w-4 text-primary" />
-                  Break Time
-                </CardTitle>
-                <CardDescription>Start or end your break</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <BreakStartEndPanel
-                  employeeId={employeeId}
-                  activeBreak={
-                    activeBreak
-                      ? {
-                          id: activeBreak.id,
-                          breakStart: activeBreak.breakStart.toISOString(),
-                        }
-                      : null
-                  }
-                />
-              </CardContent>
-            </Card>
-          )}
-
           {isAdmin && (
             <Card className="border-border/70 bg-card/80">
               <CardHeader>
@@ -388,13 +438,13 @@ function StatCard({
         : "bg-primary/10 text-primary";
   return (
     <Card className="border-border/70 bg-card/80">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-start gap-2 pb-2">
         <div
-          className={`flex h-8 w-8 items-center justify-center rounded-full ${iconBg}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconBg}`}
         >
           {icon}
         </div>
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-semibold">{value}</div>

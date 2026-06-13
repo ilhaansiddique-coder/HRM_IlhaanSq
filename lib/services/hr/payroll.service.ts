@@ -1,7 +1,11 @@
 import { Prisma, type PayrollPeriod } from "@prisma/client";
 import { prisma } from "../../db";
 import { assertTenantOwns } from "./_shared";
-import { countLateToAbsence } from "./attendance.service";
+import {
+  countLateToAbsenceBatch,
+  getLateToAbsenceDetail,
+  isWeeklyHoliday,
+} from "./attendance.service";
 import { createApprovalRequest } from "../approvals.service";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -254,6 +258,12 @@ export async function addSalaryComponent(
   const code = input.code.toUpperCase();
   assertValidComponent({ ...input, code });
 
+  // A component value (fixed amount or percentage) can never be negative — it
+  // would produce a negative gross / confusing payslips.
+  if (!Number.isFinite(input.value) || input.value < 0) {
+    throw new Error("Component value can't be negative.");
+  }
+
   // One earning rule per allowance slot — a second would double-count.
   if (input.type === "earning") {
     const dup = await prisma.salaryComponent.findFirst({
@@ -310,6 +320,13 @@ export async function updateSalaryComponent(
       c.calculationType) as ComponentCalc,
   };
   assertValidComponent(merged);
+
+  if (
+    input.value !== undefined &&
+    (!Number.isFinite(input.value) || input.value < 0)
+  ) {
+    throw new Error("Component value can't be negative.");
+  }
 
   if (merged.type === "earning") {
     const dup = await prisma.salaryComponent.findFirst({
@@ -395,6 +412,12 @@ export async function createAdvance(
   // updateAdvance). Only a negative value is invalid.
   if (input.installment < 0)
     throw new Error("Monthly recovery cannot be negative");
+  // A half-specified window is silently ignored by the recovery logic (it only
+  // applies when BOTH dates are set), which is a foot-gun — reject it loudly.
+  if (Boolean(input.recoveryStart) !== Boolean(input.recoveryEnd))
+    throw new Error(
+      "Set both a recovery start and end month, or leave both empty."
+    );
   if (
     input.recoveryStart &&
     input.recoveryEnd &&
@@ -748,6 +771,50 @@ export async function getStoredAdvanceRecovered(
   return p ? Number(p.advanceRecovered) : null;
 }
 
+// One employee's payslips across every month/run — for the employee portal.
+export async function listPayslipsForEmployee(
+  tenantId: string,
+  employeeId: string
+) {
+  const slips = await prisma.payslip.findMany({
+    where: { employeeId, run: { tenantId } },
+    include: { run: { include: { period: true } } },
+    orderBy: { generatedAt: "desc" },
+    take: 60,
+  });
+  return slips.map((s) => {
+    const period = s.run.period;
+    const label =
+      period?.name ||
+      (period
+        ? new Date(period.periodStart).toLocaleString(undefined, {
+            month: "long",
+            year: "numeric",
+          })
+        : new Date(s.generatedAt).toLocaleDateString());
+    return {
+      id: s.id,
+      runId: s.runId,
+      month: label,
+      periodStart: period ? new Date(period.periodStart).toISOString() : null,
+      periodEnd: period ? new Date(period.periodEnd).toISOString() : null,
+      payDate: period ? new Date(period.payDate).toISOString() : null,
+      basic: Number(s.basicSalary),
+      gross: Number(s.totalEarnings),
+      deductions: Number(s.totalDeductions),
+      extraDutyDays: Number(s.extraDutyDays),
+      extraDutyPayment: Number(s.extraDutyPayment),
+      absentDays: Number(s.absentDays),
+      netPay: Number(s.netPay),
+      payable: Number(s.payableSalary),
+      amountPaid: Number(s.amountPaid),
+      currency: s.currency,
+      paidAt: s.paidAt ? s.paidAt.toISOString() : null,
+      generatedAt: s.generatedAt.toISOString(),
+    };
+  });
+}
+
 // ─── Payroll Periods + Runs ─────────────────────────────────
 
 export async function listPayrollRuns(tenantId: string) {
@@ -831,54 +898,68 @@ export async function getPayrollPrep(
     orderBy: { employee: { empCode: "asc" } },
   });
 
-  return Promise.all(
-    salaries.map(async (s) => {
-      const [absentDays, lateAbsenceDays, activeAdvances] = await Promise.all([
-        prisma.attendanceRecord.count({
-          where: {
-            employeeId: s.employeeId,
-            status: "absent",
-            date: { gte: periodStart, lte: periodEnd },
-          },
-        }),
-        countLateToAbsence(tenantId, s.employeeId, periodStart, periodEnd),
-        prisma.employeeAdvance.aggregate({
-          where: { tenantId, employeeId: s.employeeId, status: "active", outstanding: { gt: 0 } },
-          _sum: { outstanding: true },
-        }),
-      ]);
-      const totalAbsentDays = absentDays + lateAbsenceDays;
-      const basic = Number(s.baseSalary);
-      // Mirror runPayroll: structure rules drive allowances when defined,
-      // else the employee's own amounts — so the prep table preview matches
-      // what the run will actually compute.
-      const a = resolveAllowances(s.structure.components, basic, {
-        houseRent: Number(s.houseRent),
-        health: Number(s.health),
-        education: Number(s.education),
-        savings: Number(s.savings),
-        dailyHand: Number(s.dailyHand),
-      });
-      const gross = round2(
-        basic +
-          a.houseRent +
-          a.health +
-          a.education +
-          a.savings +
-          a.dailyHand
-      );
-      return {
-        employeeId: s.employeeId,
-        empCode: s.employee.empCode,
-        name: s.employee.fullName,
-        designation: s.employee.position?.title ?? "—",
-        baseSalary: basic,
-        grossSalary: gross,
-        absentDays: totalAbsentDays,
-        outstandingAdvance: Number(activeAdvances._sum.outstanding ?? 0),
-      };
-    })
+  // Batched lookups — one query each across all employees instead of three
+  // queries per employee (avoids the N+1 pattern on large headcounts).
+  const employeeIds = salaries.map((s) => s.employeeId);
+  const [absentGroups, lateAbsenceMap, advanceGroups] = await Promise.all([
+    prisma.attendanceRecord.groupBy({
+      by: ["employeeId"],
+      where: {
+        tenantId,
+        employeeId: { in: employeeIds },
+        status: "absent",
+        date: { gte: periodStart, lte: periodEnd },
+      },
+      _count: { _all: true },
+    }),
+    countLateToAbsenceBatch(tenantId, employeeIds, periodStart, periodEnd),
+    prisma.employeeAdvance.groupBy({
+      by: ["employeeId"],
+      where: {
+        tenantId,
+        employeeId: { in: employeeIds },
+        status: "active",
+        outstanding: { gt: 0 },
+      },
+      _sum: { outstanding: true },
+    }),
+  ]);
+  const absentMap = new Map(
+    absentGroups.map((g) => [g.employeeId, g._count._all])
   );
+  const advanceMap = new Map(
+    advanceGroups.map((g) => [g.employeeId, Number(g._sum.outstanding ?? 0)])
+  );
+
+  return salaries.map((s) => {
+    const totalAbsentDays =
+      (absentMap.get(s.employeeId) ?? 0) +
+      (lateAbsenceMap.get(s.employeeId) ?? 0);
+    const basic = Number(s.baseSalary);
+    // Mirror runPayroll: structure rules drive allowances when defined,
+    // else the employee's own amounts — so the prep table preview matches
+    // what the run will actually compute.
+    const a = resolveAllowances(s.structure.components, basic, {
+      houseRent: Number(s.houseRent),
+      health: Number(s.health),
+      education: Number(s.education),
+      savings: Number(s.savings),
+      dailyHand: Number(s.dailyHand),
+    });
+    const gross = round2(
+      basic + a.houseRent + a.health + a.education + a.savings + a.dailyHand
+    );
+    return {
+      employeeId: s.employeeId,
+      empCode: s.employee.empCode,
+      name: s.employee.fullName,
+      designation: s.employee.position?.title ?? "—",
+      baseSalary: basic,
+      grossSalary: gross,
+      absentDays: totalAbsentDays,
+      outstandingAdvance: advanceMap.get(s.employeeId) ?? 0,
+    };
+  });
 }
 
 // ─── Run Payroll ────────────────────────────────────────────
@@ -1007,8 +1088,23 @@ export async function runPayroll(
     addEarning("Savings", "SAV", savings, 40);
     addEarning("Daily Hand Expenses", "DHEXP", dailyHand, 50);
 
-    // Extra duty — entered per run (Basic/30 × extra-duty days)
-    const extraDutyDays = input.adjustments?.[sal.employeeId]?.extraDutyDays ?? 0;
+    // Extra duty = manual per-run adjustment PLUS every Friday (weekly
+    // holiday) the employee actually worked in this period. Paid Basic/30
+    // per extra day.
+    const workedRows = await prisma.attendanceRecord.findMany({
+      where: {
+        employeeId: sal.employeeId,
+        checkIn: { not: null },
+        date: { gte: input.periodStart, lte: input.periodEnd },
+      },
+      select: { date: true },
+    });
+    const fridayWorkedDays = workedRows.filter((r) =>
+      isWeeklyHoliday(r.date)
+    ).length;
+    const manualExtraDuty =
+      input.adjustments?.[sal.employeeId]?.extraDutyDays ?? 0;
+    const extraDutyDays = manualExtraDuty + fridayWorkedDays;
     const extraDutyPayment = round2((basic / 30) * extraDutyDays);
     if (extraDutyPayment > 0) {
       lines.push({
@@ -1037,16 +1133,28 @@ export async function runPayroll(
 
     // Absence deduction. Defaults: days from attendance + late conversion, amount = Basic/30 × days.
     // Admin may override either; if so a reason is mandatory.
-    const [attendanceDays, lateAbsenceDays] = await Promise.all([
-      prisma.attendanceRecord.count({
+    const [absentRows, lateDetail] = await Promise.all([
+      prisma.attendanceRecord.findMany({
         where: {
           employeeId: sal.employeeId,
           status: "absent",
           date: { gte: input.periodStart, lte: input.periodEnd },
         },
+        select: { date: true },
       }),
-      countLateToAbsence(tenantId, sal.employeeId, input.periodStart, input.periodEnd),
+      getLateToAbsenceDetail(
+        tenantId,
+        sal.employeeId,
+        input.periodStart,
+        input.periodEnd
+      ),
     ]);
+    // Friday (weekly holiday) is never counted as an absent working day.
+    const attendanceDays = absentRows.filter(
+      (r) => !isWeeklyHoliday(r.date)
+    ).length;
+    // Late → absence: per month, every 3 lates = 1 absent day.
+    const lateAbsenceDays = lateDetail.absenceDays;
     const adj = input.adjustments?.[sal.employeeId];
     const absentDays = adj?.absentDays ?? (attendanceDays + lateAbsenceDays);
     const formulaDeduction = round2((basic / 30) * absentDays);
@@ -1065,10 +1173,19 @@ export async function runPayroll(
     const absenceReason = daysChanged || amountChanged ? reason : null;
 
     if (absenceDeduction > 0) {
+      // Spell out the rule on the payslip so the employee sees how the
+      // deduction was derived.
+      const lateNote =
+        lateAbsenceDays > 0
+          ? ` incl. ${lateAbsenceDays} from late rule (${lateDetail.lateDays} late ÷ 3 per month)`
+          : "";
+      const autoName =
+        `Absence Deduction (${absentDays} day${absentDays === 1 ? "" : "s"}` +
+        `: ${attendanceDays} absent${lateNote}) — Basic/30 each`;
       lines.push({
-        componentName:
-          `Absence Deduction (${absentDays} day${absentDays === 1 ? "" : "s"})` +
-          (absenceReason ? ` — ${absenceReason}` : ""),
+        componentName: absenceReason
+          ? `Absence Deduction (${absentDays} day${absentDays === 1 ? "" : "s"}) — ${absenceReason}`
+          : autoName,
         componentCode: "ABSENT",
         amount: absenceDeduction,
         type: "deduction",

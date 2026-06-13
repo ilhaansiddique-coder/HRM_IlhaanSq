@@ -49,13 +49,13 @@ export default {
         "/",
         "/login",
         "/auth",
-        "/request-demo",
         "/reset-password",
       ]);
       const isPublic =
         publicPaths.has(pathname) ||
         pathname.startsWith("/invite/") ||
         pathname.startsWith("/reset-password/") ||
+        pathname.startsWith("/verify-email/") ||
         pathname.startsWith("/careers/") ||
         pathname.startsWith("/_next") ||
         pathname.startsWith("/api/auth") ||
@@ -74,6 +74,27 @@ export default {
         !pathname.startsWith("/api/auth")
       ) {
         return Response.redirect(new URL("/change-password", origin));
+      }
+
+      // EMPLOYEE PORTAL CONFINEMENT: the "employee" role can only reach their
+      // own self-service surface (Overview / Attendance / Break / Profile).
+      // Every other route bounces back to /employee.
+      const role = (auth as any)?.role;
+      if (auth?.user && role === "employee") {
+        const allowed =
+          pathname === "/employee" ||
+          pathname.startsWith("/employee/") ||
+          pathname.startsWith("/hr/attendance") ||
+          pathname.startsWith("/hr/break") ||
+          pathname.startsWith("/profile") ||
+          pathname === "/change-password" ||
+          pathname.startsWith("/api/") ||
+          pathname.startsWith("/_next") ||
+          pathname.startsWith("/icons") ||
+          pathname.startsWith("/images");
+        if (!allowed) {
+          return Response.redirect(new URL("/employee", origin));
+        }
       }
 
       return true;

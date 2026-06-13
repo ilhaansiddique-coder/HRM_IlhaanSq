@@ -33,8 +33,30 @@ export async function listBreakSessions(
   });
 }
 
-export async function startBreak(tenantId: string, employeeId: string) {
+export type BreakCategory = "courier" | "personal";
+
+// A break whose reason mentions "courier" is treated as a work errand — that
+// time still counts as working/duty time. Anything else is an out-of-duty
+// (non-working) break.
+export function classifyBreakReason(reason: string): {
+  category: BreakCategory;
+  isDuty: boolean;
+} {
+  const isDuty = /courier/i.test(reason);
+  return { category: isDuty ? "courier" : "personal", isDuty };
+}
+
+export async function startBreak(
+  tenantId: string,
+  employeeId: string,
+  opts: { note: string }
+) {
   await assertTenantOwns(tenantId, "employee", [employeeId]);
+
+  const note = (opts.note ?? "").trim();
+  if (!note) throw new Error("Please enter a reason for the break.");
+
+  const { category, isDuty } = classifyBreakReason(note);
 
   const active = await prisma.breakSession.findFirst({
     where: { tenantId, employeeId, status: "active" },
@@ -47,6 +69,9 @@ export async function startBreak(tenantId: string, employeeId: string) {
       employeeId,
       breakStart: new Date(),
       status: "active",
+      breakCategory: category,
+      isDuty,
+      notes: note,
     },
   });
 }

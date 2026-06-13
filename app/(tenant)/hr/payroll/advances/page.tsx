@@ -13,8 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, HandCoins, Plus, Ban } from "lucide-react";
-import { AdvanceForm } from "./_components/advance-form";
+import { ArrowLeft, HandCoins, Ban } from "lucide-react";
+import { AdvanceDialog } from "./_components/advance-dialog";
 import { EditAdvanceDialog } from "./_components/edit-advance-dialog";
 import { AdvanceLiveRefresh } from "../_components/advance-live-refresh";
 import { cancelAdvanceAction } from "../../actions-phase2";
@@ -66,6 +66,12 @@ export default async function AdvancesPage() {
         </Link>
       </div>
 
+      {/* The New Advance form opens from the "+" button in the top bar (left of
+          the notification bell). Portals into the TopBar; nothing inline here. */}
+      <AdvanceDialog
+        employees={employees.map((e) => ({ id: e.id, name: e.fullName, code: e.empCode }))}
+      />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border/70 bg-card/80">
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Active Advances</CardTitle></CardHeader>
@@ -81,8 +87,7 @@ export default async function AdvancesPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card className="border-border/70 bg-card/80">
+      <Card className="border-border/70 bg-card/80">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HandCoins className="h-5 w-5 text-primary" />
@@ -254,25 +259,6 @@ export default async function AdvancesPage() {
             )}
           </CardContent>
         </Card>
-
-        <Card className="border-border/70 bg-card/80 h-fit">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-4 w-4 text-primary" />
-              New Advance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AdvanceForm
-              employees={employees.map((e) => ({
-                id: e.id,
-                name: e.fullName,
-                code: e.empCode,
-              }))}
-            />
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

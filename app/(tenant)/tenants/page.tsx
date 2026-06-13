@@ -27,8 +27,10 @@ export default async function AllTenantsPage() {
   const tenants = await listAllTenants();
 
   const totalMembers = tenants.reduce((sum, t) => sum + t._count.members, 0);
-  const totalProducts = tenants.reduce((sum, t) => sum + t._count.products, 0);
-  const totalSales = tenants.reduce((sum, t) => sum + t._count.sales, 0);
+  const totalEmployees = tenants.reduce(
+    (sum, t) => sum + t._count.employees,
+    0
+  );
   const activeCount = tenants.filter((t) => t.isActive).length;
 
   return (
@@ -46,7 +48,7 @@ export default async function AllTenantsPage() {
         <MetricCard label="Total Tenants" value={tenants.length} />
         <MetricCard label="Active" value={activeCount} variant="success" />
         <MetricCard label="Total Members" value={totalMembers} />
-        <MetricCard label="Total Sales" value={totalSales} />
+        <MetricCard label="Total Employees" value={totalEmployees} />
       </div>
 
       {/* Desktop: table view. Mobile uses the card stack below. */}
@@ -64,8 +66,7 @@ export default async function AllTenantsPage() {
                   <TableHead>Slug</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead className="text-right">Members</TableHead>
-                  <TableHead className="text-right">Products</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
+                  <TableHead className="text-right">Employees</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead></TableHead>
@@ -74,7 +75,7 @@ export default async function AllTenantsPage() {
               <TableBody>
                 {tenants.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       <Building2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
                       No tenants yet. Create one to get started.
                     </TableCell>
@@ -94,8 +95,7 @@ export default async function AllTenantsPage() {
                         <Badge variant="outline" className="capitalize">{t.plan}</Badge>
                       </TableCell>
                       <TableCell className="text-right">{t._count.members}</TableCell>
-                      <TableCell className="text-right">{t._count.products}</TableCell>
-                      <TableCell className="text-right">{t._count.sales}</TableCell>
+                      <TableCell className="text-right">{t._count.employees}</TableCell>
                       <TableCell>
                         <Badge variant={t.isActive ? "default" : "destructive"}>
                           {t.isActive ? "Active" : "Disabled"}
@@ -118,9 +118,7 @@ export default async function AllTenantsPage() {
                             tenantSlug={t.slug}
                             counts={{
                               members: t._count.members,
-                              products: t._count.products,
-                              sales: t._count.sales,
-                              customers: t._count.customers,
+                              employees: t._count.employees,
                             }}
                           />
                         </div>
@@ -174,18 +172,14 @@ export default async function AllTenantsPage() {
                 </span>
               </div>
 
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <span className="text-muted-foreground">Members: </span>
                   <span className="font-semibold">{t._count.members}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Products: </span>
-                  <span className="font-semibold">{t._count.products}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Sales: </span>
-                  <span className="font-semibold">{t._count.sales}</span>
+                  <span className="text-muted-foreground">Employees: </span>
+                  <span className="font-semibold">{t._count.employees}</span>
                 </div>
               </div>
 
@@ -202,9 +196,7 @@ export default async function AllTenantsPage() {
                   tenantSlug={t.slug}
                   counts={{
                     members: t._count.members,
-                    products: t._count.products,
-                    sales: t._count.sales,
-                    customers: t._count.customers,
+                    employees: t._count.employees,
                   }}
                 />
               </div>

@@ -96,9 +96,8 @@ app.prepare().then(() => {
   }, 30000);
   wss.on("close", () => clearInterval(heartbeat));
 
-  // Fan a published advance change out to every open page for that tenant
-  // (salary sheets + the advances page).
-  bus().on("advance-changed", (ev) => {
+  // Fan any tenant-scoped bus event out to every open page for that tenant.
+  const broadcast = (ev) => {
     if (!ev || !ev.tenantId) return;
     const data = JSON.stringify(ev);
     wss.clients.forEach((c) => {
@@ -110,7 +109,12 @@ app.prepare().then(() => {
         }
       }
     });
-  });
+  };
+
+  // advance-changed → salary sheets + advances page (existing behaviour).
+  bus().on("advance-changed", broadcast);
+  // realtime → app-wide notifications/data-changed for EVERY page.
+  bus().on("realtime", broadcast);
 
   server.listen(port, hostname, () => {
     console.log(

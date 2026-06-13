@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
+import { realtimeStatus } from "./realtime-status";
 
 // App-wide notification popup. Mounted once in TenantShell, so it runs on
 // every tenant page. Polls the recent-notifications API; when something new
@@ -36,6 +37,9 @@ export function NotificationPoller() {
     async function tick() {
       try {
         if (typeof document !== "undefined" && document.hidden) return;
+        // Fallback only: when the websocket is connected it already pushes
+        // toasts + refreshes instantly, so the poll stands down.
+        if (realtimeStatus.connected) return;
 
         const res = await fetch("/api/notifications/recent", {
           cache: "no-store",

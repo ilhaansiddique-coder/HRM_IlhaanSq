@@ -7,20 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Target, Trash2 } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft, Plus, Target, Trash2 } from "lucide-react";
-import {
-  createGoalAction,
   updateGoalAction,
   deleteGoalAction,
 } from "../../actions-phase2";
+import { NewGoalDialog } from "./_components/new-goal-dialog";
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   not_started: "outline",
@@ -44,8 +36,14 @@ export default async function GoalsPage() {
         <Link href="/hr/performance"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-3">
+      {/* The New Goal form opens from the "+" button in the top bar (left of the
+          notification bell). Portals into the TopBar; nothing inline here. */}
+      <NewGoalDialog
+        employees={employees.map((e) => ({ id: e.id, fullName: e.fullName, empCode: e.empCode }))}
+        cycles={cycles.map((c) => ({ id: c.id, name: c.name }))}
+      />
+
+      <div className="space-y-3">
           {goals.length === 0 ? (
             <Card className="border-border/70 bg-card/40">
               <CardContent className="py-12 text-center">
@@ -106,62 +104,6 @@ export default async function GoalsPage() {
             ))
           )}
         </div>
-
-        <Card className="border-border/70 bg-card/80 h-fit">
-          <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="h-4 w-4 text-primary" />New Goal</CardTitle></CardHeader>
-          <CardContent>
-            <form action={createGoalAction} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Employee *</Label>
-                <Select name="employeeId" required>
-                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                  <SelectContent>
-                    {employees.map((e) => <SelectItem key={e.id} value={e.id}>{e.fullName} ({e.empCode})</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Type</Label>
-                <Select name="type" defaultValue="okr">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="okr">OKR</SelectItem>
-                    <SelectItem value="kpi">KPI</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="title" className="text-xs">Title *</Label>
-                <Input id="title" name="title" required minLength={2} placeholder="Increase sales by 30%" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="description" className="text-xs">Description</Label>
-                <Textarea id="description" name="description" rows={2} />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="targetValue" className="text-xs">Target</Label>
-                  <Input id="targetValue" name="targetValue" type="number" step="0.01" placeholder="100" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="unit" className="text-xs">Unit</Label>
-                  <Input id="unit" name="unit" placeholder="%, $, units" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Cycle (optional)</Label>
-                <Select name="cycleId">
-                  <SelectTrigger><SelectValue placeholder="No cycle" /></SelectTrigger>
-                  <SelectContent>
-                    {cycles.length === 0 ? <SelectItem value="_none" disabled>No cycles</SelectItem> : cycles.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit" className="w-full"><Plus className="h-4 w-4" />Create Goal</Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

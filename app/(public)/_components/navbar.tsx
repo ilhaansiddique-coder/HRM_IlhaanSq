@@ -59,7 +59,7 @@ export function Navbar() {
               Sign in
             </Button>
           </Link>
-          <Link href="/request-demo">
+          <Link href="/onboarding">
             <Button size="sm">Request Access</Button>
           </Link>
         </div>
@@ -95,7 +95,7 @@ export function Navbar() {
                   Sign in
                 </Button>
               </Link>
-              <Link href="/request-demo" className="flex-1">
+              <Link href="/onboarding" className="flex-1">
                 <Button size="sm" className="w-full">
                   Request Access
                 </Button>

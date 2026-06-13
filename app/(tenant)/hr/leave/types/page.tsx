@@ -10,14 +10,9 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, CalendarDays } from "lucide-react";
-import {
-  createLeaveTypeAction,
-  deleteLeaveTypeAction,
-} from "../../actions";
+import { ArrowLeft, Trash2, CalendarDays } from "lucide-react";
+import { deleteLeaveTypeAction } from "../../actions";
+import { NewLeaveTypeDialog } from "./_components/new-leave-type-dialog";
 
 export default async function LeaveTypesPage() {
   const session = await requireTenant();
@@ -33,8 +28,11 @@ export default async function LeaveTypesPage() {
         </Link>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card className="border-border/70 bg-card/80">
+      {/* The New Leave Type form opens from the "+" button in the top bar (left
+          of the notification bell). Portals into the TopBar; nothing inline. */}
+      <NewLeaveTypeDialog />
+
+      <Card className="border-border/70 bg-card/80">
           <CardHeader>
             <CardTitle>All Leave Types ({types.length})</CardTitle>
           </CardHeader>
@@ -82,57 +80,6 @@ export default async function LeaveTypesPage() {
             )}
           </CardContent>
         </Card>
-
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-4 w-4 text-primary" />
-              New Leave Type
-            </CardTitle>
-            <CardDescription>e.g., Annual, Sick, Maternity</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={createLeaveTypeAction} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs">
-                  Name <span className="text-destructive">*</span>
-                </Label>
-                <Input id="name" name="name" required minLength={2} placeholder="Annual Leave" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="code" className="text-xs">
-                  Code <span className="text-destructive">*</span>
-                </Label>
-                <Input id="code" name="code" required maxLength={4} placeholder="AL" className="font-mono uppercase" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="annualEntitlement" className="text-xs">Annual Entitlement (days)</Label>
-                <Input id="annualEntitlement" name="annualEntitlement" type="number" min="0" defaultValue="20" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="color" className="text-xs">Color</Label>
-                <Input id="color" name="color" type="color" defaultValue="#6366f1" className="h-10" />
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="isPaid" name="isPaid" defaultChecked className="rounded" />
-                <Label htmlFor="isPaid" className="text-xs cursor-pointer">Paid leave</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="requiresApproval" name="requiresApproval" defaultChecked className="rounded" />
-                <Label htmlFor="requiresApproval" className="text-xs cursor-pointer">Requires approval</Label>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="description" className="text-xs">Description</Label>
-                <Textarea id="description" name="description" rows={2} />
-              </div>
-              <Button type="submit" className="w-full">
-                <Plus className="h-4 w-4" />
-                Create Type
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

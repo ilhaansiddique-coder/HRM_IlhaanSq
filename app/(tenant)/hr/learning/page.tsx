@@ -1,11 +1,17 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { getLearningStats, listEnrollments } from "@/lib/services/hr/learning.service";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Plus, Award, BookOpen, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { GraduationCap, Award, BookOpen, TrendingUp } from "lucide-react";
+import { NewCourseDialog } from "./courses/_components/new-course-dialog";
 
 export default async function LearningOverviewPage() {
   const session = await requireTenant();
@@ -16,12 +22,9 @@ export default async function LearningOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <div className="flex gap-2">
-          <Link href="/hr/learning/enrollments"><Button variant="outline"><Award className="h-4 w-4" />Enrollments</Button></Link>
-          <Link href="/hr/learning/courses"><Button><Plus className="h-4 w-4" />New Course</Button></Link>
-        </div>
-      </div>
+      {/* New-course form opens from the "+" button in the top bar (left of the
+          notification bell). Enrollments now lives in the sidebar under Learning. */}
+      <NewCourseDialog />
 
       <div className="grid gap-4 sm:grid-cols-4">
         <StatCard icon={<BookOpen className="h-4 w-4" />} title="Total Courses" value={stats.courseCount} hint={`${stats.publishedCount} published`} />
@@ -30,35 +33,53 @@ export default async function LearningOverviewPage() {
         <StatCard icon={<TrendingUp className="h-4 w-4" />} title="Completion Rate" value={`${stats.completionRate}%`} />
       </div>
 
-      <Card className="border-border/70 bg-card/80">
-        <CardHeader>
-          <CardTitle>Recent Enrollments</CardTitle>
-          <CardDescription>Latest course assignments</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {enrollments.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No enrollments yet</p>
-          ) : (
-            enrollments.slice(0, 8).map((e) => (
-              <div key={e.id} className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{e.employee.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{e.course.title}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-20">
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary" style={{ width: `${e.progress}%` }} />
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold">Recent Enrollments</h2>
+          <p className="text-sm text-muted-foreground">Latest course assignments</p>
+        </div>
+        {enrollments.length === 0 ? (
+          <Card className="border-border/70 bg-card/40">
+            <CardContent className="py-10 text-center">
+              <p className="text-sm text-muted-foreground">No enrollments yet</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Course</TableHead>
+                <TableHead className="w-[220px]">Progress</TableHead>
+                <TableHead>Certificate</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {enrollments.slice(0, 8).map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell className="font-medium">{e.employee.fullName}</TableCell>
+                  <TableCell className="text-muted-foreground">{e.course.title}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-28 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${e.progress}%` }} />
+                      </div>
+                      <span className="text-xs font-medium tabular-nums">{e.progress}%</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground text-right mt-0.5">{e.progress}%</p>
-                  </div>
-                  {e.certification && <Award className="h-4 w-4 text-success" />}
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+                  </TableCell>
+                  <TableCell>
+                    {e.certification ? (
+                      <Award className="h-4 w-4 text-success" />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </div>
   );
 }

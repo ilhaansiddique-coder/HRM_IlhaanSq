@@ -71,7 +71,6 @@ async function main() {
     create: {
       tenantId: tenant.id,
       businessName: "Demo Business",
-      invoicePrefix: "INV",
     },
   });
 
@@ -87,78 +86,7 @@ async function main() {
     },
   });
 
-  // Create a default payment method
-  await prisma.paymentMethod.create({
-    data: {
-      tenantId: tenant.id,
-      name: "Cash",
-      isActive: true,
-    },
-  });
-
-  console.log("Created default settings and payment method");
-
-  // Create sample products
-  const products = await Promise.all([
-    prisma.product.create({
-      data: {
-        tenantId: tenant.id,
-        name: "T-Shirt Basic",
-        sku: "TSH-001",
-        rate: 450,
-        cost: 250,
-        stockQuantity: 100,
-        createdBy: admin.id,
-      },
-    }),
-    prisma.product.create({
-      data: {
-        tenantId: tenant.id,
-        name: "Premium Polo",
-        sku: "POL-001",
-        rate: 850,
-        cost: 500,
-        stockQuantity: 50,
-        hasVariants: true,
-        createdBy: admin.id,
-        variants: {
-          create: [
-            { sku: "POL-001-S", attributes: { size: "S" }, rate: 850, cost: 500, stockQuantity: 15 },
-            { sku: "POL-001-M", attributes: { size: "M" }, rate: 850, cost: 500, stockQuantity: 20 },
-            { sku: "POL-001-L", attributes: { size: "L" }, rate: 850, cost: 500, stockQuantity: 15 },
-          ],
-        },
-      },
-    }),
-    prisma.product.create({
-      data: {
-        tenantId: tenant.id,
-        name: "Cotton Panjabi",
-        sku: "PAN-001",
-        rate: 1200,
-        cost: 700,
-        stockQuantity: 30,
-        createdBy: admin.id,
-      },
-    }),
-  ]);
-
-  console.log(`Created ${products.length} sample products`);
-
-  // Create sample customer
-  const customer = await prisma.customer.create({
-    data: {
-      tenantId: tenant.id,
-      name: "Rahim Ahmed",
-      phone: "01712345678",
-      email: "rahim@example.com",
-      address: "123 Dhanmondi, Dhaka",
-      status: "active",
-      createdBy: admin.id,
-    },
-  });
-
-  console.log(`Created sample customer: ${customer.name}`);
+  console.log("Created default settings");
 
   // RaheDeen standard salary structure (terms of payment from the company sheet)
   const STRUCTURE_NAME = "Standard Monthly Salary (RaheDeen)";

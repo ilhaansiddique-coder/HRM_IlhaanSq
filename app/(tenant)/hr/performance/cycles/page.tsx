@@ -4,21 +4,12 @@ import { listReviewCycles } from "@/lib/services/hr/performance.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ArrowLeft, Play, X, Calendar } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft, Plus, Play, X, Calendar } from "lucide-react";
-import {
-  createCycleAction,
   activateCycleAction,
   closeCycleAction,
 } from "../../actions-phase2";
+import { NewCycleDialog } from "./_components/new-cycle-dialog";
 
 const statusVariants: Record<string, "default" | "secondary" | "outline"> = {
   draft: "outline",
@@ -36,8 +27,11 @@ export default async function CyclesPage() {
         <Link href="/hr/performance"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-3">
+      {/* The New Cycle form opens from the "+" button in the top bar (left of the
+          notification bell). Portals into the TopBar; nothing inline here. */}
+      <NewCycleDialog />
+
+      <div className="space-y-3">
           {cycles.length === 0 ? (
             <Card className="border-border/70 bg-card/40">
               <CardContent className="py-12 text-center">
@@ -78,41 +72,6 @@ export default async function CyclesPage() {
             ))
           )}
         </div>
-
-        <Card className="border-border/70 bg-card/80 h-fit">
-          <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="h-4 w-4 text-primary" />New Cycle</CardTitle></CardHeader>
-          <CardContent>
-            <form action={createCycleAction} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs">Name *</Label>
-                <Input id="name" name="name" required minLength={2} placeholder="2026 Annual Review" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="type" className="text-xs">Type</Label>
-                <Select name="type" defaultValue="annual">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="annual">Annual</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="startDate" className="text-xs">From</Label>
-                  <Input id="startDate" name="startDate" type="date" required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="endDate" className="text-xs">To</Label>
-                  <Input id="endDate" name="endDate" type="date" required />
-                </div>
-              </div>
-              <Button type="submit" className="w-full"><Plus className="h-4 w-4" />Create</Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

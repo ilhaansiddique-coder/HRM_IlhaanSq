@@ -30,8 +30,10 @@ import {
   requestChangesAction,
   approvalDetailAction,
   approveWithEditsAction,
+  approveWithPayloadEditsAction,
 } from "../actions";
 import type { ApprovalDetail } from "@/lib/services/approvals.service";
+import { ActivateNowButton } from "./activate-now-button";
 
 type Approval = {
   id: string;
@@ -291,6 +293,13 @@ export function ApprovalsTab({
                     </div>
                   </div>
 
+                  {a.status === "pending" &&
+                    a.type === "employee_onboarding" && (
+                      <div className="mt-2 flex justify-end">
+                        <ActivateNowButton id={a.id} />
+                      </div>
+                    )}
+
                   {reviewing === a.id && (
                     <div className="mt-3 rounded-md border border-border/60 bg-background/40 p-3 text-xs">
                       {loadingId === a.id && !details[a.id] ? (
@@ -396,6 +405,54 @@ export function ApprovalsTab({
                                   placeholder="Requirements"
                                   className="text-xs"
                                 />
+                                {a.status === "pending" && (
+                                  <Button
+                                    type="submit"
+                                    size="sm"
+                                    className="h-7 w-full gap-1"
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Approve with these changes
+                                  </Button>
+                                )}
+                              </form>
+                            ) : details[a.id].editableFields ? (
+                              <form
+                                action={approveWithPayloadEditsAction}
+                                className="space-y-1.5"
+                              >
+                                <p className="mb-1 font-semibold text-primary">
+                                  Proposed — editable by admin
+                                </p>
+                                <input type="hidden" name="id" value={a.id} />
+                                {details[a.id].editableFields!.map((f) => (
+                                  <div key={f.name} className="space-y-0.5">
+                                    <label className="text-[10px] uppercase text-muted-foreground">
+                                      {f.label}
+                                    </label>
+                                    {f.type === "textarea" ? (
+                                      <Textarea
+                                        name={f.name}
+                                        rows={2}
+                                        defaultValue={f.value}
+                                        className="text-xs"
+                                      />
+                                    ) : (
+                                      <Input
+                                        name={f.name}
+                                        type={
+                                          f.type === "number"
+                                            ? "number"
+                                            : f.type === "date"
+                                              ? "date"
+                                              : "text"
+                                        }
+                                        defaultValue={f.value}
+                                        className="h-7 text-xs"
+                                      />
+                                    )}
+                                  </div>
+                                ))}
                                 {a.status === "pending" && (
                                   <Button
                                     type="submit"

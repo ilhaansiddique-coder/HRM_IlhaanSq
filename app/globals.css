@@ -675,6 +675,27 @@
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
   }
 
+  /* Employee portal: extra breathing room on mobile so page content never
+     sits flush against the fixed bottom nav. Cleared on lg (sidebar, no
+     bottom nav). */
+  .nav-mb-safe-tall {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0));
+  }
+  @media (min-width: 1024px) {
+    .nav-mb-safe-tall {
+      padding-bottom: 1.5rem;
+    }
+  }
+
+  /* Scrollable but with no visible scrollbar (clean horizontal card rails). */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .no-bounce {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: auto;

@@ -42,7 +42,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/request-demo" className="text-muted-foreground hover:text-foreground">
+                <Link href="/onboarding" className="text-muted-foreground hover:text-foreground">
                   Request access
                 </Link>
               </li>

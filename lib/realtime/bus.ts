@@ -54,3 +54,37 @@ export function onAdvanceChange(fn: (ev: AdvanceChangeEvent) => void): () => voi
   b.on(CHANNEL, fn);
   return () => b.off(CHANNEL, fn);
 }
+
+// ─── Generic realtime channel ───────────────────────────────
+// App-wide realtime: ANY part of the app can push a tenant-scoped event
+// (notification, data-changed, …). server.cjs fans these out to every open
+// page for that tenant; the app-wide RealtimeProvider pops a toast and
+// router.refresh()es. No sensitive data crosses the socket — only a hint;
+// authenticated server components re-fetch on refresh.
+export type RealtimeEvent = {
+  type: "realtime";
+  /** Tenant scope — clients subscribe by tenant and filter on this. */
+  tenantId: string;
+  /** "notification" | "data" | feature-specific kinds. */
+  kind: string;
+  title?: string;
+  body?: string | null;
+  severity?: string;
+  category?: string;
+};
+
+const RT_CHANNEL = "realtime";
+
+export function publishRealtime(ev: Omit<RealtimeEvent, "type">) {
+  try {
+    bus().emit(RT_CHANNEL, { type: "realtime", ...ev } satisfies RealtimeEvent);
+  } catch {
+    /* realtime is best-effort and must never break the caller */
+  }
+}
+
+export function onRealtime(fn: (ev: RealtimeEvent) => void): () => void {
+  const b = bus();
+  b.on(RT_CHANNEL, fn);
+  return () => b.off(RT_CHANNEL, fn);
+}
