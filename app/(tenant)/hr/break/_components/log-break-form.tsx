@@ -96,27 +96,31 @@ export function LogBreakForm({
         </div>
       )}
 
-      {employees && (
-        <div className="space-y-1.5">
-          <Label className="text-xs">Employee</Label>
-          <Select value={employeeId} onValueChange={setEmployeeId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select employee..." />
-            </SelectTrigger>
-            <SelectContent>
-              {employees.map((e) => (
-                <SelectItem key={e.id} value={e.id}>
-                  {e.name} ({e.code})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {/* Employee + Date in the same row (admin mode); Date alone when an
+          employee logs their own break. */}
+      <div className={employees ? "grid grid-cols-2 gap-3" : ""}>
+        {employees && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Employee</Label>
+            <Select value={employeeId} onValueChange={setEmployeeId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select employee..." />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.name} ({e.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-      <div className="space-y-1.5">
-        <Label className="text-xs">Date</Label>
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <div className="space-y-1.5">
+          <Label className="text-xs">Date</Label>
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

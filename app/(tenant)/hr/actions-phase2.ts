@@ -35,7 +35,7 @@ const HR_DOC_ALLOWED_MIME = new Set([
 async function syncAdvances(tenantId: string, kind: AdvanceChangeKind) {
   const runIds = await reconcileRunAdvancesForTenant(tenantId);
   for (const runId of runIds) revalidatePath(`/hr/payroll/runs/${runId}`);
-  if (runIds.length) revalidatePath("/hr/payroll/runs");
+  if (runIds.length) revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   revalidatePath("/hr/payroll/advances");
   publishAdvanceChange({ tenantId, kind });
 }
@@ -343,7 +343,7 @@ export async function runPayrollAction(formData: FormData) {
       error: e instanceof Error ? e.message : "Failed to submit for approval",
     };
   }
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   revalidatePath("/hr/payroll");
   revalidatePath("/admin");
   return { ok: true as const };
@@ -404,7 +404,7 @@ export async function updatePayslipAction(formData: FormData) {
     });
   }
   if (runId) revalidatePath(`/hr/payroll/runs/${runId}`);
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   revalidatePath("/hr/payroll");
 }
 
@@ -1080,7 +1080,7 @@ export async function createPayrollColumnAction(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed" };
   }
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   return { ok: true };
 }
 
@@ -1102,7 +1102,7 @@ export async function updatePayrollColumnAction(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed" };
   }
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   return { ok: true };
 }
 
@@ -1120,7 +1120,7 @@ export async function deletePayrollColumnAction(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Failed" };
   }
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   return { ok: true };
 }
 
@@ -1153,7 +1153,7 @@ export async function setPayslipPaidAction(
     return { ok: false, error: e instanceof Error ? e.message : "Failed" };
   }
   if (runId) revalidatePath(`/hr/payroll/runs/${runId}`);
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   revalidatePath("/admin");
   return { ok: true };
 }
@@ -1179,7 +1179,7 @@ export async function refreshRunAdvancesAction(
     runId: runId || undefined,
     kind: "refreshed",
   });
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   return { ok: true };
 }
 
@@ -1211,7 +1211,7 @@ export async function setPayslipCustomValueAction(
     return { ok: false, error: e instanceof Error ? e.message : "Failed" };
   }
   if (runId) revalidatePath(`/hr/payroll/runs/${runId}`);
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
   return { ok: true };
 }
 
@@ -1259,7 +1259,7 @@ export async function setBaseColumnAction(
       session.userId,
       `Edited built-in column "${fieldKey}"`
     );
-    revalidatePath("/hr/payroll/runs");
+    revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
     return {
       ok: true,
       info: `Recomputed ${r.payslips} payslip(s) across ${r.runs} run(s). A restore point was saved.`,
@@ -1286,7 +1286,7 @@ export async function clearBaseColumnAction(
       session.userId,
       `Reset built-in column "${fieldKey}" to default`
     );
-    revalidatePath("/hr/payroll/runs");
+    revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
     return {
       ok: true,
       info: `Reset to default. Recomputed ${r.payslips} payslip(s) across ${r.runs} run(s).`,
@@ -1310,7 +1310,7 @@ export async function restoreRecomputeBackupAction(
       session.tenantId,
       (formData.get("backupId") as string) ?? ""
     );
-    revalidatePath("/hr/payroll/runs");
+    revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
     return {
       ok: true,
       info: `Restored ${r.payslips} payslip(s) across ${r.runs} run(s).`,

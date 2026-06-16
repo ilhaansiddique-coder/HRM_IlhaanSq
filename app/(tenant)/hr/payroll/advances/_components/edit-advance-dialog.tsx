@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, SquarePen } from "lucide-react";
 import { updateAdvanceAction } from "../../../actions-phase2";
 
 // Lets an admin correct an ACTIVE advance's amount / monthly recovery — the
@@ -58,10 +58,10 @@ export function EditAdvanceDialog({
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7"
+          className="h-7 w-7 rounded-full"
           title="Edit advance"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <SquarePen className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">

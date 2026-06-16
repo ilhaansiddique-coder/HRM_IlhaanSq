@@ -183,6 +183,55 @@ export async function checkOut(tenantId: string, employeeId: string) {
   });
 }
 
+/** Working hours between two timestamps (2-decimal hours), or null if either
+ *  is missing / the range is non-positive. */
+function computeWorkHours(
+  checkIn: Date | null,
+  checkOut: Date | null
+): number | null {
+  if (!checkIn || !checkOut) return null;
+  const ms = checkOut.getTime() - checkIn.getTime();
+  if (ms <= 0) return 0;
+  return Math.round((ms / 3_600_000) * 100) / 100;
+}
+
+/** Admin edit of a single attendance record — adjust check-in / check-out /
+ *  status. Working hours are recomputed from the resulting times. */
+export async function updateAttendanceRecord(
+  tenantId: string,
+  id: string,
+  data: { checkIn?: Date | null; checkOut?: Date | null; status?: string }
+) {
+  const rec = await prisma.attendanceRecord.findFirst({
+    where: { id, tenantId },
+  });
+  if (!rec) throw new Error("Attendance record not found");
+
+  const checkIn = data.checkIn !== undefined ? data.checkIn : rec.checkIn;
+  const checkOut = data.checkOut !== undefined ? data.checkOut : rec.checkOut;
+
+  return prisma.attendanceRecord.update({
+    where: { id },
+    data: {
+      checkIn,
+      checkOut,
+      workHours: computeWorkHours(checkIn, checkOut),
+      ...(data.status !== undefined && data.status
+        ? { status: data.status }
+        : {}),
+    },
+  });
+}
+
+export async function deleteAttendanceRecord(tenantId: string, id: string) {
+  const rec = await prisma.attendanceRecord.findFirst({
+    where: { id, tenantId },
+    select: { id: true },
+  });
+  if (!rec) throw new Error("Attendance record not found");
+  return prisma.attendanceRecord.delete({ where: { id } });
+}
+
 export async function getAttendanceStats(tenantId: string, date?: Date) {
   // "Today" must be the tenant-local business day (UTC-midnight key) so it
   // matches how check-in filed the record. Records store date at UTC
@@ -216,6 +265,149 @@ export async function getAttendanceStats(tenantId: string, date?: Date) {
     absent: totalActive - checkedIn,
     attendanceRate: totalActive > 0 ? Math.round((checkedIn / totalActive) * 100) : 0,
   };
+}
+
+export type RosterMember = {
+  id: string;
+  fullName: string;
+  empCode: string;
+  department: string | null;
+  // Present/Late → check-in time; On leave → leave type; Absent → null.
+  detail: string | null;
+};
+
+export type AttendanceRoster = {
+  present: RosterMember[];
+  late: RosterMember[];
+  onLeave: RosterMember[];
+  absent: RosterMember[];
+};
+
+/**
+ * Per-employee attendance roster for "today" (tenant-local business day):
+ * who is present, late, on approved leave, or absent. Powers the dashboard
+ * Attendance Today breakdown. The four buckets are mutually exclusive and
+ * together cover every active employee, so:
+ *   present + late + onLeave + absent === active headcount.
+ * (Note: this "absent" excludes people on approved leave, unlike the coarse
+ * getAttendanceStats.absent which counts them as not-checked-in.)
+ */
+export async function getAttendanceRosterToday(
+  tenantId: string
+): Promise<AttendanceRoster> {
+  const dayKey = await getAttendanceDayKey(tenantId);
+
+  const fmtTime = (d: Date | null) =>
+    d
+      ? new Date(d).toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : null;
+
+  const [records, leaves, activeEmployees] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: { tenantId, date: dayKey },
+      select: {
+        status: true,
+        checkIn: true,
+        employee: {
+          select: {
+            id: true,
+            fullName: true,
+            empCode: true,
+            status: true,
+            department: { select: { name: true } },
+          },
+        },
+      },
+    }),
+    prisma.leaveRequest.findMany({
+      where: {
+        tenantId,
+        status: "approved",
+        startDate: { lte: dayKey },
+        endDate: { gte: dayKey },
+      },
+      select: {
+        employee: {
+          select: {
+            id: true,
+            fullName: true,
+            empCode: true,
+            status: true,
+            department: { select: { name: true } },
+          },
+        },
+        leaveType: { select: { name: true } },
+      },
+    }),
+    prisma.employee.findMany({
+      where: { tenantId, status: "active" },
+      orderBy: { fullName: "asc" },
+      select: {
+        id: true,
+        fullName: true,
+        empCode: true,
+        department: { select: { name: true } },
+      },
+    }),
+  ]);
+
+  // On approved leave today — resolve first so leave wins over an absent slot.
+  const onLeave: RosterMember[] = [];
+  const onLeaveIds = new Set<string>();
+  for (const l of leaves) {
+    const e = l.employee;
+    if (!e || e.status !== "active" || onLeaveIds.has(e.id)) continue;
+    onLeaveIds.add(e.id);
+    onLeave.push({
+      id: e.id,
+      fullName: e.fullName,
+      empCode: e.empCode,
+      department: e.department?.name ?? null,
+      detail: l.leaveType?.name ?? "Leave",
+    });
+  }
+
+  // Checked in today (present / late).
+  const present: RosterMember[] = [];
+  const late: RosterMember[] = [];
+  const checkedInIds = new Set<string>();
+  for (const r of records) {
+    const e = r.employee;
+    if (!e || e.status !== "active" || onLeaveIds.has(e.id)) continue;
+    if (checkedInIds.has(e.id)) continue;
+    checkedInIds.add(e.id);
+    const member: RosterMember = {
+      id: e.id,
+      fullName: e.fullName,
+      empCode: e.empCode,
+      department: e.department?.name ?? null,
+      detail: fmtTime(r.checkIn),
+    };
+    if (r.status === "late") late.push(member);
+    else present.push(member);
+  }
+
+  // Absent = active, not on leave, no check-in.
+  const absent: RosterMember[] = activeEmployees
+    .filter((e) => !checkedInIds.has(e.id) && !onLeaveIds.has(e.id))
+    .map((e) => ({
+      id: e.id,
+      fullName: e.fullName,
+      empCode: e.empCode,
+      department: e.department?.name ?? null,
+      detail: null,
+    }));
+
+  const byName = (a: RosterMember, b: RosterMember) =>
+    a.fullName.localeCompare(b.fullName);
+  present.sort(byName);
+  late.sort(byName);
+  onLeave.sort(byName);
+
+  return { present, late, onLeave, absent };
 }
 
 /**

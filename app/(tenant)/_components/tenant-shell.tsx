@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { NavLink } from "./nav-link";
 import { NotificationBell } from "./notification-bell";
+import { ViewSwitcher } from "./view-switcher";
 import { NotificationPoller } from "./notification-poller";
 import { RealtimeProvider } from "./realtime-provider";
 import { signOut } from "next-auth/react";
@@ -35,15 +36,13 @@ import {
   Target,
   UserPlus,
   GraduationCap,
-  BookOpen,
-  Award,
-  Briefcase,
-  Calendar,
-  FileText,
-  HandCoins,
   FolderLock,
   ClipboardCheck,
   Coffee,
+  Calendar,
+  Briefcase,
+  BookOpen,
+  Award,
   Tags,
   User,
 } from "lucide-react";
@@ -82,7 +81,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DateRangePicker } from "../dashboard/_components/date-range-picker";
+import { DateRangePicker } from "./date-range-picker";
 import {
   Tooltip,
   TooltipContent,
@@ -97,15 +96,10 @@ import {
   type DaisyThemeName,
 } from "@/lib/utils";
 
-const menuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: Home },
-];
-
 // Mobile bottom-nav entries — shown to every authenticated tenant user
 // regardless of role. Admin gets appended for owner / admin / superadmin
-// roles below.
+// roles below. The HR Overview (/hr) is the tenant home.
 const baseBottomNavItems = [
-  { label: "Dashboard", to: "/dashboard", icon: Home },
   { label: "HR", to: "/hr", icon: UserCog },
   { label: "Profile", to: "/profile", icon: User },
   { label: "Settings", to: "/settings", icon: Settings },
@@ -119,6 +113,8 @@ export function TenantShell({
   userEmail,
   role,
   isSuperAdmin,
+  availableViews,
+  activeView,
   pendingTenantCount,
   notifications,
   sidebarDefaultOpen,
@@ -131,6 +127,8 @@ export function TenantShell({
   userEmail: string;
   role: string | null;
   isSuperAdmin: boolean;
+  availableViews: string[];
+  activeView: string | null;
   pendingTenantCount: number;
   notifications: NotificationItem[];
   sidebarDefaultOpen: boolean;
@@ -154,6 +152,8 @@ export function TenantShell({
               userName={userName}
               userEmail={userEmail}
               role={role}
+              availableViews={availableViews}
+              activeView={activeView}
               notifications={notifications}
             />
             <main
@@ -197,15 +197,36 @@ function AppSidebar({
     pathname === path || pathname.startsWith(`${path}/`);
   const isInTenantsAdmin = pathname.startsWith("/tenants");
   const [tenantsOpen, setTenantsOpen] = useState(isInTenantsAdmin);
-  const isInHr = pathname.startsWith("/hr");
-  const [hrOpen, setHrOpen] = useState(isInHr);
+  // Payroll submenu — toggled ONLY by its chevron; clicking the label
+  // navigates to /hr/payroll instead of expanding.
+  const [payrollOpen, setPayrollOpen] = useState(
+    isRouteActive("/hr/payroll/assign")
+  );
+  // Performance submenu — same chevron-only toggle behaviour as Payroll.
+  const [performanceOpen, setPerformanceOpen] = useState(
+    isRouteActive("/hr/performance/cycles") ||
+      isRouteActive("/hr/performance/goals")
+  );
+  // Recruitment submenu — same chevron-only toggle behaviour.
+  const [recruitmentOpen, setRecruitmentOpen] = useState(
+    isRouteActive("/hr/recruitment/jobs") ||
+      isRouteActive("/hr/recruitment/candidates")
+  );
+  // Learning submenu — same chevron-only toggle behaviour.
+  const [learningOpen, setLearningOpen] = useState(
+    isRouteActive("/hr/learning/courses") ||
+      isRouteActive("/hr/learning/enrollments")
+  );
+  // Documents submenu — same chevron-only toggle behaviour.
+  const [documentsOpen, setDocumentsOpen] = useState(
+    isRouteActive("/hr/documents/categories")
+  );
 
   // On mobile, open the top-level groups by default so every menu item is
   // visible openly in the drawer. Desktop keeps them collapsed unless you're
   // currently inside that section.
   useEffect(() => {
     if (isMobile) {
-      setHrOpen(true);
       setTenantsOpen(true);
     }
   }, [isMobile]);
@@ -216,12 +237,13 @@ function AppSidebar({
       : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground";
 
   // Employee portal: a stripped sidebar with ONLY the employee's own
-  // self-service surface — Overview, Attendance, Break Time.
+  // self-service surface — Overview, Attendance, Break Time, Leave, Payslips.
   if (isEmployee) {
     const employeeMenu = [
       { title: "Overview", url: "/employee", icon: Home },
       { title: "Attendance", url: "/hr/attendance", icon: CalendarClock },
       { title: "Break Time", url: "/hr/break", icon: Coffee },
+      { title: "Leave", url: "/hr/leave", icon: CalendarDays },
       { title: "Payslips", url: "/employee/payslips", icon: Wallet },
     ];
     return (
@@ -329,107 +351,287 @@ function AppSidebar({
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isRouteActive(item.url)}
-                    tooltip={isCollapsed ? item.title : undefined}
-                    className={navClass(isRouteActive(item.url))}
-                  >
-                    <NavLink href={item.url}>
-                      <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center transition-colors">
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        {!isCollapsed && <span>{item.title}</span>}
-                      </span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-
               {/* HR Module — inline accordion when expanded, flyout dropdown
-                  when the sidebar is collapsed to icons. */}
-              <CollapsibleNavGroup
-                icon={UserCog}
-                label="HR"
-                isActive={isInHr}
-                isCollapsed={isCollapsed}
-                open={hrOpen}
-                onOpenChange={setHrOpen}
-                triggerClassName={navClass(isInHr)}
-                items={[
-                  { href: "/hr", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr" },
-                  { href: "/hr/employees", icon: <Users className="h-4 w-4" />, label: "Employees", active: pathname.startsWith("/hr/employees") },
-                  { href: "/hr/departments", icon: <Building2 className="h-4 w-4" />, label: "Departments", active: pathname.startsWith("/hr/departments") },
-                  { href: "/hr/positions", icon: <ClipboardCheck className="h-4 w-4" />, label: "Positions", active: pathname.startsWith("/hr/positions") },
-                  { href: "/hr/attendance", icon: <CalendarClock className="h-4 w-4" />, label: "Attendance", active: pathname.startsWith("/hr/attendance") },
-                  { href: "/hr/break", icon: <Coffee className="h-4 w-4" />, label: "Break Time", active: pathname.startsWith("/hr/break") },
-                  {
-                    href: "/hr/leave",
-                    icon: <CalendarDays className="h-4 w-4" />,
-                    label: "Leave",
-                    active: pathname.startsWith("/hr/leave"),
-                    children: [
-                      { href: "/hr/leave", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/leave" },
-                      { href: "/hr/leave/types", icon: <Settings className="h-4 w-4" />, label: "Manage Leave Types", active: pathname.startsWith("/hr/leave/types") },
-                    ],
-                  },
-                  {
-                    href: "/hr/payroll",
-                    icon: <Wallet className="h-4 w-4" />,
-                    label: "Payroll",
-                    active: pathname.startsWith("/hr/payroll"),
-                    children: [
-                      { href: "/hr/payroll", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/payroll" },
-                      { href: "/hr/payroll/runs", icon: <FileText className="h-4 w-4" />, label: "Run Payroll", active: pathname.startsWith("/hr/payroll/runs") },
-                      { href: "/hr/payroll/advances", icon: <HandCoins className="h-4 w-4" />, label: "Advances", active: pathname.startsWith("/hr/payroll/advances") },
-                    ],
-                  },
-                  {
-                    href: "/hr/performance",
-                    icon: <Target className="h-4 w-4" />,
-                    label: "Performance",
-                    active: pathname.startsWith("/hr/performance"),
-                    children: [
-                      { href: "/hr/performance", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/performance" },
-                      { href: "/hr/performance/cycles", icon: <Calendar className="h-4 w-4" />, label: "Cycles", active: pathname.startsWith("/hr/performance/cycles") },
-                      { href: "/hr/performance/goals", icon: <Target className="h-4 w-4" />, label: "Goals", active: pathname.startsWith("/hr/performance/goals") },
-                    ],
-                  },
-                  {
-                    href: "/hr/recruitment",
-                    icon: <UserPlus className="h-4 w-4" />,
-                    label: "Recruitment",
-                    active: pathname.startsWith("/hr/recruitment"),
-                    children: [
-                      { href: "/hr/recruitment", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/recruitment" },
-                      { href: "/hr/recruitment/jobs", icon: <Briefcase className="h-4 w-4" />, label: "Jobs", active: pathname.startsWith("/hr/recruitment/jobs") },
-                      { href: "/hr/recruitment/candidates", icon: <Users className="h-4 w-4" />, label: "Candidates", active: pathname.startsWith("/hr/recruitment/candidates") },
-                    ],
-                  },
-                  {
-                    href: "/hr/learning",
-                    icon: <GraduationCap className="h-4 w-4" />,
-                    label: "Learning",
-                    active: pathname.startsWith("/hr/learning"),
-                    children: [
-                      { href: "/hr/learning", icon: <Home className="h-4 w-4" />, label: "Overview", active: pathname === "/hr/learning" },
-                      { href: "/hr/learning/courses", icon: <BookOpen className="h-4 w-4" />, label: "Courses", active: pathname.startsWith("/hr/learning/courses") },
-                      { href: "/hr/learning/enrollments", icon: <Award className="h-4 w-4" />, label: "Enrollments", active: pathname.startsWith("/hr/learning/enrollments") },
-                    ],
-                  },
-                  {
-                    href: "/hr/documents",
-                    icon: <FolderLock className="h-4 w-4" />,
-                    label: "Documents",
-                    active: pathname.startsWith("/hr/documents"),
-                    children: [
-                      { href: "/hr/documents", icon: <FolderLock className="h-4 w-4" />, label: "All Documents", active: pathname === "/hr/documents" },
-                      { href: "/hr/documents/categories", icon: <Tags className="h-4 w-4" />, label: "Categories", active: pathname.startsWith("/hr/documents/categories") },
-                    ],
-                  },
-                ]}
-              />
+                  when the sidebar is collapsed to icons. HR Overview (/hr) is
+                  the tenant home (the former standalone Dashboard was merged in). */}
+              {/* Flat HR menu — every item is a standalone link. "HR" itself
+                  is the dashboard home (/hr); the former dropdown groups
+                  (Payroll, Performance, etc.) are individual links. */}
+              {[
+                { href: "/hr", icon: UserCog, label: "HR", active: pathname === "/hr" },
+                { href: "/hr/employees", icon: Users, label: "Employees", active: isRouteActive("/hr/employees") },
+                { href: "/hr/departments", icon: Building2, label: "Departments", active: isRouteActive("/hr/departments") },
+                { href: "/hr/positions", icon: ClipboardCheck, label: "Positions", active: isRouteActive("/hr/positions") },
+                { href: "/hr/attendance", icon: CalendarClock, label: "Attendance", active: isRouteActive("/hr/attendance") },
+                { href: "/hr/break", icon: Coffee, label: "Break Time", active: isRouteActive("/hr/break") },
+                { href: "/hr/leave", icon: CalendarDays, label: "Leave", active: isRouteActive("/hr/leave") },
+                { href: "/hr/payroll", icon: Wallet, label: "Payroll", active: isRouteActive("/hr/payroll") },
+                { href: "/hr/performance", icon: Target, label: "Performance", active: isRouteActive("/hr/performance") },
+                { href: "/hr/recruitment", icon: UserPlus, label: "Recruitment", active: isRouteActive("/hr/recruitment") },
+                { href: "/hr/learning", icon: GraduationCap, label: "Learning", active: isRouteActive("/hr/learning") },
+                { href: "/hr/documents", icon: FolderLock, label: "Documents", active: isRouteActive("/hr/documents") },
+              ].map(({ href, icon: Icon, label, active }) => {
+                // Payroll: label navigates to /hr/payroll; chevron (only) opens
+                // the Assign Salary submenu.
+                if (href === "/hr/payroll") {
+                  return (
+                    <SidebarMenuItem key={href}>
+                      <div className="relative">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={isCollapsed ? label : undefined}
+                          className={navClass(active)}
+                        >
+                          <NavLink href={href}>
+                            <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 pr-8 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                              <Icon className="h-5 w-5" />
+                              {!isCollapsed && <span>{label}</span>}
+                            </span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                        {!isCollapsed && (
+                          <button
+                            type="button"
+                            aria-label="Toggle Payroll submenu"
+                            onClick={() => setPayrollOpen((o) => !o)}
+                            className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${payrollOpen ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        )}
+                      </div>
+                      {payrollOpen && !isCollapsed && (
+                        <SidebarMenuSub>
+                          <TenantSubLink
+                            href="/hr/payroll/assign"
+                            icon={<UserPlus className="h-4 w-4" />}
+                            label="Assign Salary"
+                            active={isRouteActive("/hr/payroll/assign")}
+                          />
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                }
+                // Performance: label navigates to /hr/performance; chevron
+                // (only) opens the Cycles + Goals submenu.
+                if (href === "/hr/performance") {
+                  return (
+                    <SidebarMenuItem key={href}>
+                      <div className="relative">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={isCollapsed ? label : undefined}
+                          className={navClass(active)}
+                        >
+                          <NavLink href={href}>
+                            <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 pr-8 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                              <Icon className="h-5 w-5" />
+                              {!isCollapsed && <span>{label}</span>}
+                            </span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                        {!isCollapsed && (
+                          <button
+                            type="button"
+                            aria-label="Toggle Performance submenu"
+                            onClick={() => setPerformanceOpen((o) => !o)}
+                            className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${performanceOpen ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        )}
+                      </div>
+                      {performanceOpen && !isCollapsed && (
+                        <SidebarMenuSub>
+                          <TenantSubLink
+                            href="/hr/performance/cycles"
+                            icon={<Calendar className="h-4 w-4" />}
+                            label="Cycles"
+                            active={isRouteActive("/hr/performance/cycles")}
+                          />
+                          <TenantSubLink
+                            href="/hr/performance/goals"
+                            icon={<Target className="h-4 w-4" />}
+                            label="Goals"
+                            active={isRouteActive("/hr/performance/goals")}
+                          />
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                }
+                // Recruitment: label navigates to /hr/recruitment; chevron
+                // (only) opens the Jobs + Candidates submenu.
+                if (href === "/hr/recruitment") {
+                  return (
+                    <SidebarMenuItem key={href}>
+                      <div className="relative">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={isCollapsed ? label : undefined}
+                          className={navClass(active)}
+                        >
+                          <NavLink href={href}>
+                            <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 pr-8 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                              <Icon className="h-5 w-5" />
+                              {!isCollapsed && <span>{label}</span>}
+                            </span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                        {!isCollapsed && (
+                          <button
+                            type="button"
+                            aria-label="Toggle Recruitment submenu"
+                            onClick={() => setRecruitmentOpen((o) => !o)}
+                            className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${recruitmentOpen ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        )}
+                      </div>
+                      {recruitmentOpen && !isCollapsed && (
+                        <SidebarMenuSub>
+                          <TenantSubLink
+                            href="/hr/recruitment/jobs"
+                            icon={<Briefcase className="h-4 w-4" />}
+                            label="Jobs"
+                            active={isRouteActive("/hr/recruitment/jobs")}
+                          />
+                          <TenantSubLink
+                            href="/hr/recruitment/candidates"
+                            icon={<Users className="h-4 w-4" />}
+                            label="Candidates"
+                            active={isRouteActive("/hr/recruitment/candidates")}
+                          />
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                }
+                // Learning: label navigates to /hr/learning; chevron (only)
+                // opens the Courses + Enrollments submenu.
+                if (href === "/hr/learning") {
+                  return (
+                    <SidebarMenuItem key={href}>
+                      <div className="relative">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={isCollapsed ? label : undefined}
+                          className={navClass(active)}
+                        >
+                          <NavLink href={href}>
+                            <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 pr-8 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                              <Icon className="h-5 w-5" />
+                              {!isCollapsed && <span>{label}</span>}
+                            </span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                        {!isCollapsed && (
+                          <button
+                            type="button"
+                            aria-label="Toggle Learning submenu"
+                            onClick={() => setLearningOpen((o) => !o)}
+                            className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${learningOpen ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        )}
+                      </div>
+                      {learningOpen && !isCollapsed && (
+                        <SidebarMenuSub>
+                          <TenantSubLink
+                            href="/hr/learning/courses"
+                            icon={<BookOpen className="h-4 w-4" />}
+                            label="Courses"
+                            active={isRouteActive("/hr/learning/courses")}
+                          />
+                          <TenantSubLink
+                            href="/hr/learning/enrollments"
+                            icon={<Award className="h-4 w-4" />}
+                            label="Enrollments"
+                            active={isRouteActive("/hr/learning/enrollments")}
+                          />
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                }
+                // Documents: label navigates to /hr/documents; chevron (only)
+                // opens the Categories submenu.
+                if (href === "/hr/documents") {
+                  return (
+                    <SidebarMenuItem key={href}>
+                      <div className="relative">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={isCollapsed ? label : undefined}
+                          className={navClass(active)}
+                        >
+                          <NavLink href={href}>
+                            <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 pr-8 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                              <Icon className="h-5 w-5" />
+                              {!isCollapsed && <span>{label}</span>}
+                            </span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                        {!isCollapsed && (
+                          <button
+                            type="button"
+                            aria-label="Toggle Documents submenu"
+                            onClick={() => setDocumentsOpen((o) => !o)}
+                            className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${documentsOpen ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        )}
+                      </div>
+                      {documentsOpen && !isCollapsed && (
+                        <SidebarMenuSub>
+                          <TenantSubLink
+                            href="/hr/documents/categories"
+                            icon={<Tags className="h-4 w-4" />}
+                            label="Categories"
+                            active={isRouteActive("/hr/documents/categories")}
+                          />
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                }
+                return (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={isCollapsed ? label : undefined}
+                      className={navClass(active)}
+                    >
+                      <NavLink href={href}>
+                        <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                          <Icon className="h-5 w-5" />
+                          {!isCollapsed && <span>{label}</span>}
+                        </span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
 
               {/* SUPER ADMIN ONLY: Tenants management */}
               {isSuperAdmin && (
@@ -506,11 +708,15 @@ function TopBar({
   userName,
   userEmail,
   role,
+  availableViews,
+  activeView,
   notifications,
 }: {
   userName: string;
   userEmail: string;
   role: string | null;
+  availableViews: string[];
+  activeView: string | null;
   notifications: NotificationItem[];
 }) {
   const roleLabel = formatRole(role);
@@ -534,22 +740,35 @@ function TopBar({
     .join("")
     .toUpperCase();
 
+  // The date-range picker is only useful on pages with date-filtered data
+  // (the Overview analytics). Hide it where it does nothing — e.g. the
+  // Positions and Departments lists.
+  const { activePath: pathname } = useOptimisticNav();
+  const NO_DATE_PICKER = ["/hr/positions", "/hr/departments"];
+  const showDatePicker = !NO_DATE_PICKER.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+
   return (
     <TooltipProvider delayDuration={150}>
       <header className="sticky top-0 z-30 hidden lg:flex items-center gap-1.5 border-b border-border/60 bg-card/80 px-4 py-3 backdrop-blur lg:px-6">
-        {/* Left — the date-range picker. Shown in the same TopBar slot on
-            every tenant page (not just the dashboard) so the date filter is
-            available everywhere. Hidden on mobile because each page renders
-            its own mobile header below. */}
+        {/* Left — the date-range picker. Shown on most tenant pages (not just
+            the dashboard) so the date filter is available; hidden on mobile and
+            on pages where it does nothing (see showDatePicker). */}
         <div className="flex flex-1 items-center justify-start">
-          <div className="hidden lg:block">
-            <DateRangePicker />
-          </div>
+          {showDatePicker && (
+            <div className="hidden lg:block">
+              <DateRangePicker />
+            </div>
+          )}
         </div>
 
         {/* Page-injected actions (e.g. the Documents "+" upload button) portal
             into this slot so they appear just left of the notification bell. */}
         <div id="topbar-action-slot" className="flex items-center gap-1.5" />
+
+        {/* "View as" switcher — only renders for users holding >1 role. */}
+        <ViewSwitcher available={availableViews} active={activeView} />
 
         {/* Notifications bell — opens a dropdown of recent activity */}
         <NotificationBell notifications={notifications} />
@@ -572,7 +791,7 @@ function TopBar({
                   selectedTheme === "night" ? "light" : "night"
                 )
               }
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
             >
               {selectedTheme === "night" ? (
                 <Sun className="h-4 w-4" />
@@ -591,7 +810,7 @@ function TopBar({
         <Link
           href="/profile"
           title={userEmail}
-          className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm transition-colors hover:bg-muted"
+          className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-2.5 py-1 shadow-sm transition-colors hover:bg-muted"
         >
           <Avatar className="h-7 w-7 border border-border/60">
             <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
@@ -612,7 +831,7 @@ function TopBar({
           onClick={() => signOut({ callbackUrl: "/login" })}
           aria-label="Sign Out"
           title="Sign Out"
-          className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted lg:w-9 lg:justify-center lg:px-0"
+          className="flex h-9 items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 text-sm text-foreground transition-colors hover:bg-muted lg:w-9 lg:justify-center lg:px-0"
         >
           <LogOut className="h-4 w-4" />
           <span className="lg:hidden">Sign Out</span>
@@ -657,6 +876,7 @@ function MobileBottomNav({
           { label: "Overview", to: "/employee", icon: Home },
           { label: "Attendance", to: "/hr/attendance", icon: CalendarClock },
           { label: "Break", to: "/hr/break", icon: Coffee },
+          { label: "Leave", to: "/hr/leave", icon: CalendarDays },
           { label: "Payslips", to: "/employee/payslips", icon: Wallet },
           { label: "Profile", to: "/profile", icon: User },
         ]
@@ -936,10 +1156,10 @@ function TenantSubGroup({ item }: { item: NavSubItem }) {
                 : "text-sidebar-foreground/85 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
             }
           >
-            <button type="button">
+            <button type="button" className="w-full">
               <span className="flex w-full items-center gap-2.5 text-[0.8125rem] [&>svg]:!h-[18px] [&>svg]:!w-[18px] [&>svg]:flex-shrink-0">
                 {item.icon}
-                <span className="truncate">{item.label}</span>
+                <span className="flex-1 truncate text-left">{item.label}</span>
                 <ChevronDown
                   className={`ml-auto h-3.5 w-3.5 flex-shrink-0 transition-transform ${
                     open ? "rotate-180" : ""

@@ -38,10 +38,17 @@ export function ServiceWorkerRegister() {
       window.location.reload();
     };
 
+    // The UpdateBanner asks us to apply a pending update when the user clicks
+    // "Refresh". Activate the waiting worker → controllerchange → reload.
+    const onApplyUpdate = () => {
+      promoteWaiting(reg?.waiting ?? null);
+    };
+
     navigator.serviceWorker.addEventListener(
       "controllerchange",
       onControllerChange
     );
+    window.addEventListener("sw:apply-update", onApplyUpdate);
 
     const triggerUpdate = () => {
       if (reg) void reg.update().catch(() => {});
@@ -55,9 +62,10 @@ export function ServiceWorkerRegister() {
       try {
         reg = await navigator.serviceWorker.register("/sw.js");
 
-        // A new worker may already be waiting from a previous visit.
+        // A new worker may already be waiting from a previous visit — prompt
+        // the user rather than reloading out from under them.
         if (reg.waiting && navigator.serviceWorker.controller) {
-          promoteWaiting(reg.waiting);
+          window.dispatchEvent(new CustomEvent("sw:update-ready"));
         }
 
         reg.addEventListener("updatefound", () => {
@@ -68,9 +76,9 @@ export function ServiceWorkerRegister() {
               installing.state === "installed" &&
               navigator.serviceWorker.controller
             ) {
-              // An update (not the first install) finished installing —
-              // activate it now instead of waiting for all tabs to close.
-              promoteWaiting(installing);
+              // An update (not the first install) finished installing — surface
+              // the "App update available" prompt; the user applies it.
+              window.dispatchEvent(new CustomEvent("sw:update-ready"));
             }
           });
         });
@@ -97,6 +105,7 @@ export function ServiceWorkerRegister() {
         "controllerchange",
         onControllerChange
       );
+      window.removeEventListener("sw:apply-update", onApplyUpdate);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", triggerUpdate);
       if (interval) clearInterval(interval);

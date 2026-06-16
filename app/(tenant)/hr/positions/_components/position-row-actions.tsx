@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Loader2 } from "lucide-react";
+import { SquarePen, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -111,11 +111,11 @@ export function PositionRowActions({
         type="button"
         variant={isFull ? "outline" : "ghost"}
         size={isFull ? "sm" : "icon"}
-        className={isFull ? "rounded-lg" : "h-8 w-8"}
+        className={isFull ? "rounded-lg" : "h-8 w-8 rounded-full"}
         onClick={() => setEditOpen(true)}
         title="Edit position"
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <SquarePen className="h-3.5 w-3.5" />
         {isFull && "Edit"}
       </Button>
 
@@ -126,7 +126,7 @@ export function PositionRowActions({
         className={
           isFull
             ? "rounded-lg text-destructive hover:text-destructive"
-            : "h-8 w-8 text-destructive"
+            : "h-8 w-8 rounded-full text-destructive"
         }
         onClick={() => setConfirmOpen(true)}
         title="Delete position"
@@ -175,40 +175,15 @@ export function PositionRowActions({
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5">
-                <Label htmlFor={`grade-${position.id}`} className="text-xs">
-                  Grade
-                </Label>
-                <Input
-                  id={`grade-${position.id}`}
-                  name="grade"
-                  defaultValue={position.grade ?? ""}
-                  placeholder="L4"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={`band-${position.id}`} className="text-xs">
-                  Band
-                </Label>
-                <Input
-                  id={`band-${position.id}`}
-                  name="band"
-                  defaultValue={position.band ?? ""}
-                  placeholder="Senior"
-                />
-              </div>
-            </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor={`jf-${position.id}`} className="text-xs">
-                Job Family
+              <Label htmlFor={`grade-${position.id}`} className="text-xs">
+                Salary Grade
               </Label>
               <Input
-                id={`jf-${position.id}`}
-                name="jobFamily"
-                defaultValue={position.jobFamily ?? ""}
-                placeholder="Sales"
+                id={`grade-${position.id}`}
+                name="grade"
+                defaultValue={position.grade ?? ""}
+                placeholder="e.g. L4"
               />
             </div>
 

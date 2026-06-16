@@ -55,7 +55,7 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>HRM_IlhaanSq SaaS - Architecture Analysis</h1>
+      <h1>HRM SaaS - Architecture Analysis</h1>
       <p class="muted">Generated on 2026-03-10</p>
       <p>This file contains your full structured analysis plus rendered diagrams.</p>
       <p>Word-friendly text copy is available at: <code>docs/SaaS_Architecture_Analysis_2026-03-10.doc</code></p>

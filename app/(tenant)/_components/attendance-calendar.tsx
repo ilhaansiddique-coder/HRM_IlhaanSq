@@ -57,16 +57,24 @@ export function AttendanceCalendar({ records }: { records: Rec[] }) {
           holiday: "text-muted-foreground/60",
         }}
       />
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px]">
-        <Legend className="bg-success/30" label="Present" />
-        <Legend className="bg-warning/40 ring-1 ring-warning" label="Late" />
-        <Legend className="bg-destructive/30" label="Absent" />
-        <Legend
-          className="bg-primary/30 ring-1 ring-primary"
-          label="Holiday worked (extra duty)"
-        />
-        <span className="text-muted-foreground/70">· Fridays = weekly holiday</span>
-      </div>
+      <AttendanceLegend />
+    </div>
+  );
+}
+
+// Status colour key. Reused on its own (e.g. below the admin records table)
+// where the calendar isn't shown.
+export function AttendanceLegend() {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px]">
+      <Legend className="bg-success/30" label="Present" />
+      <Legend className="bg-warning/40 ring-1 ring-warning" label="Late" />
+      <Legend className="bg-destructive/30" label="Absent" />
+      <Legend
+        className="bg-primary/30 ring-1 ring-primary"
+        label="Holiday worked (extra duty)"
+      />
+      <span className="text-muted-foreground/70">· Fridays = weekly holiday</span>
     </div>
   );
 }

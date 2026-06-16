@@ -1,12 +1,9 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { getEmployee } from "@/lib/services/hr/employee.service";
 import { listDepartments, listPositions } from "@/lib/services/hr/department.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { EmployeeForm } from "../_components/employee-form";
 
 export default async function EditEmployeePage({
@@ -45,15 +42,7 @@ export default async function EditEmployeePage({
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/employees">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <Card className="border-border/70 bg-card/80">
         <CardHeader>
           <CardTitle>Edit Employee</CardTitle>

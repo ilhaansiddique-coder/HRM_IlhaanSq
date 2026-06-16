@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireTenant } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -17,7 +16,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { refreshRunAdvancesFormAction } from "../../../actions-phase2";
 import { SalarySheet, type Slip, type CustomCol } from "./_components/salary-sheet";
 import { SalarySheetFullView } from "./_components/salary-sheet-full-view";
@@ -40,6 +39,11 @@ export default async function PayrollRunDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // Guard against non-UUID segments (e.g. the retired "/runs/new" path now
+  // falling through to this dynamic route) — a non-UUID id would crash the
+  // Prisma UUID lookup, so treat it as not found.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(id)) notFound();
   const session = await requireTenant();
   const run = await getPayrollRun(session.tenantId, id);
   if (!run) notFound();
@@ -139,6 +143,7 @@ export default async function PayrollRunDetailPage({
       employeeName: p.employeeName,
       employeeCode: p.employeeCode,
       designation: p.designation,
+      salaryGrade: p.salaryGrade,
       basicSalary: values.basicSalary,
       houseRent: values.houseRent,
       health: values.health,
@@ -195,9 +200,6 @@ export default async function PayrollRunDetailPage({
     <div className="space-y-6">
       <AdvanceLiveRefresh tenantId={session.tenantId} />
       <div className="flex items-center justify-between gap-3">
-        <Link href="/hr/payroll/runs">
-          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-        </Link>
         <Badge variant={run.status === "completed" ? "default" : "outline"}>
           {run.status}
         </Badge>

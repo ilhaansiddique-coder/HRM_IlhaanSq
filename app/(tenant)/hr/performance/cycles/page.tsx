@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listReviewCycles } from "@/lib/services/hr/performance.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, X, Calendar } from "lucide-react";
+import { Play, X, Calendar } from "lucide-react";
 import {
   activateCycleAction,
   closeCycleAction,
@@ -23,10 +22,6 @@ export default async function CyclesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/performance"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-      </div>
-
       {/* The New Cycle form opens from the "+" button in the top bar (left of the
           notification bell). Portals into the TopBar; nothing inline here. */}
       <NewCycleDialog />

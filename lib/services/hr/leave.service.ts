@@ -48,13 +48,24 @@ export async function deleteLeaveType(tenantId: string, id: string) {
 
 export async function listLeaveRequests(
   tenantId: string,
-  filters: { status?: LeaveStatus; employeeId?: string } = {}
+  filters: {
+    status?: LeaveStatus;
+    employeeId?: string;
+    from?: Date;
+    to?: Date;
+  } = {}
 ) {
   const requests = await prisma.leaveRequest.findMany({
     where: {
       tenantId,
       ...(filters.status && { status: filters.status }),
       ...(filters.employeeId && { employeeId: filters.employeeId }),
+      ...((filters.from || filters.to) && {
+        createdAt: {
+          ...(filters.from && { gte: filters.from }),
+          ...(filters.to && { lte: filters.to }),
+        },
+      }),
     },
     include: {
       employee: { select: { id: true, fullName: true, empCode: true, email: true } },

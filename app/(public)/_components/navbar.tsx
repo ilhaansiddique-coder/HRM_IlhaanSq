@@ -37,7 +37,7 @@ export function Navbar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Package className="h-4 w-4" />
           </div>
-          <span className="text-base font-semibold tracking-tight">HRM_IlhaanSq</span>
+          <span className="text-base font-semibold tracking-tight">HRM SaaS</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-7">

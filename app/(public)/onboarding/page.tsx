@@ -6,7 +6,7 @@ import { OnboardingActions } from "./_components/onboarding-actions";
 export default async function OnboardingPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.tenantId) redirect("/dashboard");
+  if (session.tenantId) redirect("/hr");
 
   // User is authenticated but has no workspace yet — show pending state
   return (

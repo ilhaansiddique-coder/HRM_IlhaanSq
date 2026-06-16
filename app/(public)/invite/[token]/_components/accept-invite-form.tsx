@@ -35,7 +35,7 @@ export function AcceptInviteForm({
           setError("Account created but sign-in failed. Please try logging in.");
           return;
         }
-        router.push("/dashboard");
+        router.push("/hr");
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to accept invite");

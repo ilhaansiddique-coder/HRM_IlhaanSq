@@ -60,10 +60,12 @@
     --muted-foreground: #202020;
     --input: #f6f6f6;
     --border: #dfdfdf;
+    /* Table header surface — balanced light counterpart to the dark #1f1f1f */
+    --table-head: #ededed;
 
     /* Accents */
-    --primary: #72e3ad;
-    --primary-foreground: #1e2723;
+    --primary: #0d4421;
+    --primary-foreground: #f9f9f9;
     --secondary: #f9f9f9;
     --secondary-foreground: #171717;
     --accent: #ededed;
@@ -79,21 +81,21 @@
     --info: #3b82f6;
     --info-foreground: #f9f9f9;
 
-    --ring: #72e3ad;
+    --ring: #0d4421;
 
     /* Sidebar — active pill follows --sidebar-accent per the doc spec. */
     --sidebar: #f9f9f9;
     --sidebar-foreground: #707070;
     --sidebar-background: #f9f9f9;
-    --sidebar-primary: #72e3ad;
-    --sidebar-primary-foreground: #1e2723;
+    --sidebar-primary: #0d4421;
+    --sidebar-primary-foreground: #f9f9f9;
     --sidebar-accent: #ededed;
     --sidebar-accent-foreground: #202020;
     --sidebar-border: #dfdfdf;
-    --sidebar-ring: #72e3ad;
+    --sidebar-ring: #0d4421;
 
     /* Charts (Recharts dashboard widgets) */
-    --chart-1: #72e3ad;
+    --chart-1: #0d4421;
     --chart-2: #3b82f6;
     --chart-3: #8b5cf6;
     --chart-4: #f59e0b;
@@ -104,8 +106,8 @@
     --color-base-200: #ededed;
     --color-base-300: #dfdfdf;
     --color-base-content: #171717;
-    --color-primary: #72e3ad;
-    --color-primary-content: #1e2723;
+    --color-primary: #0d4421;
+    --color-primary-content: #f9f9f9;
     --color-secondary: #f9f9f9;
     --color-secondary-content: #171717;
     --color-accent: #ededed;
@@ -132,7 +134,7 @@
     --base-200-rgb: 237 237 237;
     --base-300-rgb: 223 223 223;
     --base-content-rgb: 23 23 23;
-    --primary-content-rgb: 30 39 35;
+    --primary-content-rgb: 249 249 249;
     --secondary-content-rgb: 23 23 23;
     --accent-content-rgb: 32 32 32;
     --neutral-rgb: 30 41 59;
@@ -164,9 +166,11 @@
     --muted-foreground: #a2a2a2;
     --input: #242424;
     --border: #292929;
+    /* Table header surface — requested dark-mode color */
+    --table-head: #1f1f1f;
 
     /* Accents */
-    --primary: #006239;
+    --primary: #0d4421;
     --primary-foreground: #dde8e3;
     --secondary: #242424;
     --secondary-foreground: #fafafa;
@@ -189,7 +193,7 @@
     --sidebar: #121212;
     --sidebar-foreground: #898989;
     --sidebar-background: #121212;
-    --sidebar-primary: #006239;
+    --sidebar-primary: #0d4421;
     --sidebar-primary-foreground: #dde8e3;
     --sidebar-accent: #313131;
     --sidebar-accent-foreground: #fafafa;
@@ -208,7 +212,7 @@
     --color-base-200: #1f1f1f;
     --color-base-300: #292929;
     --color-base-content: #e2e8f0;
-    --color-primary: #006239;
+    --color-primary: #0d4421;
     --color-primary-content: #dde8e3;
     --color-secondary: #242424;
     --color-secondary-content: #fafafa;
@@ -254,7 +258,7 @@
   :where(
       input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="reset"]):not([type="button"]):not([type="image"])
     ):not(.input) {
-    @apply h-10 w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors;
+    @apply h-10 w-full rounded-full border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors;
     border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
   }
 
@@ -437,7 +441,7 @@
 
 @layer components {
   .field-control {
-    @apply h-10 w-full rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply h-10 w-full rounded-full border border-base-300 bg-base-100 px-3 py-2 text-sm text-base-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50;
     border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
   }
 
@@ -705,4 +709,115 @@
     transform: translateZ(0);
     will-change: transform;
   }
+}
+
+/* ============================================================
+   Unified table styling — every app table (.app-table).
+   Header sits on the --table-head surface with rounded top
+   corners; rows are transparent so the card background shows
+   through. Auto-themes via CSS variables (light & dark):
+     foreground  → --foreground   (e2e8f0 dark / 171717 light)
+     border      → --border       (292929 dark / dfdfdf light)
+     header bg   → --table-head    (1f1f1f dark / ededed light)
+   Left UNLAYERED on purpose so it overrides Tailwind's layered
+   utility classes (padding / colour / casing) without touching
+   the stateful hover/selected styles, which live on <tr>.
+   ============================================================ */
+.app-table {
+  width: 100%;
+  background-color: transparent;
+  color: var(--foreground);
+  border-color: var(--border);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+.app-table thead {
+  background-color: var(--table-head);
+  color: var(--foreground);
+}
+.app-table th {
+  height: 50px;
+  background-color: var(--table-head);
+  color: var(--foreground);
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 0 0 0 16px;
+}
+.app-table thead th:first-child {
+  border-top-left-radius: 10px;
+}
+.app-table thead th:last-child {
+  border-top-right-radius: 10px;
+}
+.app-table tbody td {
+  height: 50px;
+  background-color: transparent;
+  color: var(--foreground);
+  border-color: var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 0 0 0 16px;
+}
+.app-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Table row-action icon buttons — circular ring, muted icons, even 32px size,
+   16px glyphs. Applies to every table (the central rowActions path AND each
+   table's custom actionsCell) so they all match. Destructive (trash) keeps its
+   own colour and just gets a red-tinted ring. */
+.app-row-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  width: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+}
+.app-row-actions button svg {
+  height: 1rem;
+  width: 1rem;
+}
+.app-row-actions button:not([class*="destructive"]) {
+  color: var(--muted-foreground);
+}
+.app-row-actions button:not([class*="destructive"]):hover {
+  color: var(--foreground);
+  background-color: var(--table-head);
+}
+.app-row-actions button[class*="destructive"] {
+  border-color: color-mix(in oklab, var(--destructive) 45%, transparent);
+}
+
+/* Rounded table checkbox (from the spec). Smaller 16px circle with a neutral
+   --border ring + subtle shadow. Fill uses --card (not the spec's base-100)
+   because our table rows are transparent over the page background, so a
+   base-100 fill would be invisible; --card keeps the disc visible. Checked
+   fills with the primary green. */
+.checkbox-round {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: 2px solid var(--border);
+  background-color: var(--card);
+  box-shadow: rgba(0, 0, 0, 0.10) 0 0 0 1px, rgba(0, 0, 0, 0.05) 0 1px 2px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: border-color 0.15s, background-color 0.15s;
+  cursor: pointer;
+}
+.checkbox-round[data-state="checked"] {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.checkbox-round:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 40%, transparent);
 }

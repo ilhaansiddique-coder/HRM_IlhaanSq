@@ -42,7 +42,7 @@ export function AddPenaltyDialog({
           type="button"
           aria-label="Add penalty"
           title="Add penalty"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
         >
           <Plus className="h-4 w-4" />
         </button>

@@ -198,7 +198,7 @@ export async function approveWithPayloadEditsAction(formData: FormData) {
   );
   revalidatePath("/admin");
   revalidatePath("/hr/payroll");
-  revalidatePath("/hr/payroll/runs");
+  revalidatePath("/hr/payroll/runs"); revalidatePath("/hr/payroll");
 }
 
 export async function requestChangesAction(formData: FormData) {

@@ -124,13 +124,25 @@ export async function adminDeleteUser(tenantId: string, userId: string) {
 
 export async function listActivityLogs(
   tenantId: string,
-  filters: { entityType?: string; action?: string; limit?: number } = {}
+  filters: {
+    entityType?: string;
+    action?: string;
+    limit?: number;
+    from?: Date;
+    to?: Date;
+  } = {}
 ) {
   return prisma.activityLog.findMany({
     where: {
       tenantId,
       ...(filters.entityType && { entityType: filters.entityType }),
       ...(filters.action && { action: filters.action }),
+      ...((filters.from || filters.to) && {
+        createdAt: {
+          ...(filters.from && { gte: filters.from }),
+          ...(filters.to && { lte: filters.to }),
+        },
+      }),
     },
     include: {
       user: { select: { fullName: true, email: true } },

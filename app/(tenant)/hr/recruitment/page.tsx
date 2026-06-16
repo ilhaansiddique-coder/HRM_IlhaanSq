@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { getRecruitmentStats, listApplications } from "@/lib/services/hr/recruitment.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard as MetricCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, GitBranch, Users, Award, ArrowRight } from "lucide-react";
@@ -57,14 +58,16 @@ export default async function RecruitmentOverviewPage() {
 }
 
 function StatCard({ icon, title, value, variant }: { icon: ReactNode; title: string; value: number; variant?: "default" | "success" }) {
-  const iconBg = variant === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary";
   return (
-    <Card className="border-border/70 bg-card/80">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${iconBg}`}>{icon}</div>
-      </CardHeader>
-      <CardContent><div className="text-2xl font-semibold">{value.toLocaleString()}</div></CardContent>
-    </Card>
+    <MetricCard
+      icon={icon}
+      label={title}
+      value={typeof value === "number" ? value.toLocaleString() : value}
+      tone={
+        variant === "success"
+          ? "success"
+          : "primary"
+      }
+    />
   );
 }

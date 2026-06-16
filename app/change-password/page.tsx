@@ -9,7 +9,7 @@ export default async function ChangePasswordPage() {
   if (!session) redirect("/login");
 
   // If user already changed their password, send them home
-  if (!session.mustResetPassword) redirect("/dashboard");
+  if (!session.mustResetPassword) redirect("/hr");
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">

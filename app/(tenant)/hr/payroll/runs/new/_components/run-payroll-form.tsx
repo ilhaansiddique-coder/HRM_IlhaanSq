@@ -13,6 +13,7 @@ export type PrepRow = {
   empCode: string;
   name: string;
   designation: string;
+  salaryGrade: string;
   baseSalary: number;
   absentDays: number;
   outstandingAdvance: number;
@@ -126,7 +127,7 @@ export function RunPayrollForm({
           setError(res.error ?? "Failed");
           return;
         }
-        router.push("/hr/payroll/runs");
+        router.push("/hr/payroll");
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed");
@@ -174,7 +175,7 @@ export function RunPayrollForm({
           </Label>
           <div className="max-h-80 overflow-y-auto rounded-lg border border-border/60">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-muted/60 text-muted-foreground">
+              <thead className="sticky top-0 bg-[var(--table-head)] text-muted-foreground">
                 <tr>
                   <th className="px-2 py-1.5 text-left font-medium">Emp</th>
                   <th className="px-2 py-1.5 text-right font-medium">Basic</th>
@@ -195,6 +196,9 @@ export function RunPayrollForm({
                         <div className="font-medium">{r.name}</div>
                         <div className="font-mono text-[10px] text-muted-foreground">
                           {r.empCode} · {r.designation}
+                          {r.salaryGrade && r.salaryGrade !== "—" && (
+                            <> · Grade {r.salaryGrade}</>
+                          )}
                         </div>
                       </td>
                       <td className="px-2 py-1.5 text-right">{r.baseSalary.toLocaleString()}</td>

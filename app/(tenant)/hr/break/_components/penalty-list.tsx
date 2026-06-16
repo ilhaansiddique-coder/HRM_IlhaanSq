@@ -107,7 +107,7 @@ export function PenaltyList({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-7 w-7 rounded-full"
                   onClick={() => handleAction(p.id, applyBreakPenaltyAction)}
                   disabled={pending}
                   title="Apply Penalty"
@@ -121,7 +121,7 @@ export function PenaltyList({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-7 w-7 rounded-full"
                   onClick={() => handleAction(p.id, waiveBreakPenaltyAction)}
                   disabled={pending}
                   title="Waive Penalty"
@@ -131,7 +131,7 @@ export function PenaltyList({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-7 w-7 rounded-full"
                   onClick={() => handleAction(p.id, deleteBreakPenaltyAction)}
                   disabled={pending}
                   title="Delete Penalty"

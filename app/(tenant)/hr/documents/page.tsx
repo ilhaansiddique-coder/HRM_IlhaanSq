@@ -7,6 +7,7 @@ import {
 } from "@/lib/services/hr/documents.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard as MetricCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -83,7 +84,7 @@ export default async function DocumentsOverviewPage() {
                       <div className="flex items-center gap-1 shrink-0">
                         {d.fileUrl && (
                           <a href={d.fileUrl} target="_blank" rel="noopener noreferrer">
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
                               <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
                           </a>
@@ -99,7 +100,7 @@ export default async function DocumentsOverviewPage() {
                         )}
                         <form action={deleteDocumentAction} className="inline">
                           <input type="hidden" name="id" value={d.id} />
-                          <Button type="submit" variant="ghost" size="icon" className="h-7 w-7 text-destructive">
+                          <Button type="submit" variant="ghost" size="icon" className="h-7 w-7 rounded-full text-destructive">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </form>
@@ -122,14 +123,20 @@ export default async function DocumentsOverviewPage() {
 }
 
 function StatCard({ icon, title, value, variant }: { icon: ReactNode; title: string; value: number; variant?: "success" | "warning" | "destructive" }) {
-  const iconBg = variant === "success" ? "bg-success/10 text-success" : variant === "warning" ? "bg-warning/10 text-warning" : variant === "destructive" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary";
   return (
-    <Card className="border-border/70 bg-card/80">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${iconBg}`}>{icon}</div>
-      </CardHeader>
-      <CardContent><div className="text-2xl font-semibold">{value.toLocaleString()}</div></CardContent>
-    </Card>
+    <MetricCard
+      icon={icon}
+      label={title}
+      value={typeof value === "number" ? value.toLocaleString() : value}
+      tone={
+        variant === "success"
+          ? "success"
+          : variant === "warning"
+          ? "warning"
+          : variant === "destructive"
+          ? "destructive"
+          : "primary"
+      }
+    />
   );
 }

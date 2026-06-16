@@ -28,7 +28,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { SelfCheckInOut } from "../_components/self-check-in-out";
-import { AttendanceCalendar } from "../_components/attendance-calendar";
 
 export default async function EmployeeHomePage() {
   const session = await requireTenant();
@@ -138,7 +137,6 @@ export default async function EmployeeHomePage() {
               <Mini icon={<AlertCircle className="h-4 w-4" />} label="Absent" value={summary.counts.absent} tone="destructive" />
               <Mini icon={<Coffee className="h-4 w-4" />} label="Holiday worked" value={summary.counts.holidayWorked} tone="primary" />
             </div>
-            <AttendanceCalendar records={summary.records} />
           </CardContent>
         </Card>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,7 +79,7 @@ export function EditStructureDialog({
         className="h-7 gap-1.5 text-xs"
         onClick={() => onOpenChange(true)}
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <SquarePen className="h-3.5 w-3.5" />
         Edit
       </Button>
       <DialogContent className="sm:max-w-md">

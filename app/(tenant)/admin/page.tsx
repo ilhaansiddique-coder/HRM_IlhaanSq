@@ -19,14 +19,23 @@ import {
   getUnreadNotificationCount,
 } from "@/lib/services/notifications-center.service";
 import { AdminTabs } from "./_components/admin-tabs";
+import { resolveDateBounds } from "@/lib/date-range";
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
   if (!["owner", "admin", "superadmin"].includes(session.role ?? "")) {
-    redirect("/dashboard");
+    redirect("/hr");
   }
 
   const tenantId = session.tenantId;
+
+  // Global top-bar date filter applies to the activity-log feed.
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
 
   const [
     users,
@@ -41,7 +50,11 @@ export default async function AdminPage() {
     unreadNotifications,
   ] = await Promise.all([
     listTenantUsers(tenantId),
-    listActivityLogs(tenantId, { limit: 200 }),
+    listActivityLogs(tenantId, {
+      limit: 200,
+      ...(start && { from: start }),
+      ...(end && { to: end }),
+    }),
     getSystemStats(tenantId),
     getCachedSystemSettings(tenantId),
     getCachedBusinessSettings(tenantId),

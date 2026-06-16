@@ -3,24 +3,16 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { listAllTenants } from "@/lib/services/tenant.service";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Plus, Building2, Settings } from "lucide-react";
 import { ToggleTenantButton } from "./_components/toggle-tenant-button";
 import { DeleteTenantButton } from "./_components/delete-tenant-button";
+import { TenantsTable, type TenantRow } from "./_components/tenants-table";
 
 export default async function AllTenantsPage() {
   await requireSuperAdmin();
@@ -32,6 +24,17 @@ export default async function AllTenantsPage() {
     0
   );
   const activeCount = tenants.filter((t) => t.isActive).length;
+
+  const tenantRows: TenantRow[] = tenants.map((t) => ({
+    id: t.id,
+    slug: t.slug,
+    name: t.businessSettings?.businessName ?? t.name,
+    plan: t.plan,
+    members: t._count.members,
+    employees: t._count.employees,
+    isActive: t.isActive,
+    createdAt: new Date(t.createdAt).toISOString(),
+  }));
 
   return (
     <div className="space-y-6">
@@ -51,86 +54,10 @@ export default async function AllTenantsPage() {
         <MetricCard label="Total Employees" value={totalEmployees} />
       </div>
 
-      {/* Desktop: table view. Mobile uses the card stack below. */}
-      <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
-        <CardHeader>
-          <CardTitle>Tenants</CardTitle>
-          <CardDescription>All workspaces on the platform</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Business</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead className="text-right">Members</TableHead>
-                  <TableHead className="text-right">Employees</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tenants.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                      <Building2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                      No tenants yet. Create one to get started.
-                    </TableCell>
-                  </TableRow>
-                  ) : (
-                    tenants.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell className="font-medium">
-                          <Link href={`/tenants/${t.slug}`} className="hover:underline text-primary">
-                            {t.businessSettings?.businessName ?? t.name}
-                          </Link>
-                        </TableCell>
-                      <TableCell className="text-muted-foreground text-xs font-mono">
-                        {t.slug}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">{t.plan}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{t._count.members}</TableCell>
-                      <TableCell className="text-right">{t._count.employees}</TableCell>
-                      <TableCell>
-                        <Badge variant={t.isActive ? "default" : "destructive"}>
-                          {t.isActive ? "Active" : "Disabled"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(t.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link href={`/tenants/${t.slug}/edit`}>
-                              <Settings className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <ToggleTenantButton tenantId={t.id} isActive={t.isActive} />
-                          <DeleteTenantButton
-                            tenantId={t.id}
-                            tenantName={t.businessSettings?.businessName ?? t.name}
-                            tenantSlug={t.slug}
-                            counts={{
-                              members: t._count.members,
-                              employees: t._count.employees,
-                            }}
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Desktop: the project-wide DataTable. Mobile uses the card stack below. */}
+      <div className="hidden md:block">
+        <TenantsTable rows={tenantRows} />
+      </div>
 
       {/* Mobile: same data as a card stack — business + status header,
           slug + plan, three-col counts grid, created date, then actions. */}

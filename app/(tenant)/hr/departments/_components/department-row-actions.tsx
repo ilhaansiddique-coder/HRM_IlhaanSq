@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Loader2 } from "lucide-react";
+import { SquarePen, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,11 +91,11 @@ export function DepartmentRowActions({
         type="button"
         variant={isFull ? "outline" : "ghost"}
         size={isFull ? "sm" : "icon"}
-        className={isFull ? "rounded-lg" : "h-8 w-8"}
+        className={isFull ? "rounded-lg" : "h-8 w-8 rounded-full"}
         onClick={() => setEditOpen(true)}
         title="Edit department"
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <SquarePen className="h-3.5 w-3.5" />
         {isFull && "Edit"}
       </Button>
 
@@ -107,7 +107,7 @@ export function DepartmentRowActions({
         className={
           isFull
             ? "rounded-lg text-destructive hover:text-destructive"
-            : "h-8 w-8 text-destructive"
+            : "h-8 w-8 rounded-full text-destructive"
         }
         onClick={() => setConfirmOpen(true)}
         title="Delete department"
@@ -136,28 +136,6 @@ export function DepartmentRowActions({
                 required
                 minLength={2}
                 defaultValue={department.name}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={`code-${department.id}`} className="text-xs">
-                Code
-              </Label>
-              <Input
-                id={`code-${department.id}`}
-                name="code"
-                defaultValue={department.code ?? ""}
-                placeholder="SALES"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={`cc-${department.id}`} className="text-xs">
-                Cost Center
-              </Label>
-              <Input
-                id={`cc-${department.id}`}
-                name="costCenter"
-                defaultValue={department.costCenter ?? ""}
-                placeholder="CC-1001"
               />
             </div>
             <div className="space-y-1.5">

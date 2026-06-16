@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listCandidates, listJobPostings } from "@/lib/services/hr/recruitment.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { createApplicationAction } from "../../actions-phase2";
 import { AddCandidateDialog } from "./_components/add-candidate-dialog";
 
@@ -23,10 +22,6 @@ export default async function CandidatesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/recruitment"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-      </div>
-
       {/* The Add Candidate form opens from the "+" button in the top bar (left of
           the notification bell). Portals into the TopBar; nothing inline here. */}
       <AddCandidateDialog />

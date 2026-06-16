@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings2, Pencil, Loader2, Plus, X, RotateCcw } from "lucide-react";
+import { Settings2, SquarePen, Loader2, Plus, X, RotateCcw } from "lucide-react";
 import {
   setBaseColumnAction,
   clearBaseColumnAction,
@@ -256,17 +256,17 @@ export function BaseColumnManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-7 w-7 rounded-full"
                     onClick={() => openEdit(c)}
                     title="Edit"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <SquarePen className="h-3.5 w-3.5" />
                   </Button>
                   {c.overridden && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-muted-foreground"
+                      className="h-7 w-7 rounded-full text-muted-foreground"
                       onClick={() => reset(c)}
                       disabled={pending}
                       title="Reset to default"
@@ -440,7 +440,7 @@ export function BaseColumnManager({
                       {pending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Pencil className="h-4 w-4" />
+                        <SquarePen className="h-4 w-4" />
                       )}
                       Save &amp; recompute
                     </Button>

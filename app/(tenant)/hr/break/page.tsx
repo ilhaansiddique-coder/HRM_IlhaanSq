@@ -3,7 +3,6 @@ import { requireTenant } from "@/lib/auth";
 import { listEmployees } from "@/lib/services/hr/employee.service";
 import {
   listBreakSessions,
-  listBreakPenalties,
   getBreakStats,
   getActiveBreak,
   getBreakTimeThreshold,
@@ -16,73 +15,147 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { StatCard as MetricCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Coffee,
-  Clock,
-  Timer,
-  AlertTriangle,
-  UserCheck,
-} from "lucide-react";
+import { Coffee, Clock, Timer, UserCheck } from "lucide-react";
 import { BreakStartEndPanel } from "./_components/break-start-end-panel";
 import { LogBreakForm } from "./_components/log-break-form";
-import { AddPenaltyDialog } from "./_components/add-penalty-dialog";
-import { PenaltyList } from "./_components/penalty-list";
 import { BreakThresholdForm } from "./_components/break-threshold-form";
+import {
+  BreakSessionsTable,
+  type BreakSessionRow,
+} from "./_components/break-sessions-table";
 
 export default async function BreakTimePage() {
   const session = await requireTenant();
   const isAdmin = ["owner", "admin", "superadmin"].includes(session.role ?? "");
 
-  const employee = isAdmin
-    ? null
-    : await prisma.employee.findFirst({
-        where: { tenantId: session.tenantId, userId: session.userId },
-        select: { id: true },
-      });
+  // The logged-in user's own employee record (if any) — used for THEIR personal
+  // Start/End break button. Looked up for every role so admins can take breaks
+  // too, not just employees.
+  const myEmployee = await prisma.employee.findFirst({
+    where: { tenantId: session.tenantId, userId: session.userId },
+    select: { id: true },
+  });
+  const myEmployeeId = myEmployee?.id;
 
-  const employeeId = isAdmin ? undefined : employee?.id;
+  // Non-admins only ever see their own data; admins see everyone's. When a
+  // non-admin has no linked employee record, filter by a zero UUID so the
+  // queries return nothing (employeeId is a UUID column — a non-UUID sentinel
+  // would crash Prisma).
+  const NO_MATCH = "00000000-0000-0000-0000-000000000000";
+  const dataFilter = isAdmin
+    ? {}
+    : { employeeId: myEmployeeId ?? NO_MATCH };
 
-  const [stats, sessions, penalties, employees, threshold, activeBreak] =
+  const [stats, sessions, employees, threshold, activeBreak] =
     await Promise.all([
       getBreakStats(session.tenantId),
-      listBreakSessions(session.tenantId, employeeId ? { employeeId } : {}),
-      listBreakPenalties(session.tenantId, employeeId ? { employeeId } : {}),
+      listBreakSessions(session.tenantId, dataFilter),
       listEmployees(session.tenantId, { status: "active" }),
       getBreakTimeThreshold(session.tenantId),
-      employeeId ? getActiveBreak(session.tenantId, employeeId) : null,
+      myEmployeeId ? getActiveBreak(session.tenantId, myEmployeeId) : null,
     ]);
+
+  // Plain serializable rows for the shared DataTable (both admin & employee
+  // branches render the same shape).
+  const breakRows: BreakSessionRow[] = sessions.map((s) => ({
+    id: s.id,
+    employeeName: s.employee.fullName,
+    empCode: s.employee.empCode,
+    breakStart: s.breakStart.toISOString(),
+    breakEnd: s.breakEnd ? s.breakEnd.toISOString() : null,
+    durationMin: s.durationMin,
+    isDuty: s.isDuty,
+    notes: s.notes,
+    status: s.status,
+  }));
+
+  // Reusable personal Start/End break card for the logged-in user.
+  const myBreakCard = (
+    <Card className="border-border/70 bg-card/80">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Coffee className="h-4 w-4 text-primary" />
+          Break Time
+        </CardTitle>
+        <CardDescription>
+          Press start to begin your break; press again to end it.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {myEmployeeId ? (
+          <BreakStartEndPanel
+            employeeId={myEmployeeId}
+            thresholdMin={threshold}
+            activeBreak={
+              activeBreak
+                ? {
+                    id: activeBreak.id,
+                    breakStart: activeBreak.breakStart.toISOString(),
+                    breakCategory: activeBreak.breakCategory,
+                    notes: activeBreak.notes,
+                  }
+                : null
+            }
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Your account isn&apos;t linked to an employee record, so a personal
+            break can&apos;t be tracked here. Ask an admin to link your account
+            to an employee profile.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  // Employee view: the Start/End button, a quick summary, and a history table
+  // so they can see how often and how long they take breaks.
+  if (!isAdmin) {
+    const completed = sessions.filter((s) => s.status === "completed");
+    const totalMin = Math.round(
+      completed.reduce((sum, s) => sum + s.durationMin, 0)
+    );
+    const avgMin = completed.length
+      ? Math.round(totalMin / completed.length)
+      : 0;
+
+    return (
+      <div className="mx-auto w-full max-w-3xl space-y-6">
+        <div className="mx-auto w-full max-w-md">{myBreakCard}</div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Breaks taken", value: completed.length },
+            { label: "Total time", value: `${totalMin} min` },
+            { label: "Avg per break", value: `${avgMin} min` },
+          ].map((stat) => (
+            <MetricCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              valueClassName="tabular-nums"
+            />
+          ))}
+        </div>
+
+        <div>
+          <div className="mb-3">
+            <p className="text-base font-semibold">Your Break History</p>
+            <p className="text-xs text-muted-foreground">
+              Every break you&apos;ve taken
+            </p>
+          </div>
+          <BreakSessionsTable rows={breakRows} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Admin "Add Penalty" opens from the "+" button in the top bar (left of
-          the notification bell). Portals into the TopBar; nothing inline. */}
-      {isAdmin && (
-        <AddPenaltyDialog
-          employees={employees.map((e) => ({
-            id: e.id,
-            name: e.fullName,
-            code: e.empCode,
-          }))}
-          breakSessions={sessions.map((s) => ({
-            id: s.id,
-            employeeId: s.employeeId,
-            breakStart: s.breakStart.toISOString(),
-            durationMin: s.durationMin,
-          }))}
-          thresholdMin={threshold}
-        />
-      )}
-
+      {/* KPI row — at the top. */}
       <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory xl:grid xl:grid-cols-4 xl:overflow-visible">
         <div className="w-[68vw] max-w-[300px] xl:w-auto xl:max-w-none shrink-0 snap-start">
           <StatCard
@@ -116,6 +189,31 @@ export default async function BreakTimePage() {
         </div>
       </div>
 
+      {/* Log Break (left, 40%) + personal Break Time (right, 60%). */}
+      <div className="grid gap-6 lg:grid-cols-[2fr_3fr]">
+        <Card className="border-border/70 bg-card/80">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              Log Break
+            </CardTitle>
+            <CardDescription>
+              Record a break for a specific window — from one time to another.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LogBreakForm
+              employees={employees.map((e) => ({
+                id: e.id,
+                name: e.fullName,
+                code: e.empCode,
+              }))}
+            />
+          </CardContent>
+        </Card>
+        {myBreakCard}
+      </div>
+
       {isAdmin && (
         <Card className="border-border/70 bg-card/80">
           <CardHeader>
@@ -127,147 +225,12 @@ export default async function BreakTimePage() {
         </Card>
       )}
 
-      <div
-        className={
-          isAdmin ? "grid gap-6 lg:grid-cols-[1fr_360px]" : "space-y-6"
-        }
-      >
-        <div className="space-y-3">
-          {!isAdmin && employeeId && (
-            <Card className="border-border/70 bg-card/80">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Coffee className="h-4 w-4 text-primary" />
-                  Break Time
-                </CardTitle>
-                <CardDescription>Start or end your break</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <BreakStartEndPanel
-                  employeeId={employeeId}
-                  thresholdMin={threshold}
-                  activeBreak={
-                    activeBreak
-                      ? {
-                          id: activeBreak.id,
-                          breakStart: activeBreak.breakStart.toISOString(),
-                          breakCategory: activeBreak.breakCategory,
-                          notes: activeBreak.notes,
-                        }
-                      : null
-                  }
-                />
-              </CardContent>
-            </Card>
-          )}
-          {!isAdmin && employeeId && (
-            <Card className="border-border/70 bg-card/80">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" />
-                  Log a Past Break
-                </CardTitle>
-                <CardDescription>
-                  Forgot to use the timer? Record a break from one time to another.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <LogBreakForm employeeId={employeeId} />
-              </CardContent>
-            </Card>
-          )}
-          <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
-            <CardHeader>
-              <CardTitle>Break Sessions</CardTitle>
-              <CardDescription>
-                {isAdmin ? "All employees' breaks" : "Your break history"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {sessions.length === 0 ? (
-                <div className="text-center py-12">
-                  <Coffee className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    No break sessions recorded yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Employee</TableHead>
-                        <TableHead>Start</TableHead>
-                        <TableHead>End</TableHead>
-                        <TableHead className="text-right">Duration</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sessions.map((s) => (
-                        <TableRow key={s.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium text-sm">{s.employee.fullName}</p>
-                              <p className="text-xs text-muted-foreground font-mono">
-                                {s.employee.empCode}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs font-mono">
-                            {new Date(s.breakStart).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}{" "}
-                            <span className="text-muted-foreground">
-                              {new Date(s.breakStart).toLocaleDateString()}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-xs font-mono">
-                            {s.breakEnd
-                              ? new Date(s.breakEnd).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-right text-sm font-medium">
-                            {s.durationMin > 0
-                              ? `${Math.round(s.durationMin)} min`
-                              : "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={s.isDuty ? "default" : "secondary"}
-                              className="text-xs"
-                            >
-                              {s.isDuty
-                                ? "Courier · duty"
-                                : "Personal · out of duty"}
-                            </Badge>
-                            {s.notes ? (
-                              <p className="mt-1 max-w-[220px] truncate text-[11px] text-muted-foreground">
-                                {s.notes}
-                              </p>
-                            ) : null}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={s.status === "active" ? "secondary" : "outline"}
-                              className="capitalize text-xs"
-                            >
-                              {s.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      <div className="space-y-3">
+          {/* Desktop: the project-wide DataTable (read-only — no selection).
+              Mobile uses the card stack below. */}
+          <div className="hidden md:block">
+            <BreakSessionsTable rows={breakRows} showEmployee />
+          </div>
 
           <div className="md:hidden space-y-3">
             <div>
@@ -359,91 +322,8 @@ export default async function BreakTimePage() {
             )}
           </div>
 
-          {isAdmin && (
-            <Card className="border-border/70 bg-card/80">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                  Break Penalties
-                </CardTitle>
-                <CardDescription>All penalty records</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="pending">
-                  <TabsList>
-                    <TabsTrigger value="pending">
-                      Pending ({penalties.filter((p) => p.status === "pending").length})
-                    </TabsTrigger>
-                    <TabsTrigger value="applied">
-                      Applied ({penalties.filter((p) => p.status === "applied").length})
-                    </TabsTrigger>
-                    <TabsTrigger value="waived">
-                      Waived ({penalties.filter((p) => p.status === "waived").length})
-                    </TabsTrigger>
-                  </TabsList>
-                  {(["pending", "applied", "waived"] as const).map((status) => (
-                    <TabsContent key={status} value={status} className="mt-4">
-                      <PenaltyList
-                        penalties={
-                          penalties
-                            .filter((p) => p.status === status)
-                            .map((p) => ({
-                              ...p,
-                              amount: Number(p.amount),
-                            })) as any
-                        }
-                        isAdmin={true}
-                      />
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              </CardContent>
-            </Card>
-          )}
-
-          {!isAdmin && penalties.length > 0 && (
-            <Card className="border-border/70 bg-card/80">
-              <CardHeader>
-                <CardTitle>Your Penalties</CardTitle>
-                <CardDescription>Break time penalties</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PenaltyList
-                  penalties={penalties
-                    .filter((p) => p.status !== "waived")
-                    .map((p) => ({ ...p, amount: Number(p.amount) })) as any}
-                  isAdmin={false}
-                />
-              </CardContent>
-            </Card>
-          )}
         </div>
 
-        <div className="space-y-4">
-          {isAdmin && (
-            <Card className="border-border/70 bg-card/80">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" />
-                  Log Break
-                </CardTitle>
-                <CardDescription>
-                  Record a break for a specific window — from one time to another.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <LogBreakForm
-                  employees={employees.map((e) => ({
-                    id: e.id,
-                    name: e.fullName,
-                    code: e.empCode,
-                  }))}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
@@ -459,25 +339,19 @@ function StatCard({
   value: number | string;
   variant?: "default" | "success" | "warning";
 }) {
-  const iconBg =
-    variant === "success"
-      ? "bg-success/10 text-success"
-      : variant === "warning"
-        ? "bg-warning/10 text-warning"
-        : "bg-primary/10 text-primary";
   return (
-    <Card className="border-border/70 bg-card/80">
-      <CardHeader className="flex flex-row items-center justify-start gap-2 pb-2">
-        <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconBg}`}
-        >
-          {icon}
-        </div>
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold">{value}</div>
-      </CardContent>
-    </Card>
+    <MetricCard
+      icon={icon}
+      label={title}
+      value={typeof value === "number" ? value.toLocaleString() : value}
+      tone={
+        variant === "success"
+          ? "success"
+          : variant === "warning"
+          ? "warning"
+          : "primary"
+      }
+    />
   );
 }
+

@@ -7,32 +7,22 @@ import { getTenantDetail } from "@/lib/services/tenant.service";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Building2,
-  Pencil,
+  SquarePen,
   ArrowLeft,
   Users,
-  Package,
-  ShoppingCart,
   UserRound,
   Settings,
 } from "lucide-react";
 import { ToggleTenantButton } from "../_components/toggle-tenant-button";
 import { DeleteTenantButton } from "../_components/delete-tenant-button";
+import { MembersTable, type MemberRow } from "./_components/members-table";
 
 export default async function TenantDetailPage({
   params,
@@ -49,6 +39,14 @@ export default async function TenantDetailPage({
   if (!tenant) notFound();
 
   const t = tenant;
+
+  const memberRows: MemberRow[] = t.members.map((m) => ({
+    id: m.user.id,
+    fullName: m.user.fullName,
+    email: m.user.email,
+    phone: m.user.phone || "—",
+    role: m.role,
+  }));
 
   return (
     <div className="space-y-6">
@@ -79,7 +77,7 @@ export default async function TenantDetailPage({
           <Badge variant="outline" className="capitalize rounded-lg">{t.plan}</Badge>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/tenants/${t.slug}/edit`}>
-              <Pencil className="h-4 w-4" />
+              <SquarePen className="h-4 w-4" />
               Edit
             </Link>
           </Button>
@@ -111,57 +109,18 @@ export default async function TenantDetailPage({
       </div>
 
       {/* Members */}
-      <Card className="border-border/70 bg-card/80">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <div className="space-y-3">
+        <div>
+          <p className="flex items-center gap-2 text-base font-semibold">
             <Users className="h-5 w-5 text-primary" />
             Members ({t._count.members})
-          </CardTitle>
-          <CardDescription>
+          </p>
+          <p className="text-xs text-muted-foreground">
             People with access to this workspace.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Role</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {t.members.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      No members found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  t.members.map((m) => (
-                    <TableRow key={m.user.id}>
-                      <TableCell className="font-medium">
-                        {m.user.fullName}
-                      </TableCell>
-                      <TableCell className="text-sm">{m.user.email}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {m.user.phone || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize rounded-lg">
-                          {m.role}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+          </p>
+        </div>
+        <MembersTable rows={memberRows} />
+      </div>
 
       {/* Settings */}
       <div className="grid gap-4 sm:grid-cols-2">

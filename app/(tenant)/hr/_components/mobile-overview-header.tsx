@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 import Link from "next/link";
 import { Users, CalendarClock, CalendarDays, Wallet } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { DateRangePicker } from "./date-range-picker";
+import { DateRangePicker } from "../../_components/date-range-picker";
 import { NotificationBell } from "../../_components/notification-bell";
 import type { NotificationItem } from "@/lib/services/notifications.service";
 
@@ -32,7 +32,7 @@ export function MobileDashboardHeader({
       <div className="lg:hidden space-y-3">
         {/* Title + Notification + Today picker */}
         <div className="flex items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
           <div className="flex items-center gap-2">
             <NotificationBell notifications={notifications} />
             <DateRangePicker />

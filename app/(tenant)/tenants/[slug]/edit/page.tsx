@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Pencil } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import { EditTenantForm } from "./_components/edit-tenant-form";
 
 export default async function EditTenantPage({
@@ -27,7 +27,7 @@ export default async function EditTenantPage({
       <Card className="border-border/70 bg-card/80">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Pencil className="h-5 w-5 text-primary" />
+            <SquarePen className="h-5 w-5 text-primary" />
             Edit Tenant
           </CardTitle>
           <CardDescription>

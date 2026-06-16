@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Pencil, Save, X, Loader2, CheckCircle2, Circle } from "lucide-react";
+import { SquarePen, Save, X, Loader2, CheckCircle2, Circle } from "lucide-react";
 import {
   updatePayslipAction,
   setPayslipPaidAction,
@@ -41,6 +41,7 @@ export type Slip = {
   employeeName: string;
   employeeCode: string;
   designation: string;
+  salaryGrade: string;
   basicSalary: number;
   houseRent: number;
   health: number;
@@ -466,7 +467,7 @@ export function SalarySheet({
             <TableHeader>
               {/* Earnings / Deductions group band */}
               <TableRow className="hover:bg-transparent">
-                <TableHead colSpan={5} className="bg-base-200" />
+                <TableHead colSpan={6} className="bg-base-200" />
                 <TableHead
                   colSpan={8 + earnCustom.length}
                   className={`${HEAD} bg-emerald-600 text-center text-sm tracking-wide text-white`}
@@ -491,6 +492,7 @@ export function SalarySheet({
                 <TableHead className={H_META}>Emp ID</TableHead>
                 <TableHead className={H_META}>Employee</TableHead>
                 <TableHead className={H_META}>Designation</TableHead>
+                <TableHead className={H_META}>Salary Grade</TableHead>
                 <HdrCell col={GROSS} className={H_GROSS} />
                 {EARN_COLS.map((c) => (
                   <HdrCell
@@ -545,7 +547,7 @@ export function SalarySheet({
             <TableFooter>
               <TableRow className="border-t-2 border-base-content/50 bg-base-200/70 font-bold hover:bg-base-200/70">
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className={`${META} text-right uppercase tracking-wide`}
                 >
                   Total · {slips.length} employee{slips.length !== 1 ? "s" : ""}
@@ -698,6 +700,9 @@ function SheetCard({
           <div className="break-words text-xs text-muted-foreground">
             <span className="font-mono">{slip.employeeCode}</span> ·{" "}
             {slip.designation}
+            {slip.salaryGrade && slip.salaryGrade !== "—" && (
+              <> · Grade {slip.salaryGrade}</>
+            )}
           </div>
         </div>
         {canEdit && !e.editing && (
@@ -707,7 +712,7 @@ function SheetCard({
             className="h-7 shrink-0 gap-1 px-2 text-xs"
             onClick={() => e.setEditing(true)}
           >
-            <Pencil className="h-3 w-3" /> Edit
+            <SquarePen className="h-3 w-3" /> Edit
           </Button>
         )}
       </div>
@@ -930,6 +935,9 @@ function SheetRow({
         <TableCell className={`${META} text-muted-foreground`}>
           {slip.designation}
         </TableCell>
+        <TableCell className={`${META} text-muted-foreground`}>
+          {slip.salaryGrade}
+        </TableCell>
         <TableCell className={C_GROSS}>{fmt(slip.totalEarnings)}</TableCell>
         <TableCell className={C_EARN}>{fmt(slip.basicSalary)}</TableCell>
         <TableCell className={C_EARN}>{fmt(slip.houseRent)}</TableCell>
@@ -971,7 +979,7 @@ function SheetRow({
               onClick={() => e.setEditing(true)}
               title="Edit row"
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <SquarePen className="h-3.5 w-3.5" />
             </Button>
           </TableCell>
         )}
@@ -1004,6 +1012,9 @@ function SheetRow({
       </TableCell>
       <TableCell className={`${META} text-muted-foreground`}>
         {slip.designation}
+      </TableCell>
+      <TableCell className={`${META} text-muted-foreground`}>
+        {slip.salaryGrade}
       </TableCell>
       <TableCell className={C_GROSS}>{fmt(e.gross)}</TableCell>
       <TableCell className={C_EARN}>{cell("basic")}</TableCell>
@@ -1068,7 +1079,7 @@ function SheetRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-success"
+            className="h-7 w-7 rounded-full text-success"
             onClick={e.save}
             disabled={e.pending}
             title="Save"
@@ -1082,7 +1093,7 @@ function SheetRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 rounded-full"
             onClick={e.reset}
             disabled={e.pending}
             title="Cancel"

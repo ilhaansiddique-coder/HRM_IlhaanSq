@@ -1,4 +1,5 @@
 import { requireTenant } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { listLeaveRequests, listLeaveTypes } from "@/lib/services/hr/leave.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
 import {
@@ -9,10 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatCard as MetricCard, type StatTone } from "@/components/ui/stat-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Clock, CheckCircle2, XCircle } from "lucide-react";
+import type { ReactNode } from "react";
 import { LeaveActions } from "./_components/leave-actions";
 import { SubmitLeaveDialog } from "./_components/submit-leave-dialog";
+import { resolveDateBounds } from "@/lib/date-range";
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   pending: "secondary",
@@ -21,12 +25,46 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
   cancelled: "outline",
 };
 
-export default async function LeavePage() {
+export default async function LeavePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
+  const isAdmin = ["owner", "admin", "superadmin"].includes(session.role ?? "");
+
+  // Global top-bar date filter (by leave-request date; "all time" = no bound).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
+
+  // The logged-in user's own employee record (if any). Non-admins only ever see
+  // and file leave for THEMSELVES, so we scope every query to this record — the
+  // same role-aware pattern the Break page uses.
+  const myEmployee = await prisma.employee.findFirst({
+    where: { tenantId: session.tenantId, userId: session.userId },
+    select: { id: true, fullName: true, empCode: true },
+  });
+  const myEmployeeId = myEmployee?.id;
+
+  // When a non-admin has no linked employee record, filter by a zero UUID so the
+  // queries return nothing (employeeId is a UUID column — a non-UUID sentinel
+  // would crash Prisma).
+  const NO_MATCH = "00000000-0000-0000-0000-000000000000";
+  const dateFilter = {
+    ...(start && { from: start }),
+    ...(end && { to: end }),
+  };
+  const dataFilter = isAdmin
+    ? { ...dateFilter }
+    : { employeeId: myEmployeeId ?? NO_MATCH, ...dateFilter };
+
   const [requests, types, employees] = await Promise.all([
-    listLeaveRequests(session.tenantId),
+    listLeaveRequests(session.tenantId, dataFilter),
     listLeaveTypes(session.tenantId),
-    listEmployees(session.tenantId, { status: "active" }),
+    // The employee picker is only used by admins; employees auto-target self.
+    isAdmin
+      ? listEmployees(session.tenantId, { status: "active" })
+      : Promise.resolve([]),
   ]);
 
   const pending = requests.filter((r) => r.status === "pending");
@@ -36,9 +74,16 @@ export default async function LeavePage() {
   return (
     <div className="space-y-6">
       {/* Submit Leave Request opens from the "+" button in the top bar (left of
-          the notification bell). Manage Leave Types is now in the sidebar. */}
+          the notification bell). Manage Leave Types now lives in Settings.
+          Admins pick any employee; employees file for themselves. */}
       <SubmitLeaveDialog
+        isAdmin={isAdmin}
         employees={employees.map((e) => ({ id: e.id, name: e.fullName, code: e.empCode }))}
+        selfEmployee={
+          !isAdmin && myEmployee
+            ? { id: myEmployee.id, name: myEmployee.fullName, code: myEmployee.empCode }
+            : null
+        }
         types={types.map((t) => ({ id: t.id, name: t.name, code: t.code }))}
       />
 
@@ -50,8 +95,10 @@ export default async function LeavePage() {
 
       <Card className="border-border/70 bg-card/80">
           <CardHeader>
-            <CardTitle>Leave Requests</CardTitle>
-            <CardDescription>All requests in your workspace</CardDescription>
+            <CardTitle>{isAdmin ? "Leave Requests" : "My Leave Requests"}</CardTitle>
+            <CardDescription>
+              {isAdmin ? "All requests in your workspace" : "Leave you've requested"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="pending">
@@ -107,7 +154,9 @@ export default async function LeavePage() {
                                 </p>
                               )}
                             </div>
-                            {r.status === "pending" && <LeaveActions requestId={r.id} />}
+                            {isAdmin && r.status === "pending" && (
+                              <LeaveActions requestId={r.id} />
+                            )}
                           </div>
                         </div>
                       ))
@@ -130,17 +179,14 @@ function StatCard({
   count: number;
   variant: "success" | "warning" | "muted";
 }) {
-  const colors = {
-    success: "border-success/35 text-success",
-    warning: "border-warning/35 text-warning",
-    muted: "border-border/70 text-muted-foreground",
+  const map: Record<
+    "success" | "warning" | "muted",
+    { tone: StatTone; icon: ReactNode }
+  > = {
+    success: { tone: "success", icon: <CheckCircle2 /> },
+    warning: { tone: "warning", icon: <Clock /> },
+    muted: { tone: "destructive", icon: <XCircle /> },
   };
-  return (
-    <Card className={`${colors[variant]} bg-card/80`}>
-      <CardHeader className="pb-2">
-        <CardDescription className="text-xs">{label}</CardDescription>
-        <CardTitle className="text-3xl font-bold">{count}</CardTitle>
-      </CardHeader>
-    </Card>
-  );
+  const { tone, icon } = map[variant];
+  return <MetricCard label={label} value={count} tone={tone} icon={icon} />;
 }

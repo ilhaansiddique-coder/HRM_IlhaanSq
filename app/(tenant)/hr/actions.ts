@@ -1,13 +1,19 @@
 "use server";
 
 import { requireTenant } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { resolveLinkedApproval } from "@/lib/services/approvals.service";
+import { onboardEmployeeWithPassword } from "@/lib/services/employee-onboarding.service";
 import {
   createEmployee,
   updateEmployee,
   terminateEmployee,
   deleteEmployee,
 } from "@/lib/services/hr/employee.service";
+import {
+  getEmployeeProfile,
+  type EmployeeProfile,
+} from "@/lib/services/hr/employee-profile.service";
 import {
   createDepartment,
   updateDepartment,
@@ -23,11 +29,18 @@ import {
   approveLeaveRequest,
   rejectLeaveRequest,
 } from "@/lib/services/hr/leave.service";
-import { checkIn, checkOut } from "@/lib/services/hr/attendance.service";
+import {
+  checkIn,
+  checkOut,
+  updateAttendanceRecord,
+  deleteAttendanceRecord,
+} from "@/lib/services/hr/attendance.service";
 import {
   startBreak,
   endBreak,
   logBreak,
+  updateBreakSession,
+  deleteBreakSession,
   createBreakPenalty,
   applyBreakPenalty,
   waiveBreakPenalty,
@@ -39,14 +52,47 @@ import { revalidatePath } from "next/cache";
 
 // ─── Employees ──────────────────────────────────────────────
 
-type EmployeeActionResult = { ok: boolean; error?: string };
+type EmployeeActionResult = {
+  ok: boolean;
+  error?: string;
+  // When the admin set a temporary password at creation, this carries the
+  // login credentials to hand over (password only present for a NEW account).
+  login?: { email: string; tempPassword: string | null; reused: boolean };
+};
+
+// Read-only aggregated "at a glance" profile for the employee details dialog.
+export async function getEmployeeProfileAction(
+  id: string
+): Promise<EmployeeProfile | null> {
+  const session = await requireTenant();
+  return getEmployeeProfile(session.tenantId, id);
+}
 
 export async function createEmployeeAction(
   formData: FormData
 ): Promise<EmployeeActionResult> {
   try {
     const session = await requireTenant();
-    await createEmployee(
+
+    const tempPassword = ((formData.get("tempPassword") as string | null) ?? "").trim();
+    if (tempPassword && tempPassword.length < 6) {
+      return {
+        ok: false,
+        error: "Temporary password must be at least 6 characters.",
+      };
+    }
+    // The temp password lets the employee sign in — but they log in with their
+    // email, so a password without an email can't work.
+    const emailForLogin = ((formData.get("email") as string | null) ?? "").trim();
+    if (tempPassword && !emailForLogin) {
+      return {
+        ok: false,
+        error:
+          "Add an email address — it's the employee's sign-in ID for the temporary password.",
+      };
+    }
+
+    const employee = await createEmployee(
       session.tenantId,
       {
         fullName: formData.get("fullName") as string,
@@ -70,10 +116,23 @@ export async function createEmployeeAction(
       },
       { userId: session.userId, name: session.name }
     );
+
+    let login: EmployeeActionResult["login"];
+    if (tempPassword) {
+      // Admin chose a temp password → provision login + activate immediately so
+      // the employee can sign in right away (forced to reset it on first login).
+      login = await onboardEmployeeWithPassword(
+        session.tenantId,
+        employee.id,
+        tempPassword,
+        { userId: session.userId, name: session.name }
+      );
+    }
+
     revalidatePath("/hr/employees");
     revalidatePath("/hr");
     revalidatePath("/admin");
-    return { ok: true };
+    return { ok: true, login };
   } catch (e) {
     return {
       ok: false,
@@ -282,10 +341,24 @@ export async function deleteLeaveTypeAction(formData: FormData) {
 
 export async function createLeaveRequestAction(formData: FormData) {
   const session = await requireTenant();
+  const isAdmin = ["owner", "admin", "superadmin"].includes(session.role ?? "");
+
+  // Non-admins may only file leave for THEIR OWN linked employee record — never
+  // trust the employeeId posted from the form. Admins can file for anyone.
+  let employeeId = formData.get("employeeId") as string;
+  if (!isAdmin) {
+    const me = await prisma.employee.findFirst({
+      where: { tenantId: session.tenantId, userId: session.userId },
+      select: { id: true },
+    });
+    if (!me) throw new Error("Your account isn't linked to an employee record.");
+    employeeId = me.id;
+  }
+
   await createLeaveRequest(
     session.tenantId,
     {
-      employeeId: formData.get("employeeId") as string,
+      employeeId,
       leaveTypeId: formData.get("leaveTypeId") as string,
       startDate: new Date(formData.get("startDate") as string),
       endDate: new Date(formData.get("endDate") as string),
@@ -345,6 +418,36 @@ export async function checkOutAction(formData: FormData) {
   revalidatePath("/hr/attendance");
 }
 
+export async function updateAttendanceAction(
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const session = await requireTenant();
+    const checkInRaw = (formData.get("checkIn") as string)?.trim();
+    const checkOutRaw = (formData.get("checkOut") as string)?.trim();
+    await updateAttendanceRecord(session.tenantId, formData.get("id") as string, {
+      checkIn: checkInRaw ? new Date(checkInRaw) : null,
+      checkOut: checkOutRaw ? new Date(checkOutRaw) : null,
+      status: (formData.get("status") as string) || undefined,
+    });
+    revalidatePath("/hr/attendance");
+    revalidatePath("/hr");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to update record",
+    };
+  }
+}
+
+export async function deleteAttendanceAction(formData: FormData) {
+  const session = await requireTenant();
+  await deleteAttendanceRecord(session.tenantId, formData.get("id") as string);
+  revalidatePath("/hr/attendance");
+  revalidatePath("/hr");
+}
+
 export async function updateLateThresholdAction(formData: FormData) {
   const session = await requireTenant();
   const raw = formData.get("lateThreshold") as string;
@@ -382,6 +485,34 @@ export async function logBreakAction(formData: FormData) {
     breakEnd: new Date(formData.get("breakEnd") as string),
     note: ((formData.get("note") as string | null) ?? "").trim(),
   });
+  revalidatePath("/hr/break");
+}
+
+export async function updateBreakSessionAction(
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const session = await requireTenant();
+    const startRaw = (formData.get("breakStart") as string)?.trim();
+    const endRaw = (formData.get("breakEnd") as string)?.trim();
+    await updateBreakSession(session.tenantId, formData.get("id") as string, {
+      breakStart: startRaw ? new Date(startRaw) : undefined,
+      breakEnd: endRaw ? new Date(endRaw) : null,
+      note: (formData.get("note") as string) ?? undefined,
+    });
+    revalidatePath("/hr/break");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Failed to update break",
+    };
+  }
+}
+
+export async function deleteBreakSessionAction(formData: FormData) {
+  const session = await requireTenant();
+  await deleteBreakSession(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/break");
 }
 

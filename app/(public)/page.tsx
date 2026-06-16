@@ -14,7 +14,7 @@ export default async function LandingPage() {
   // Super admins use the same tenant dashboard (with extra Tenants sidebar menu).
   const session = await getOptionalSession();
   if (session) {
-    if (session.tenantId) redirect("/dashboard");
+    if (session.tenantId) redirect("/hr");
     redirect("/onboarding");
   }
 

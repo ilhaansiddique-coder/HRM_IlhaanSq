@@ -20,7 +20,7 @@ export async function toggleTenantAction(formData: FormData) {
   const isActive = formData.get("isActive") === "true";
   await toggleTenantActive(tenantId, isActive);
   revalidatePath("/tenants");
-  revalidatePath("/dashboard");
+  revalidatePath("/hr");
 }
 
 export async function deleteTenantAction(formData: FormData) {
@@ -29,7 +29,7 @@ export async function deleteTenantAction(formData: FormData) {
   if (!tenantId) throw new Error("tenantId is required");
   await hardDeleteTenant(tenantId);
   revalidatePath("/tenants");
-  revalidatePath("/dashboard");
+  revalidatePath("/hr");
 }
 
 export async function approveRequestAction(
@@ -40,7 +40,7 @@ export async function approveRequestAction(
   const result = await approveDemoRequest(requestId, session.userId, {
     customPassword,
   });
-  revalidatePath("/dashboard");
+  revalidatePath("/hr");
   revalidatePath("/tenants");
   revalidatePath("/tenants/requests");
   revalidatePath("/tenants/approved");
@@ -56,7 +56,7 @@ export async function approveRequestAction(
 export async function resetRequestAction(requestId: string) {
   await requireSuperAdmin();
   await resetDemoRequest(requestId);
-  revalidatePath("/dashboard");
+  revalidatePath("/hr");
   revalidatePath("/tenants");
   revalidatePath("/tenants/requests");
   revalidatePath("/tenants/approved");
@@ -66,7 +66,7 @@ export async function resetRequestAction(requestId: string) {
 export async function rejectRequestAction(requestId: string, reason?: string) {
   const session = await requireSuperAdmin();
   await rejectDemoRequest(requestId, session.userId, reason);
-  revalidatePath("/dashboard");
+  revalidatePath("/hr");
   revalidatePath("/tenants/requests");
   revalidatePath("/tenants/declined");
 }
@@ -97,7 +97,7 @@ export async function createTenantAction(formData: FormData) {
     plan: (formData.get("plan") as string) || "starter",
     slug: (formData.get("slug") as string) || undefined,
   });
-  revalidatePath("/dashboard");
+  revalidatePath("/hr");
   revalidatePath("/tenants");
   return {
     email: result.user.email,

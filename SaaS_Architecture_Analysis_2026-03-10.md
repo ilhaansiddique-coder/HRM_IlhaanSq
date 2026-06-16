@@ -1,4 +1,4 @@
-﻿# HRM_IlhaanSq SaaS - Architecture Analysis
+﻿# HRM SaaS - Architecture Analysis
 
 Generated: 2026-03-10
 

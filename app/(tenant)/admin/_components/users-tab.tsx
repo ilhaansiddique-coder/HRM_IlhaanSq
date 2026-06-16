@@ -28,15 +28,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { DataTable, type Column } from "@/components/ui/data-table";
+import { Plus, SquarePen, Trash2, ExternalLink } from "lucide-react";
 import { PERMISSION_CATEGORIES, ROLES } from "@/lib/permissions";
 import {
   createUserAction,
@@ -71,97 +64,114 @@ export function UsersTab({
   const isAllowed = (permKey: string): boolean =>
     rolePermissions[selectedRole]?.[permKey] ?? false;
 
+  const columns: Column<any>[] = [
+    {
+      key: "user",
+      header: "User",
+      className: "font-medium",
+      cell: (m) => (
+        <>
+          {m.user.fullName}
+          {m.userId === currentUserId && (
+            <span className="text-xs text-muted-foreground ml-2">(you)</span>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "email",
+      header: "Email",
+      className: "text-muted-foreground text-xs",
+      cell: (m) => m.user.email,
+    },
+    {
+      key: "phone",
+      header: "Phone",
+      className: "text-muted-foreground text-xs",
+      cell: (m) => m.user.phone ?? "-",
+    },
+    {
+      key: "role",
+      header: "Role",
+      cell: (m) => (
+        <Badge variant={roleColors[m.role] ?? "outline"}>{m.role}</Badge>
+      ),
+    },
+    {
+      key: "joined",
+      header: "Joined",
+      className: "text-xs text-muted-foreground",
+      cell: (m) => new Date(m.user.createdAt).toLocaleDateString(),
+    },
+    {
+      key: "lastActive",
+      header: "Last Active",
+      className: "text-xs text-muted-foreground",
+      cell: (m) =>
+        m.user.lastSignInAt
+          ? new Date(m.user.lastSignInAt).toLocaleDateString()
+          : "Never",
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* User Management Card */}
+      {/* User Management */}
       {/* Desktop: table view. Mobile uses the card stack below. */}
-      <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <div className="hidden md:block space-y-4">
+        <div className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>Create and manage user accounts</CardDescription>
+            <p className="text-base font-semibold">User Management</p>
+            <p className="text-sm text-muted-foreground">
+              Create and manage user accounts
+            </p>
           </div>
           <Button onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4" />
             Add User
           </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Last Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((m) => {
-                  const isMe = m.userId === currentUserId;
-                  return (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">
-                        {m.user.fullName}
-                        {isMe && <span className="text-xs text-muted-foreground ml-2">(you)</span>}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs">{m.user.email}</TableCell>
-                      <TableCell className="text-muted-foreground text-xs">
-                        {m.user.phone ?? "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={roleColors[m.role] ?? "outline"}>{m.role}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(m.user.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {m.user.lastSignInAt
-                          ? new Date(m.user.lastSignInAt).toLocaleDateString()
-                          : "Never"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-1 justify-end">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="View">
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setEditing(m)}
-                            title="Edit"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          {!isMe && (
-                            <form action={deleteUserAction} className="inline-block">
-                              <input type="hidden" name="userId" value={m.userId} />
-                              <Button
-                                type="submit"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive"
-                                title="Remove"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </form>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <DataTable
+          rows={users}
+          columns={columns}
+          getId={(m) => m.id}
+          selectable={false}
+          itemNoun="users"
+          actionsCell={(m) => {
+            const isMe = m.userId === currentUserId;
+            return (
+              <>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" title="View">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={() => setEditing(m)}
+                  title="Edit"
+                >
+                  <SquarePen className="h-3.5 w-3.5" />
+                </Button>
+                {!isMe && (
+                  <form action={deleteUserAction} className="inline-block">
+                    <input type="hidden" name="userId" value={m.userId} />
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full text-destructive/70 hover:text-destructive"
+                      title="Remove"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </form>
+                )}
+              </>
+            );
+          }}
+        />
+      </div>
 
       {/* Mobile: same data as a card stack — name + role header, email and
           phone, two-col joined/last-active grid, then action buttons. */}
@@ -243,7 +253,7 @@ export function UsersTab({
                   onClick={() => setEditing(m)}
                   title="Edit"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <SquarePen className="h-3.5 w-3.5" />
                   Edit
                 </Button>
                 {!isMe && (

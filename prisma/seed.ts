@@ -88,8 +88,8 @@ async function main() {
 
   console.log("Created default settings");
 
-  // HRM_IlhaanSq standard salary structure (terms of payment from the company sheet)
-  const STRUCTURE_NAME = "Standard Monthly Salary (HRM_IlhaanSq)";
+  // HRM SaaS standard salary structure (terms of payment from the company sheet)
+  const STRUCTURE_NAME = "Standard Monthly Salary (HRM SaaS)";
   const existingStructure = await prisma.salaryStructure.findFirst({
     where: { tenantId: tenant.id, name: STRUCTURE_NAME },
   });

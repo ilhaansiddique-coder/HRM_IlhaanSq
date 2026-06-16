@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listJobPostings } from "@/lib/services/hr/recruitment.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -11,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Briefcase } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { changeJobStatusAction } from "../../actions-phase2";
 import { CopyJobUrlButton } from "./_components/copy-job-url-button";
 import { JobRowActions } from "./_components/job-row-actions";
@@ -30,10 +28,6 @@ export default async function JobsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/recruitment"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-      </div>
-
       {/* The New Job Posting form opens from the "+" button in the top bar (left
           of the notification bell). Portals into the TopBar; nothing inline. */}
       <NewJobPostingDialog />
@@ -79,7 +73,7 @@ export default async function JobsPage() {
                       <form action={changeJobStatusAction}>
                         <input type="hidden" name="id" value={j.id} />
                         <Select name="status" defaultValue={j.status}>
-                          <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-8 w-[110px] rounded-full text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="draft">Draft</SelectItem>
                             <SelectItem value="open">Open</SelectItem>

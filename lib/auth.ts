@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import authConfig from "./auth.config";
 import { signIn, signOut } from "next-auth/react";
+import { resolveViewOverride, type ViewMode } from "./view-mode";
 
 let cache: any;
 let redirect: any;
@@ -33,6 +34,9 @@ export type AppSession = {
   role: string | null;
   isSuperAdmin: boolean;
   mustResetPassword: boolean;
+  // The active view when the user switched roles via the "Continue as …"
+  // chooser; null when they're in their default (token) role.
+  activeView: ViewMode | null;
 };
 
 // ─── Cached Session Getter ──────────────────────────────────
@@ -41,7 +45,7 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  return {
+  const base: AppSession = {
     userId: session.user.id,
     email: session.user.email ?? "",
     name: session.user.name ?? "",
@@ -50,7 +54,19 @@ export const getSession = cache(async (): Promise<AppSession | null> => {
     role: (session as any).role ?? null,
     isSuperAdmin: (session as any).isSuperAdmin ?? false,
     mustResetPassword: (session as any).mustResetPassword ?? false,
+    activeView: null,
   };
+
+  // Apply the "Continue as …" view override (validated against what the user
+  // actually holds). Every downstream isAdmin / role check respects it.
+  const override = await resolveViewOverride(base);
+  if (override) {
+    base.role = override.role;
+    base.isSuperAdmin = override.isSuperAdmin;
+    base.activeView = override.activeView;
+  }
+
+  return base;
 });
 
 export const getOptionalSession = cache(async (): Promise<AppSession | null> => {
@@ -83,7 +99,7 @@ export async function requireTenant(): Promise<
 
 export async function requireSuperAdmin(): Promise<AppSession> {
   const session = await requireAuth();
-  if (!session.isSuperAdmin) redirect("/dashboard");
+  if (!session.isSuperAdmin) redirect("/hr");
   return session;
 }
 

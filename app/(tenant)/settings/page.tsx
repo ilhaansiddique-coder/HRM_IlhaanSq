@@ -5,9 +5,15 @@ import {
 } from "@/lib/cache";
 import { SettingsTabs } from "./_components/settings-tabs";
 import { SalaryStructureSection } from "./_components/salary-structure-section";
+import { BreakPenaltiesSection } from "./_components/break-penalties-section";
+import { LeaveTypesSection } from "./_components/leave-types-section";
+import { AdvancesSection } from "./_components/advances-section";
 
 export default async function SettingsPage() {
   const session = await requireTenant();
+  const isAdmin = ["owner", "admin", "superadmin"].includes(
+    session.role ?? ""
+  );
 
   const [business, system] = await Promise.all([
     getCachedBusinessSettings(session.tenantId),
@@ -20,6 +26,9 @@ export default async function SettingsPage() {
         business={business}
         system={system}
         salaryStructure={<SalaryStructureSection />}
+        breakPenalties={isAdmin ? <BreakPenaltiesSection /> : undefined}
+        leaveTypes={isAdmin ? <LeaveTypesSection /> : undefined}
+        advances={isAdmin ? <AdvancesSection /> : undefined}
       />
     </div>
   );

@@ -2,9 +2,8 @@ import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listApplications } from "@/lib/services/hr/recruitment.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, GitBranch } from "lucide-react";
+import { GitBranch } from "lucide-react";
 import { PipelineStageMover } from "./_components/pipeline-stage-mover";
 
 const STAGES: Array<{ key: any; label: string; color: string }> = [
@@ -22,10 +21,6 @@ export default async function PipelinePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/recruitment"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-      </div>
-
       {applications.length === 0 ? (
         <Card className="border-border/70 bg-card/40">
           <CardContent className="py-16 text-center">

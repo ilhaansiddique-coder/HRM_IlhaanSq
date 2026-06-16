@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { getPerformanceStats, listGoals, listReviewCycles } from "@/lib/services/hr/performance.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard as MetricCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listEmployees } from "@/lib/services/hr/employee.service";
@@ -102,17 +103,13 @@ export default async function PerformanceOverviewPage() {
 }
 
 function StatCard({ icon, title, value, hint, variant }: { icon: ReactNode; title: string; value: number | string; hint?: string; variant?: "success" }) {
-  const iconBg = variant === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary";
   return (
-    <Card className="border-border/70 bg-card/80">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${iconBg}`}>{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold">{typeof value === "number" ? value.toLocaleString() : value}</div>
-        {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
-      </CardContent>
-    </Card>
+    <MetricCard
+      icon={icon}
+      label={title}
+      value={typeof value === "number" ? value.toLocaleString() : value}
+      subtitle={hint}
+      tone={variant === "success" ? "success" : "primary"}
+    />
   );
 }

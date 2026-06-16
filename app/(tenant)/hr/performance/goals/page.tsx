@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listGoals, listReviewCycles } from "@/lib/services/hr/performance.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Target, Trash2 } from "lucide-react";
+import { Target, Trash2 } from "lucide-react";
 import {
   updateGoalAction,
   deleteGoalAction,
@@ -32,10 +31,6 @@ export default async function GoalsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/performance"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-      </div>
-
       {/* The New Goal form opens from the "+" button in the top bar (left of the
           notification bell). Portals into the TopBar; nothing inline here. */}
       <NewGoalDialog
@@ -67,7 +62,7 @@ export default async function GoalsPage() {
                     </div>
                     <form action={deleteGoalAction}>
                       <input type="hidden" name="id" value={g.id} />
-                      <Button type="submit" variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Button type="submit" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </form>

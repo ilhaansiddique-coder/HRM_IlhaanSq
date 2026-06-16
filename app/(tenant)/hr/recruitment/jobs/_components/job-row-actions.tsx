@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Loader2 } from "lucide-react";
+import { SquarePen, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,22 +85,22 @@ export function JobRowActions({ job }: { job: JobRow }) {
   }
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex items-center gap-2">
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-8 w-8 rounded-full"
         onClick={() => setEditOpen(true)}
         title="Edit job posting (needs admin approval)"
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <SquarePen className="h-3.5 w-3.5" />
       </Button>
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-destructive"
+        className="h-8 w-8 rounded-full text-destructive"
         onClick={() => setConfirmOpen(true)}
         title="Delete job posting (needs admin approval)"
       >

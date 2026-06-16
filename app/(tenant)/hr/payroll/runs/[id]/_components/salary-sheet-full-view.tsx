@@ -42,7 +42,7 @@ export function SalarySheetFullView({
         <Button
           variant="outline"
           size="sm"
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 rounded-full p-0"
           title="Open full-screen view"
           aria-label="Open full-screen salary sheet"
         >

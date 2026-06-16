@@ -113,7 +113,7 @@ Task:
 [Write / rewrite / improve / summarize the content]
 
 Business Context:
-- Company/product: HRM_IlhaanSq SaaS
+- Company/product: HRM SaaS
 - Audience: [store owners / internal team / investors / demo leads / admins]
 - Goal: [sell / educate / onboard / announce / request action]
 - Channel: [landing page / email / proposal / WhatsApp / docs / pitch]
@@ -155,7 +155,7 @@ Task:
 Rewrite the landing page hero copy.
 
 Business Context:
-- Company/product: HRM_IlhaanSq SaaS
+- Company/product: HRM SaaS
 - Audience: small and mid-sized retail businesses
 - Goal: increase demo requests
 - Channel: website landing page

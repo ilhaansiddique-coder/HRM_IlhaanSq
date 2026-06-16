@@ -53,10 +53,10 @@ export async function startBreak(
 ) {
   await assertTenantOwns(tenantId, "employee", [employeeId]);
 
-  // Reason is optional — a user can just press the button to start a break.
-  // An empty reason is treated as a personal (out-of-duty) break; mentioning
-  // "courier" still marks it as duty time.
+  // A reason is required to start a break; mentioning "courier" marks it as
+  // duty time, anything else is a personal (out-of-duty) break.
   const note = (opts.note ?? "").trim();
+  if (!note) throw new Error("Please enter a reason for the break.");
 
   const { category, isDuty } = classifyBreakReason(note);
 
@@ -127,6 +127,54 @@ export async function logBreak(
       notes: note,
     },
   });
+}
+
+/** Admin edit of a logged break session — adjust start/end times and reason;
+ *  duration, status and duty classification are recomputed. */
+export async function updateBreakSession(
+  tenantId: string,
+  id: string,
+  data: { breakStart?: Date; breakEnd?: Date | null; note?: string }
+) {
+  const rec = await prisma.breakSession.findFirst({ where: { id, tenantId } });
+  if (!rec) throw new Error("Break session not found");
+
+  const breakStart = data.breakStart ?? rec.breakStart;
+  const breakEnd = data.breakEnd !== undefined ? data.breakEnd : rec.breakEnd;
+  const note =
+    data.note !== undefined ? (data.note ?? "").trim() : rec.notes ?? "";
+
+  if (breakEnd && breakEnd.getTime() <= breakStart.getTime()) {
+    throw new Error("Break end time must be after the start time.");
+  }
+
+  const durationMin = breakEnd
+    ? Math.round(((breakEnd.getTime() - breakStart.getTime()) / 60000) * 100) /
+      100
+    : 0;
+  const { category, isDuty } = classifyBreakReason(note);
+
+  return prisma.breakSession.update({
+    where: { id },
+    data: {
+      breakStart,
+      breakEnd,
+      durationMin,
+      status: breakEnd ? "completed" : "active",
+      breakCategory: category,
+      isDuty,
+      notes: note || null,
+    },
+  });
+}
+
+export async function deleteBreakSession(tenantId: string, id: string) {
+  const rec = await prisma.breakSession.findFirst({
+    where: { id, tenantId },
+    select: { id: true },
+  });
+  if (!rec) throw new Error("Break session not found");
+  return prisma.breakSession.delete({ where: { id } });
 }
 
 export async function endBreak(

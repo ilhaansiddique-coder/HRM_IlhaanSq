@@ -1,33 +1,134 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
-import { getPayrollStats, listPayrollRuns, getPayrollPrep } from "@/lib/services/hr/payroll.service";
+import {
+  getPayrollStats,
+  listPayrollRuns,
+  getPayrollPrep,
+} from "@/lib/services/hr/payroll.service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { StatCard as MetricCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Plus, FileText, Layers, CheckCircle2, Calendar } from "lucide-react";
+import { FileText, Layers, CheckCircle2, Calendar, AlertTriangle } from "lucide-react";
 import { RunPayrollDialog } from "./_components/run-payroll-dialog";
+import { PayrollRunsTable, type RunRow } from "./runs/_components/payroll-runs-table";
+import { resolveDateBounds } from "@/lib/date-range";
 
-export default async function PayrollOverviewPage() {
+export default async function PayrollOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  // Global top-bar date filter applies to the payroll-runs list (by run date).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
+
   const [stats, runs, prep] = await Promise.all([
     getPayrollStats(session.tenantId),
-    listPayrollRuns(session.tenantId),
+    listPayrollRuns(session.tenantId, {
+      ...(start && { from: start }),
+      ...(end && { to: end }),
+    }),
     getPayrollPrep(session.tenantId, monthStart, monthEnd),
   ]);
   const hasStructure = stats.structureCount > 0;
   const hasSalary = stats.activeSalaryCount > 0;
+  const ready = hasStructure && hasSalary;
+
+  // Plain serializable rows for the shared DataTable.
+  const runRows: RunRow[] = runs.map((r) => ({
+    id: r.id,
+    periodName: r.period.name,
+    payDate: new Date(r.period.payDate).toISOString(),
+    employeeCount: r.employeeCount,
+    totalGross: Number(r.totalGross),
+    totalDeductions: Number(r.totalDeductions),
+    totalNet: Number(r.totalNet),
+    status: r.status,
+    runAt: new Date(r.runAt).toISOString(),
+  }));
+
+  // Runs history — full table on desktop, card stack on mobile.
+  const runsContent = (
+    <>
+      <div className="hidden md:block">
+        {runs.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+            <FileText className="h-10 w-10 opacity-40" />
+            <p className="text-sm">No payroll runs yet.</p>
+          </Card>
+        ) : (
+          <PayrollRunsTable rows={runRows} />
+        )}
+      </div>
+
+      <div className="md:hidden space-y-3">
+        {runs.length === 0 ? (
+          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+            <FileText className="h-10 w-10 opacity-40" />
+            <span className="text-sm">No payroll runs yet</span>
+          </Card>
+        ) : (
+          runs.map((r) => (
+            <Card key={r.id} className="rounded-lg p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <Link href={`/hr/payroll/runs/${r.id}`} className="font-medium leading-tight text-primary hover:underline">
+                    {r.period.name}
+                  </Link>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Pay date: {new Date(r.period.payDate).toLocaleDateString()}
+                  </p>
+                </div>
+                <Badge
+                  variant={r.status === "completed" ? "default" : "outline"}
+                  className="rounded-lg"
+                >
+                  {r.status}
+                </Badge>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Employees: </span>
+                  <span className="font-semibold">{r.employeeCount}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Gross: </span>
+                  <span className="font-medium">{Number(r.totalGross).toLocaleString()}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-muted-foreground">Deductions: </span>
+                  <span className="font-medium text-warning">{Number(r.totalDeductions).toLocaleString()}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Net Pay: </span>
+                  <span className="font-bold text-success">{Number(r.totalNet).toLocaleString()}</span>
+                </div>
+                <div className="col-span-2 text-muted-foreground">
+                  Run at: {new Date(r.runAt).toLocaleDateString()}
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Run Payroll opens from the "+" button in the top bar (left of the
-          notification bell). Advances and Salary Structure are now reached via
-          the sidebar (Payroll submenu) and Settings respectively. */}
+      {/* Run Payroll also opens from the "+" button in the top bar (left of the
+          notification bell). Advances live in the Payroll submenu; Salary
+          Structure lives in Settings. */}
       <RunPayrollDialog hasStructure={hasStructure} hasSalary={hasSalary} prep={prep} />
 
+      {/* Analytics — at the top. */}
       <div className="grid gap-4 sm:grid-cols-4">
         <StatCard icon={<Layers className="h-4 w-4" />} title="Salary Structures" value={stats.structureCount} />
         <StatCard icon={<CheckCircle2 className="h-4 w-4" />} title="Active Salaries" value={stats.activeSalaryCount} variant="success" />
@@ -40,45 +141,42 @@ export default async function PayrollOverviewPage() {
         />
       </div>
 
-      <Card className="border-border/70 bg-card/80">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-primary" />
-              Payroll Runs
+      {/* Setup-required warning — only while payroll can't run yet. */}
+      {!ready && (
+        <Card className="border-warning/35 bg-warning/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Setup required
             </CardTitle>
-            <CardDescription>{runs.length} run{runs.length !== 1 ? "s" : ""} executed</CardDescription>
-          </div>
-          <Link href="/hr/payroll/runs">
-            <Button variant="ghost" size="sm">View all</Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {runs.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Wallet className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm mb-3">No payroll runs yet.</p>
-              <Link href="/hr/payroll/runs/new">
-                <Button size="sm"><Plus className="h-3.5 w-3.5" />Run first payroll</Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {runs.slice(0, 5).map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-lg border border-border/60 bg-background/40 px-3 py-2">
-                  <div>
-                    <p className="font-medium text-sm">{r.period.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {r.employeeCount} employee{r.employeeCount !== 1 ? "s" : ""} · Net: {Number(r.totalNet).toLocaleString()} · {new Date(r.runAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge variant={r.status === "completed" ? "default" : "outline"}>{r.status}</Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <CardDescription>
+              You need a salary structure AND at least one employee with a salary
+              assigned before running payroll.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {!hasStructure && (
+              <p>
+                · No salary structures —{" "}
+                <Link href="/settings" className="text-primary underline">
+                  create one in Settings → Salary Structure
+                </Link>
+              </p>
+            )}
+            {hasStructure && !hasSalary && (
+              <p>
+                · No employees have a salary assigned —{" "}
+                <Link href="/hr/payroll/assign" className="text-primary underline">
+                  assign a salary
+                </Link>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Payroll runs history. */}
+      {runsContent}
 
       <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
         <strong className="text-foreground">Terms of payment:</strong> Gross = Basic + earning
@@ -94,17 +192,13 @@ export default async function PayrollOverviewPage() {
 }
 
 function StatCard({ icon, title, value, hint, variant }: { icon: ReactNode; title: string; value: number | string; hint?: string; variant?: "success" }) {
-  const iconBg = variant === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary";
   return (
-    <Card className="border-border/70 bg-card/80">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${iconBg}`}>{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold">{typeof value === "number" ? value.toLocaleString() : value}</div>
-        {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
-      </CardContent>
-    </Card>
+    <MetricCard
+      icon={icon}
+      label={title}
+      value={typeof value === "number" ? value.toLocaleString() : value}
+      subtitle={hint}
+      tone={variant === "success" ? "success" : "primary"}
+    />
   );
 }

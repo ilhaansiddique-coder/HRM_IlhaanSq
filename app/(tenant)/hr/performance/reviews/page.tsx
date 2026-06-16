@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listReviews, listReviewCycles } from "@/lib/services/hr/performance.service";
 import { listEmployees } from "@/lib/services/hr/employee.service";
@@ -15,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, MessageSquare, Star } from "lucide-react";
+import { Plus, MessageSquare, Star } from "lucide-react";
 import { createReviewAction } from "../../actions-phase2";
 
 export default async function ReviewsPage() {
@@ -28,10 +27,6 @@ export default async function ReviewsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/performance"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-3">
           {reviews.length === 0 ? (

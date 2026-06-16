@@ -1,23 +1,27 @@
 // Server-friendly date-range helpers used by reports + export routes.
 // Mirrors the preset semantics of `DATE_RANGE_PRESETS` in
-// app/(tenant)/dashboard/_components/date-range-picker.tsx so the URL
+// app/(tenant)/_components/date-range-picker.tsx so the URL
 // (`?range=...` or `?from=YYYY-MM-DD&to=YYYY-MM-DD`) round-trips
 // identically between the client picker and any server consumer.
 
 import {
   endOfDay,
+  endOfMonth,
   startOfDay,
   startOfMonth,
   startOfYear,
   subDays,
+  subMonths,
 } from "date-fns";
 
 export type DateRangePresetKey =
   | "today"
   | "yesterday"
   | "last_7_days"
-  | "this_month"
   | "last_30_days"
+  | "last_90_days"
+  | "this_month"
+  | "last_month"
   | "this_year"
   | "all_time";
 
@@ -37,8 +41,16 @@ const PRESET_BUILDERS: Record<DateRangePresetKey, () => DateBounds> = {
     start: startOfMonth(new Date()),
     end: endOfDay(new Date()),
   }),
+  last_month: () => {
+    const prev = subMonths(new Date(), 1);
+    return { start: startOfMonth(prev), end: endOfMonth(prev) };
+  },
   last_30_days: () => ({
     start: startOfDay(subDays(new Date(), 29)),
+    end: endOfDay(new Date()),
+  }),
+  last_90_days: () => ({
+    start: startOfDay(subDays(new Date(), 89)),
     end: endOfDay(new Date()),
   }),
   this_year: () => ({
@@ -56,6 +68,21 @@ function parseISODate(raw: string | null | undefined): Date | null {
   if (!m) return null;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+// Routes where the global top-bar date picker actually filters page data.
+// The picker hides itself everywhere else (Departments, Settings, etc.).
+export const DATE_FILTER_PATHS = [
+  "/hr/attendance",
+  "/hr/leave",
+  "/hr/payroll",
+  "/admin",
+];
+
+export function pathHasDateFilter(pathname: string): boolean {
+  return DATE_FILTER_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
 }
 
 export function resolveDateBounds(

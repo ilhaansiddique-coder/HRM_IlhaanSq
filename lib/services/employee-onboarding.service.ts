@@ -94,7 +94,8 @@ export async function provisionEmployeeAccount(
 export async function activateEmployeeWithoutEmail(
   tenantId: string,
   employeeId: string,
-  decider?: { userId: string; name: string }
+  decider?: { userId: string; name: string },
+  opts?: { password?: string }
 ): Promise<{ email: string; tempPassword: string | null; reused: boolean }> {
   const employee = await prisma.employee.findFirst({
     where: { id: employeeId, tenantId },
@@ -109,8 +110,10 @@ export async function activateEmployeeWithoutEmail(
   let reused = false;
 
   if (!user) {
-    // Readable one-time password the admin can pass on; forced reset on login.
-    tempPassword = randomBytes(9).toString("base64url");
+    // Use the admin-chosen temporary password when supplied; otherwise fall
+    // back to a readable random one. Either way it's a one-time password the
+    // employee is forced to reset on first login.
+    tempPassword = opts?.password?.trim() || randomBytes(9).toString("base64url");
     user = await prisma.user.create({
       data: {
         email,
@@ -156,4 +159,44 @@ export async function activateEmployeeWithoutEmail(
   });
 
   return { email, tempPassword, reused };
+}
+
+/**
+ * Onboard an employee at creation time with an admin-chosen temporary password.
+ * Provisions the login account (forced password reset on first login), marks
+ * the employee active/approved, and auto-resolves the onboarding approval
+ * request that createEmployee opened — so the employee can sign in right away.
+ *
+ * Returns the temp password only when a NEW account was created. If a user
+ * already exists for that email, their existing password is kept untouched
+ * (reused = true) and the admin-chosen password does NOT take effect.
+ */
+export async function onboardEmployeeWithPassword(
+  tenantId: string,
+  employeeId: string,
+  password: string,
+  decider: { userId: string; name: string }
+): Promise<{ email: string; tempPassword: string | null; reused: boolean }> {
+  const result = await activateEmployeeWithoutEmail(tenantId, employeeId, decider, {
+    password,
+  });
+
+  // Close out the pending onboarding approval that createEmployee created.
+  await prisma.approvalRequest.updateMany({
+    where: {
+      tenantId,
+      type: "employee_onboarding",
+      entityId: employeeId,
+      status: "pending",
+    },
+    data: {
+      status: "approved",
+      decidedBy: decider.userId,
+      decidedByName: decider.name,
+      decidedAt: new Date(),
+      reason: "Activated at creation with an admin-set temporary password",
+    },
+  });
+
+  return result;
 }

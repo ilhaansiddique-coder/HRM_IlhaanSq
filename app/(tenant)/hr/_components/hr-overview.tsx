@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { StatCard, type StatTone } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import {
   Users,
@@ -18,6 +19,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import type { HrDashboard } from "@/lib/services/dashboard-analytics.service";
+import { AttendanceRosterTabs } from "./attendance-roster-tabs";
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -32,34 +34,39 @@ function Kpi({
   label,
   value,
   href,
+  subtitle,
+  tone,
 }: {
   icon: ReactNode;
   label: string;
   value: number;
   href: string;
+  subtitle?: string;
+  tone?: StatTone;
 }) {
   return (
-    <Link href={href}>
-      <Card className="border-border/70 bg-card/80 transition-colors hover:bg-muted/30">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{label}</CardTitle>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-            {icon}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-semibold">
-            {value.toLocaleString()}
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+    <StatCard
+      icon={icon}
+      label={label}
+      value={value.toLocaleString()}
+      href={href}
+      subtitle={subtitle}
+      tone={tone}
+    />
   );
 }
 
 export function HrOverview({ data }: { data: HrDashboard }) {
-  const { kpis, attendanceToday, headcountByDept, pendingLeaveRequests } =
-    data;
+  const {
+    kpis,
+    attendanceToday,
+    attendanceRoster,
+    headcountByDept,
+    pendingLeaveRequests,
+  } = data;
+  const { present, late, onLeave, absent } = attendanceRoster;
+  const rosterTotal =
+    present.length + late.length + onLeave.length + absent.length;
   const maxDept = Math.max(1, ...headcountByDept.map((d) => d.count));
 
   return (
@@ -67,34 +74,43 @@ export function HrOverview({ data }: { data: HrDashboard }) {
       {/* KPI row */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi
-          icon={<Users className="h-4 w-4" />}
+          icon={<Users />}
           label="Total Employees"
           value={kpis.totalEmployees}
           href="/hr/employees"
+          subtitle="Active headcount"
+          tone="primary"
         />
         <Kpi
-          icon={<UserCheck className="h-4 w-4" />}
+          icon={<UserCheck />}
           label="Present Today"
           value={kpis.presentToday}
           href="/hr/attendance"
+          subtitle="Checked in today"
+          tone="success"
         />
         <Kpi
-          icon={<CalendarDays className="h-4 w-4" />}
+          icon={<CalendarDays />}
           label="On Leave"
           value={kpis.onLeaveToday}
           href="/hr/leave"
+          subtitle="Away today"
+          tone="info"
         />
         <Kpi
-          icon={<ShieldCheck className="h-4 w-4" />}
+          icon={<ShieldCheck />}
           label="Pending Approvals"
           value={kpis.pendingApprovals}
           href="/admin"
+          subtitle="Awaiting action"
+          tone="warning"
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Attendance today */}
-        <Card className="border-border/70 bg-card/80">
+      {/* Attendance Today (70%) + Headcount by Department (30%) */}
+      <div className="grid gap-4 lg:grid-cols-10">
+        {/* Attendance today — 70% */}
+        <Card className="border-border/70 bg-card/80 lg:col-span-7">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <CalendarClock className="h-5 w-5 text-primary" />
@@ -102,11 +118,15 @@ export function HrOverview({ data }: { data: HrDashboard }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <Stat label="Present" value={attendanceToday.present} tone="success" />
-              <Stat label="Late" value={attendanceToday.late} tone="warning" />
-              <Stat label="Absent" value={attendanceToday.absent} tone="destructive" />
+            {/* Stat tiles — present / late / absent / on leave */}
+            <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+              <Stat label="Present" value={present.length} tone="success" />
+              <Stat label="Late" value={late.length} tone="warning" />
+              <Stat label="Absent" value={absent.length} tone="destructive" />
+              <Stat label="On Leave" value={onLeave.length} tone="info" />
             </div>
+
+            {/* Attendance rate */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Attendance rate</span>
@@ -121,11 +141,25 @@ export function HrOverview({ data }: { data: HrDashboard }) {
                 />
               </div>
             </div>
+
+            {/* Per-status employee roster */}
+            {rosterTotal === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No active employees yet.
+              </p>
+            ) : (
+              <AttendanceRosterTabs
+                present={present}
+                late={late}
+                onLeave={onLeave}
+                absent={absent}
+              />
+            )}
           </CardContent>
         </Card>
 
-        {/* Headcount by department */}
-        <Card className="border-border/70 bg-card/80">
+        {/* Headcount by department — 30% */}
+        <Card className="border-border/70 bg-card/80 lg:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Users className="h-5 w-5 text-primary" />
@@ -299,6 +333,16 @@ export function HrOverview({ data }: { data: HrDashboard }) {
   );
 }
 
+type Tone = "success" | "warning" | "destructive" | "info";
+
+const TONE_TEXT: Record<Tone, string> = {
+  success: "text-success",
+  warning: "text-warning",
+  destructive: "text-destructive",
+  info: "text-primary",
+};
+
+
 function Stat({
   label,
   value,
@@ -306,21 +350,16 @@ function Stat({
 }: {
   label: string;
   value: number;
-  tone: "success" | "warning" | "destructive";
+  tone: Tone;
 }) {
-  const toneClass =
-    tone === "success"
-      ? "text-success"
-      : tone === "warning"
-        ? "text-warning"
-        : "text-destructive";
   return (
     <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-3">
-      <p className={`text-2xl font-semibold ${toneClass}`}>{value}</p>
+      <p className={`text-2xl font-semibold ${TONE_TEXT[tone]}`}>{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
+
 
 function Row({ label, value }: { label: string; value: string }) {
   return (

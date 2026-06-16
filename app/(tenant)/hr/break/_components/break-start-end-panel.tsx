@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Coffee, TimerOff, Loader2, Play, Truck, User } from "lucide-react";
+import { Coffee, TimerOff, Loader2, Play } from "lucide-react";
 import { startBreakAction, endBreakAction } from "../../actions";
 import { useRouter } from "next/navigation";
 
@@ -22,9 +21,9 @@ function fmt(totalSec: number) {
 }
 
 /**
- * Live timer while on break. Counts UP from 00:00 (elapsed break time); once
- * it passes the allowed break threshold it turns red and shows how far over,
- * so both the employee and any admin watching see the overrun in real time.
+ * Live timer while on break. Counts UP from 00:00 (elapsed break time) and
+ * keeps running until the user presses "End Break Time". Once it passes the
+ * allowed break threshold it turns red and shows how far over.
  */
 function BreakCountdown({
   breakStart,
@@ -44,8 +43,7 @@ function BreakCountdown({
 
   const elapsedSec = Math.max(0, Math.floor((now - startMs) / 1000));
   const over = thresholdSec > 0 && elapsedSec >= thresholdSec;
-  const lowWarn =
-    !over && thresholdSec > 0 && thresholdSec - elapsedSec <= 60;
+  const lowWarn = !over && thresholdSec > 0 && thresholdSec - elapsedSec <= 60;
   const overBySec = over ? elapsedSec - thresholdSec : 0;
 
   return (
@@ -97,11 +95,15 @@ export function BreakStartEndPanel({
 
   function handleStart() {
     setError(null);
+    if (!note.trim()) {
+      setError("Please enter a reason for the break before starting.");
+      return;
+    }
     startTransition(async () => {
       try {
         const fd = new FormData();
         fd.set("employeeId", employeeId);
-        fd.set("note", note);
+        fd.set("note", note.trim());
         await startBreakAction(fd);
         setNote("");
         router.refresh();
@@ -127,8 +129,6 @@ export function BreakStartEndPanel({
     });
   }
 
-  const isDuty = activeBreak?.breakCategory === "courier";
-
   return (
     <div className="space-y-3">
       {error && (
@@ -136,14 +136,15 @@ export function BreakStartEndPanel({
           {error}
         </div>
       )}
+
       {activeBreak ? (
-        <div className="space-y-3">
+        <>
           <div className="rounded-lg border border-warning/35 bg-warning/10 px-3 py-2">
-            <p className="text-xs font-medium text-warning flex items-center gap-1.5">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
               <Coffee className="h-3.5 w-3.5" />
               On Break
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="mt-1 text-[11px] text-muted-foreground">
               Started at{" "}
               {new Date(activeBreak.breakStart).toLocaleTimeString([], {
                 hour: "2-digit",
@@ -157,30 +158,19 @@ export function BreakStartEndPanel({
             thresholdMin={thresholdMin}
           />
 
-          <Badge
-            variant={isDuty ? "default" : "secondary"}
-            className="gap-1.5"
-          >
-            {isDuty ? (
-              <Truck className="h-3 w-3" />
-            ) : (
-              <User className="h-3 w-3" />
-            )}
-            {isDuty ? "Courier · counts as working time" : "Personal · out of duty"}
-          </Badge>
-
-          {activeBreak.notes ? (
+          {activeBreak.notes && (
             <p className="rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-xs">
               <span className="text-muted-foreground">Reason: </span>
               {activeBreak.notes}
             </p>
-          ) : null}
+          )}
 
           <Button
             onClick={handleEnd}
             disabled={pending}
             className="w-full"
             variant="destructive"
+            size="lg"
           >
             {pending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -189,30 +179,26 @@ export function BreakStartEndPanel({
             )}
             End Break Time
           </Button>
-        </div>
+        </>
       ) : (
         <div className="space-y-3">
           <div className="space-y-1.5">
             <label className="text-xs font-medium" htmlFor="break-note">
-              Reason for taking break{" "}
-              <span className="text-destructive">*</span>
+              Reason for taking break <span className="text-destructive">*</span>
             </label>
             <textarea
               id="break-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              placeholder="e.g. Deliver parcel to courier office"
-              className={`text-sm ${
-                error && !note.trim()
-                  ? "border-destructive focus-visible:ring-destructive"
-                  : ""
+              placeholder="e.g. Lunch, prayer, deliver parcel to courier office"
+              className={`flex w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                error && !note.trim() ? "border-destructive" : "border-input"
               }`}
             />
             <p className="text-[11px] text-muted-foreground">
               Mention <span className="font-medium">courier</span> if it&apos;s a
-              work errand — that time counts as working/duty time. Any other
-              reason is an out-of-duty break.
+              work errand — that time counts as working/duty time.
             </p>
           </div>
 
@@ -220,19 +206,17 @@ export function BreakStartEndPanel({
             onClick={handleStart}
             disabled={pending}
             className="w-full"
+            size="lg"
           >
             {pending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Play className="h-4 w-4" />
             )}
-            Start Break
+            Start Break Time
           </Button>
         </div>
       )}
-      <p className="text-xs text-muted-foreground text-center">
-        Records use the current time.
-      </p>
     </div>
   );
 }

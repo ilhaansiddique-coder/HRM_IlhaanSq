@@ -9,18 +9,18 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "btn-primary border-transparent",
-        destructive: "btn-error border-transparent text-error-content",
-        outline: "btn-outline border-base-content/40 bg-base-100 hover:bg-base-200",
-        secondary: "btn-secondary border-transparent",
-        ghost: "btn-ghost border-base-content/35 bg-base-100 hover:bg-base-200 shadow-none",
-        link: "btn-link border-transparent bg-transparent shadow-none",
+        default: "bg-primary text-primary-foreground border-transparent shadow-sm hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground border-transparent shadow-sm hover:bg-destructive/90",
+        outline: "border-base-content/40 bg-base-100 text-base-content hover:bg-base-200",
+        secondary: "bg-secondary text-secondary-foreground border-transparent shadow-sm hover:bg-secondary/80",
+        ghost: "border-base-content/35 bg-base-100 hover:bg-base-200 shadow-none",
+        link: "text-primary border-transparent bg-transparent shadow-none underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 min-h-10 px-4",
         sm: "btn-sm h-9 min-h-9 px-3",
         lg: "btn-lg h-11 min-h-11 px-8",
-        icon: "btn-square h-11 min-h-11 w-11 p-0",
+        icon: "btn-square h-11 min-h-0 w-11 p-0",
       },
     },
     defaultVariants: {

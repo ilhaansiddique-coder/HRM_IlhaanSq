@@ -94,7 +94,7 @@ export async function SalaryStructureSection() {
 
             <div className="mt-4 border-t border-border/60 pt-4">
               <p className="text-xs text-muted-foreground mb-2">
-                Or start from the HRM_IlhaanSq template — Basic + House Rent + Health
+                Or start from the HRM SaaS template — Basic + House Rent + Health
                 + Education + Savings (Gross), plus D.H. Expenses paid on top.
               </p>
               <StandardStructureButton />

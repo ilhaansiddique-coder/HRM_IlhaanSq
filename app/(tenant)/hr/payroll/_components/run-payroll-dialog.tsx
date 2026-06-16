@@ -1,16 +1,18 @@
 "use client";
 
-// "+" run-payroll action. Renders the trigger + a WIDE dialog into the global
-// TopBar (portal into #topbar-action-slot) so the button sits just left of the
-// notification bell, but only while the host page is mounted. The Run Payroll
-// workflow (per-employee adjustments table) lives here now — it was removed
-// from the /hr/payroll/runs/new page body. The form navigates to the runs list
-// on success, which closes the dialog.
+// Run-payroll launcher + a WIDE dialog hosting the Run Payroll workflow
+// (per-employee adjustments table). Two render modes:
+//   • "topbar"  (default) — a "+" button portaled into the global TopBar
+//     (#topbar-action-slot), sitting just left of the notification bell.
+//   • "inline"  — a labelled "Run Payroll" button rendered in the page body,
+//     for a prominent launcher on the Payroll Overview.
+// The form navigates back to the Payroll Overview on success, closing the dialog.
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -25,31 +27,37 @@ export function RunPayrollDialog({
   hasStructure,
   hasSalary,
   prep,
+  variant = "topbar",
 }: {
   hasStructure: boolean;
   hasSalary: boolean;
   prep: PrepRow[];
+  variant?: "topbar" | "inline";
 }) {
   const disabled = !hasStructure || !hasSalary;
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
 
   useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
-  const slot = document.getElementById("topbar-action-slot");
-  if (!slot) return null;
 
-  return createPortal(
+  const dialog = (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          aria-label="Run payroll"
-          title="Run payroll"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        {variant === "inline" ? (
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            Run Payroll
+          </Button>
+        ) : (
+          <button
+            type="button"
+            aria-label="Run payroll"
+            title="Run payroll"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground transition-colors hover:bg-muted"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
@@ -80,9 +88,9 @@ export function RunPayrollDialog({
               {!hasSalary && (
                 <>
                   {" — "}
-                  <Link href="/hr/payroll/runs/new" className="text-primary underline">
-                    assign a salary
-                  </Link>
+                  <span className="text-primary underline">
+                    use the Assign Salary form on this page
+                  </span>
                 </>
               )}
             </p>
@@ -90,7 +98,15 @@ export function RunPayrollDialog({
         )}
         <RunPayrollForm disabled={disabled} prep={prep} />
       </DialogContent>
-    </Dialog>,
-    slot
+    </Dialog>
   );
+
+  // Inline launcher renders straight into the page body.
+  if (variant === "inline") return dialog;
+
+  // Topbar launcher portals into the global action slot once mounted.
+  if (!mounted) return null;
+  const slot = document.getElementById("topbar-action-slot");
+  if (!slot) return null;
+  return createPortal(dialog, slot);
 }

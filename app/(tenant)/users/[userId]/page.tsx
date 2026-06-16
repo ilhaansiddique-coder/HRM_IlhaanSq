@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { ArrowLeft, Mail, Phone, Shield, User as UserIcon } from "lucide-react";
+import { Mail, Phone, Shield, User as UserIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { requireTenant } from "@/lib/auth";
@@ -67,7 +65,7 @@ export default async function UserProfilePage({
     },
     userId
   );
-  if (!allowed) redirect("/dashboard");
+  if (!allowed) redirect("/hr");
 
   const profile = await getProfile(userId, session.tenantId);
   if (!profile) notFound();
@@ -80,11 +78,6 @@ export default async function UserProfilePage({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
           <UserIcon className="h-5 w-5" />
         </div>

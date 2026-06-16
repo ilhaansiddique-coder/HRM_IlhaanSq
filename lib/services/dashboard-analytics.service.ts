@@ -1,6 +1,10 @@
 import { prisma } from "../db";
 import { getEmployeeStats } from "./hr/employee.service";
-import { getAttendanceStats } from "./hr/attendance.service";
+import {
+  getAttendanceStats,
+  getAttendanceRosterToday,
+  type AttendanceRoster,
+} from "./hr/attendance.service";
 import { getPayrollStats } from "./hr/payroll.service";
 import { getApprovalStats } from "./approvals.service";
 import { getRecruitmentStats } from "./hr/recruitment.service";
@@ -28,6 +32,7 @@ export type HrDashboard = {
     absent: number;
     attendanceRate: number;
   };
+  attendanceRoster: AttendanceRoster;
   headcountByDept: { name: string; count: number }[];
   pendingLeaveRequests: {
     id: string;
@@ -71,6 +76,7 @@ const EMPTY: HrDashboard = {
     openJobs: 0,
   },
   attendanceToday: { present: 0, late: 0, absent: 0, attendanceRate: 0 },
+  attendanceRoster: { present: [], late: [], onLeave: [], absent: [] },
   headcountByDept: [],
   pendingLeaveRequests: [],
   payroll: {
@@ -92,6 +98,7 @@ export async function getDashboardAnalytics(
   const [
     employee,
     attendance,
+    attendanceRoster,
     payroll,
     approvals,
     recruitment,
@@ -101,6 +108,7 @@ export async function getDashboardAnalytics(
   ] = await Promise.all([
     getEmployeeStats(tenantId),
     getAttendanceStats(tenantId),
+    getAttendanceRosterToday(tenantId),
     getPayrollStats(tenantId),
     getApprovalStats(tenantId),
     getRecruitmentStats(tenantId),
@@ -143,6 +151,7 @@ export async function getDashboardAnalytics(
       absent: attendance.absent,
       attendanceRate: attendance.attendanceRate,
     },
+    attendanceRoster,
     headcountByDept: departments
       .map((d) => ({ name: d.name, count: d._count.employees }))
       .filter((d) => d.count > 0),

@@ -5,6 +5,8 @@ import Script from "next/script";
 import "./globals.css";
 import { ToasterProvider } from "./_components/toaster-provider";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
+import { UpdateBanner } from "./_components/update-banner";
+import { BUILD_ID } from "@/lib/build-id";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +15,10 @@ export const dynamic = "force-dynamic";
 // public/fonts/BricolageGrotesque-Variable-*.woff2. No Google Fonts CDN.
 
 export const metadata: Metadata = {
-  applicationName: "HRM_IlhaanSq",
+  applicationName: "HRM SaaS",
   title: {
-    default: "HRM_IlhaanSq — Wholesale & Retail Management",
-    template: "%s · HRM_IlhaanSq",
+    default: "HRM SaaS — Wholesale & Retail Management",
+    template: "%s · HRM SaaS",
   },
   description:
     "All-in-one inventory, sales, customers, packaging and reporting platform built for wholesale and retail businesses.",
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "HRM_IlhaanSq",
+    title: "HRM SaaS",
   },
   formatDetection: { telephone: false },
   icons: {
@@ -95,6 +97,7 @@ export default function RootLayout({
         {children}
         <ToasterProvider />
         <ServiceWorkerRegister />
+        <UpdateBanner currentVersion={BUILD_ID} />
       </body>
     </html>
   );

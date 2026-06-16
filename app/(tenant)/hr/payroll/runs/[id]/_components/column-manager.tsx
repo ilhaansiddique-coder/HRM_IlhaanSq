@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, Loader2, X, Save } from "lucide-react";
+import { Plus, SquarePen, Trash2, Loader2, X, Save } from "lucide-react";
 import {
   createPayrollColumnAction,
   updatePayrollColumnAction,
@@ -304,16 +304,16 @@ export function ColumnManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-7 w-7 rounded-full"
                     onClick={() => editCol(c)}
                     title="Edit"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <SquarePen className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-destructive"
+                    className="h-7 w-7 rounded-full text-destructive"
                     onClick={() => remove(c.id)}
                     disabled={pending}
                     title="Delete"

@@ -1,24 +1,13 @@
 import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listEmployees } from "@/lib/services/hr/employee.service";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { listDepartments, listPositions } from "@/lib/services/hr/department.service";
+import { AddEmployeeDialog } from "./_components/add-employee-dialog";
+import { EmployeesTable, type EmployeeRow } from "./_components/employees-table";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Users, Mail, Phone, Pencil, Ban, Trash2 } from "lucide-react";
+import { Users, Mail, Phone, SquarePen, Ban, Trash2 } from "lucide-react";
 import { terminateEmployeeAction, deleteEmployeeAction } from "../actions";
 
 const statusVariants: Record<
@@ -35,141 +24,74 @@ const todayYmd = new Date().toISOString().slice(0, 10);
 
 export default async function EmployeesPage() {
   const session = await requireTenant();
-  const employees = await listEmployees(session.tenantId);
+  const [employees, departments, positions, activeEmployees] = await Promise.all([
+    listEmployees(session.tenantId),
+    listDepartments(session.tenantId),
+    listPositions(session.tenantId),
+    listEmployees(session.tenantId, { status: "active" }),
+  ]);
+
+  // Plain, serializable rows for the client DataTable.
+  const rows: EmployeeRow[] = employees.map((e) => ({
+    id: e.id,
+    empCode: e.empCode,
+    fullName: e.fullName,
+    email: e.email,
+    phone: e.phone ?? null,
+    department: e.department?.name ?? null,
+    position: e.position?.title ?? null,
+    status: e.status,
+    approvalStatus: e.approvalStatus ?? null,
+    hireDate: new Date(e.hireDate).toISOString(),
+    // Full defaults for the in-row edit dialog (same form the edit page uses).
+    form: {
+      fullName: e.fullName,
+      email: e.email,
+      phone: e.phone ?? undefined,
+      dob: e.dob ?? undefined,
+      gender: e.gender ?? undefined,
+      nationalId: e.nationalId ?? undefined,
+      address: e.address ?? undefined,
+      emergencyContact: e.emergencyContact ?? undefined,
+      emergencyPhone: e.emergencyPhone ?? undefined,
+      hireDate: e.hireDate,
+      employmentType: e.employmentType,
+      departmentId: e.departmentId ?? undefined,
+      positionId: e.positionId ?? undefined,
+      managerId: e.managerId ?? undefined,
+      baseSalary: e.baseSalary != null ? String(e.baseSalary) : undefined,
+      currency: e.currency ?? "BDT",
+    },
+  }));
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <Link href="/hr/employees/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            Add Employee
-          </Button>
-        </Link>
-      </div>
+      {/* Add Employee opens from the "+" button in the top bar (left of the
+          notification bell). Portals into the TopBar; nothing inline. */}
+      <AddEmployeeDialog
+        departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+        positions={positions.map((p) => ({ id: p.id, title: p.title }))}
+        managers={activeEmployees.map((e) => ({
+          id: e.id,
+          fullName: e.fullName,
+          empCode: e.empCode,
+        }))}
+      />
 
-      {/* Desktop: table view. Mobile uses the card stack below. */}
-      <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
-        <CardHeader>
-          <CardTitle>All Employees</CardTitle>
-          <CardDescription>Workforce master record</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {employees.length === 0 ? (
-            <div className="text-center py-16">
-              <Users className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground mb-3">
-                No employees yet. Add your first one to get started.
-              </p>
-              <Link href="/hr/employees/new">
-                <Button size="sm">
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Employee
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Hired</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {employees.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell className="font-mono text-xs">{e.empCode}</TableCell>
-                      <TableCell className="font-medium">{e.fullName}</TableCell>
-                      <TableCell>
-                        <div className="space-y-0.5 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            <span>{e.email}</span>
-                          </div>
-                          {e.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              <span>{e.phone}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {e.department?.name ?? <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {e.position?.title ?? <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap items-center gap-1">
-                          {e.approvalStatus === "pending" ? (
-                            <Badge variant="secondary" className="text-[10px]">Pending approval</Badge>
-                          ) : e.approvalStatus === "rejected" ? (
-                            <Badge variant="destructive" className="text-[10px]">Approval rejected</Badge>
-                          ) : (
-                            <Badge variant={statusVariants[e.status] ?? "outline"} className="capitalize">
-                              {e.status.replace("_", " ")}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(e.hireDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-0.5">
-                          <Link href={`/hr/employees/${e.id}`}>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit employee">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                          </Link>
-                          {e.status !== "terminated" && (
-                            <form action={terminateEmployeeAction}>
-                              <input type="hidden" name="id" value={e.id} />
-                              <input type="hidden" name="terminationDate" value={todayYmd} />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive/70 hover:text-destructive"
-                                type="submit"
-                                title="Terminate employee"
-                              >
-                                <Ban className="h-3.5 w-3.5" />
-                              </Button>
-                            </form>
-                          )}
-                          {e.status === "terminated" && (
-                            <form action={deleteEmployeeAction}>
-                              <input type="hidden" name="id" value={e.id} />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive/70 hover:text-destructive"
-                                type="submit"
-                                title="Delete permanently"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </form>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Desktop: the project-wide DataTable (selection, bulk delete,
+          pagination, footer count). Mobile uses the card stack below. */}
+      <div className="hidden md:block">
+        <EmployeesTable
+          employees={rows}
+          departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+          positions={positions.map((p) => ({ id: p.id, title: p.title }))}
+          managers={activeEmployees.map((e) => ({
+            id: e.id,
+            fullName: e.fullName,
+            empCode: e.empCode,
+          }))}
+        />
+      </div>
 
       {/* Mobile: same data as a card stack — name + status header, code,
           email/phone contact, dept/position, hired date, actions at bottom. */}
@@ -179,15 +101,13 @@ export default async function EmployeesPage() {
           <p className="text-xs text-muted-foreground">Workforce master record</p>
         </div>
         {employees.length === 0 ? (
-          <Card className="flex flex-col items-center gap-2 py-10 text-muted-foreground">
+          <Card className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
             <Users className="h-10 w-10 opacity-40" />
-            <p className="text-sm">No employees yet. Add your first one to get started.</p>
-            <Link href="/hr/employees/new">
-              <Button size="sm">
-                <Plus className="h-3.5 w-3.5" />
-                Add Employee
-              </Button>
-            </Link>
+            <p className="text-sm">
+              No employees yet. Use the{" "}
+              <span className="font-medium text-foreground">+</span> button in the
+              top bar to add your first one.
+            </p>
           </Card>
         ) : (
           employees.map((e) => (
@@ -250,7 +170,7 @@ export default async function EmployeesPage() {
               <div className="mt-3 flex items-center gap-1 justify-end border-t border-border/60 pt-3">
                 <Link href={`/hr/employees/${e.id}`}>
                   <Button variant="outline" size="sm" className="h-8">
-                    <Pencil className="h-3.5 w-3.5" />
+                    <SquarePen className="h-3.5 w-3.5" />
                     Edit
                   </Button>
                 </Link>

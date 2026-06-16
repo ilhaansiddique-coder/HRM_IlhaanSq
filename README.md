@@ -1,4 +1,4 @@
-# HRM_IlhaanSq — Multi-Tenant SaaS Human Resource Management
+# HRM SaaS — Multi-Tenant SaaS Human Resource Management
 
 A commercial-grade, multi-tenant **Human Resource Management System (HRMS)** built on a modern Next.js SaaS stack. The platform lets organizations manage their entire employee lifecycle — onboarding, attendance, leave, payroll, performance, recruitment, learning, and documents — under a single tenant-isolated workspace.
 

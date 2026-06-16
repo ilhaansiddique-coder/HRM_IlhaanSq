@@ -2,6 +2,7 @@ import { cache, type ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
+import { getAvailableViews } from "@/lib/view-mode";
 import { getCachedBusinessSettings, getCachedSystemSettings } from "@/lib/cache";
 import { prisma } from "@/lib/db";
 import { getRecentNotifications } from "@/lib/services/notifications.service";
@@ -50,6 +51,7 @@ export default async function TenantLayout({
     pendingTenantCount,
     notifications,
     freshUser,
+    availableViews,
   ] = await Promise.all([
     session.tenantId ? getCachedBusinessSettings(session.tenantId).catch(() => null) : null,
     session.tenantId ? getCachedSystemSettings(session.tenantId).catch(() => null) : null,
@@ -67,6 +69,8 @@ export default async function TenantLayout({
       where: { id: session.userId },
       select: { fullName: true, email: true },
     }).catch(() => null),
+    // Which roles this user can switch between (for the top-bar switcher).
+    getAvailableViews(session).catch(() => []),
   ]);
 
   return (
@@ -83,6 +87,8 @@ export default async function TenantLayout({
         userEmail={freshUser?.email ?? session.email}
         role={session.role}
         isSuperAdmin={session.isSuperAdmin}
+        availableViews={availableViews}
+        activeView={session.activeView}
         pendingTenantCount={pendingTenantCount}
         notifications={notifications}
         sidebarDefaultOpen={sidebarDefaultOpen}

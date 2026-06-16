@@ -20,14 +20,6 @@ export function ComingSoon({
 }) {
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-
       <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card overflow-hidden relative">
         <div
           aria-hidden

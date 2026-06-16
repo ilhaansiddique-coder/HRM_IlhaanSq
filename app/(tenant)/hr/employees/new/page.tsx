@@ -9,9 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmployeeForm } from "../_components/employee-form";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 
 export default async function NewEmployeePage() {
   const session = await requireTenant();
@@ -22,15 +19,7 @@ export default async function NewEmployeePage() {
   ]);
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/employees">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <Card className="border-border/70 bg-card/80">
         <CardHeader>
           <CardTitle>Employee Details</CardTitle>

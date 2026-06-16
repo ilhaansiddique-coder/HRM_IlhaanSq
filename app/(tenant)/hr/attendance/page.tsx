@@ -15,23 +15,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { CalendarClock, CheckCircle2, AlertCircle, TrendingUp, Clock } from "lucide-react";
 import { CheckInOutPanel } from "./_components/check-in-out-panel";
+import {
+  AttendanceRecordsTable,
+  type AttendanceRow,
+} from "./_components/attendance-records-table";
 import { SelfCheckInOut } from "../../_components/self-check-in-out";
-import { AttendanceCalendar } from "../../_components/attendance-calendar";
+import { AttendanceLegend } from "../../_components/attendance-calendar";
 import { LateThresholdForm } from "./_components/late-threshold-form";
+import { resolveDateBounds } from "@/lib/date-range";
 
-export default async function AttendancePage() {
+export default async function AttendancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
   const isAdmin = ["owner", "admin", "superadmin"].includes(session.role ?? "");
+
+  // Global top-bar date filter (defaults to "all time" = no extra bound).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
 
   // Non-admins (incl. the employee portal role) only ever see / act on their
   // own attendance.
@@ -42,12 +47,23 @@ export default async function AttendancePage() {
         select: { id: true, fullName: true, empCode: true },
       });
   const selfId = isAdmin ? undefined : self?.id;
+  // A non-admin with no linked employee record must see NOTHING (not everyone's
+  // attendance). Filter by a zero UUID so the query returns nothing — passing
+  // `{}` here would leak the whole tenant's records.
+  const NO_MATCH = "00000000-0000-0000-0000-000000000000";
+  const dateFilter = {
+    ...(start && { from: start }),
+    ...(end && { to: end }),
+  };
+  const attendanceFilter = isAdmin
+    ? { ...dateFilter }
+    : { employeeId: selfId ?? NO_MATCH, ...dateFilter };
   // Tenant-local "today" as a UTC-midnight key — matches how check-in files
   // the AttendanceRecord.date (timezone-correct).
   const todayKey = await getAttendanceDayKey(session.tenantId);
 
   const [records, stats, employees, sysSettings] = await Promise.all([
-    listAttendance(session.tenantId, selfId ? { employeeId: selfId } : {}),
+    listAttendance(session.tenantId, attendanceFilter),
     getAttendanceStats(session.tenantId),
     isAdmin
       ? listEmployees(session.tenantId, { status: "active" })
@@ -68,87 +84,24 @@ export default async function AttendancePage() {
           (r) => new Date(r.date).getTime() === todayKey.getTime()
         )
       : null;
-  const calendarRecords = records.map((r) => ({
+  const attendanceRows: AttendanceRow[] = records.map((r) => ({
+    id: r.id,
+    employeeName: r.employee.fullName,
+    empCode: r.employee.empCode,
     date: new Date(r.date).toISOString(),
-    status: r.status,
     checkIn: r.checkIn ? new Date(r.checkIn).toISOString() : null,
-    isHoliday: new Date(r.date).getUTCDay() === 5,
+    checkOut: r.checkOut ? new Date(r.checkOut).toISOString() : null,
+    workHours: r.workHours != null ? Number(r.workHours) : null,
+    status: r.status,
   }));
 
   const recordsContent = (
     <>
-      {/* Desktop: table view. Mobile uses the card stack below. */}
-      <Card className="hidden md:block border-border/70 bg-card/80 rounded-lg">
-        <CardHeader>
-          <CardTitle>Attendance Records</CardTitle>
-          <CardDescription>
-            {isAdmin ? "This month, latest first" : "Your attendance this month"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {records.length === 0 ? (
-            <div className="text-center py-12">
-              <CalendarClock className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                No attendance records yet. Use the panel to check in/out.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Check-in</TableHead>
-                    <TableHead>Check-out</TableHead>
-                    <TableHead className="text-right">Hours</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {records.map((r) => (
-                    <TableRow
-                      key={r.id}
-                      className={
-                        r.status === "late"
-                          ? "bg-warning/15 hover:bg-warning/20"
-                          : r.status === "absent"
-                            ? "bg-destructive/10 hover:bg-destructive/15"
-                            : undefined
-                      }
-                    >
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-sm">{r.employee.fullName}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{r.employee.empCode}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {new Date(r.date).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-xs font-mono">
-                        {r.checkIn ? new Date(r.checkIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
-                      </TableCell>
-                      <TableCell className="text-xs font-mono">
-                        {r.checkOut ? new Date(r.checkOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
-                      </TableCell>
-                      <TableCell className="text-right text-sm font-medium">
-                        {r.workHours ? Number(r.workHours).toFixed(1) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize text-xs">
-                          {r.status.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Desktop: the project-wide DataTable (read-only — no selection). Mobile
+          uses the card stack below. */}
+      <div className="hidden md:block">
+        <AttendanceRecordsTable rows={attendanceRows} />
+      </div>
 
       {/* Mobile: attendance card stack. */}
       <div className="md:hidden space-y-3 mb-24">
@@ -283,23 +236,6 @@ export default async function AttendancePage() {
     </Card>
   );
 
-  const calendarCard = (
-    <Card className="border-border/70 bg-card/80">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarClock className="h-4 w-4 text-primary" />
-          Calendar
-        </CardTitle>
-        <CardDescription>
-          {isAdmin ? "This month's attendance" : "Your attendance"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <AttendanceCalendar records={calendarRecords} />
-      </CardContent>
-    </Card>
-  );
-
   return (
     <div className="space-y-6">
       {isAdmin && (
@@ -334,28 +270,39 @@ export default async function AttendancePage() {
               value={stats.totalActive}
             />
           </div>
-
-          <LateThresholdForm
-            tenantId={session.tenantId}
-            defaultValue={sysSettings?.lateThreshold ?? ""}
-          />
         </>
       )}
 
       {isAdmin ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="space-y-3">{recordsContent}</div>
-          <div className="space-y-6">
+        <>
+          {/* Top row: quick check-in (left) + late-threshold (right) side by
+              side so they fill the width; records span full width below. */}
+          <div className="grid gap-6 lg:grid-cols-[7fr_3fr]">
             {checkInCard}
-            {calendarCard}
+            <LateThresholdForm
+              tenantId={session.tenantId}
+              defaultValue={sysSettings?.lateThreshold ?? ""}
+            />
           </div>
-        </div>
+          <div className="space-y-3">
+            {recordsContent}
+            {/* Status colour key, below the records it explains. The calendar
+                is intentionally not shown on the admin view. */}
+            <div className="rounded-lg border border-border/60 bg-card/50 px-3 py-2.5">
+              <AttendanceLegend />
+            </div>
+          </div>
+        </>
       ) : (
         <div className="space-y-6">
           {checkInCard}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {calendarCard}
-            <div className="space-y-3">{recordsContent}</div>
+          <div className="space-y-3">
+            {recordsContent}
+            {/* Status colour key, below the records it explains. The calendar
+                is intentionally not shown. */}
+            <div className="rounded-lg border border-border/60 bg-card/50 px-3 py-2.5">
+              <AttendanceLegend />
+            </div>
           </div>
         </div>
       )}

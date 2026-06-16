@@ -36,7 +36,11 @@ export function SelfCheckInOut({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [clock, setClock] = useState("");
-  const [now, setNow] = useState(() => Date.now());
+  // `now` and the date string are time/locale dependent, so they must start
+  // null and only fill in after mount — otherwise the server-rendered second
+  // won't match the client's and React throws a hydration mismatch.
+  const [now, setNow] = useState<number | null>(null);
+  const [todayLabel, setTodayLabel] = useState("");
 
   useEffect(() => {
     const tick = () => {
@@ -51,6 +55,13 @@ export function SelfCheckInOut({
       );
     };
     tick();
+    setTodayLabel(
+      new Date().toLocaleDateString(undefined, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    );
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
@@ -64,7 +75,10 @@ export function SelfCheckInOut({
     checkInMs != null
       ? ((checkedOut && today?.checkOut
           ? new Date(today.checkOut).getTime()
-          : now) -
+          : // Before the first client tick `now` is null — fall back to the
+            // check-in time so the live counter renders 00:00:00 identically on
+            // server and client, then animates once mounted.
+            (now ?? checkInMs)) -
           checkInMs) /
         1000
       : 0;
@@ -90,12 +104,8 @@ export function SelfCheckInOut({
           <Clock className="h-6 w-6 text-primary" />
           {clock || "--:--:--"}
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {new Date().toLocaleDateString(undefined, {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
+        <p className="mt-1 text-xs text-muted-foreground" suppressHydrationWarning>
+          {todayLabel || " "}
         </p>
 
         <div className="mt-4">

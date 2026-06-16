@@ -370,10 +370,23 @@ export async function deleteSalaryComponent(tenantId: string, id: string) {
 
 export async function listAdvances(
   tenantId: string,
-  filters: { status?: "active" | "cleared" | "cancelled" } = {}
+  filters: {
+    status?: "active" | "cleared" | "cancelled";
+    from?: Date;
+    to?: Date;
+  } = {}
 ) {
   const advances = await prisma.employeeAdvance.findMany({
-    where: { tenantId, ...(filters.status && { status: filters.status }) },
+    where: {
+      tenantId,
+      ...(filters.status && { status: filters.status }),
+      ...((filters.from || filters.to) && {
+        issuedAt: {
+          ...(filters.from && { gte: filters.from }),
+          ...(filters.to && { lte: filters.to }),
+        },
+      }),
+    },
     include: {
       employee: { select: { id: true, fullName: true, empCode: true } },
       _count: { select: { recoveries: true } },
@@ -817,9 +830,20 @@ export async function listPayslipsForEmployee(
 
 // ─── Payroll Periods + Runs ─────────────────────────────────
 
-export async function listPayrollRuns(tenantId: string) {
+export async function listPayrollRuns(
+  tenantId: string,
+  filters: { from?: Date; to?: Date } = {}
+) {
   return prisma.payrollRun.findMany({
-    where: { tenantId },
+    where: {
+      tenantId,
+      ...((filters.from || filters.to) && {
+        runAt: {
+          ...(filters.from && { gte: filters.from }),
+          ...(filters.to && { lte: filters.to }),
+        },
+      }),
+    },
     include: {
       period: true,
       _count: { select: { payslips: true } },

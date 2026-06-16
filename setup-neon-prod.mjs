@@ -53,7 +53,7 @@ async function setupNeon() {
       const tenant = await prisma.tenant.create({
         data: {
           slug: "hrmilhaansq",
-          name: "HRM_IlhaanSq",
+          name: "HRM SaaS",
           isActive: true,
           plan: "starter",
           createdBy: user.id
@@ -73,7 +73,7 @@ async function setupNeon() {
       await prisma.businessSettings.create({
         data: {
           tenantId: tenant.id,
-          businessName: "HRM_IlhaanSq",
+          businessName: "HRM SaaS",
           createdBy: user.id
         }
       });
@@ -85,7 +85,7 @@ async function setupNeon() {
       });
 
       console.log("✅ Workspace created!");
-      console.log(`   Workspace: HRM_IlhaanSq`);
+      console.log(`   Workspace: HRM SaaS`);
       console.log(`   User Role: Owner`);
     }
 

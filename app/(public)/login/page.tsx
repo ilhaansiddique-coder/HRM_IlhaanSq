@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { signIn, getSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Eye, EyeOff, Package, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/hr";
   const resetSuccess = searchParams.get("reset") === "success";
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,10 +36,10 @@ export default function LoginPage() {
       return;
     }
 
-    const session = await getSession();
-    const destination =
-      (session as any)?.isSuperAdmin ? "/tenants" : callbackUrl;
-    router.push(destination);
+    // Route through the "Continue as …" chooser. It auto-forwards single-role
+    // users straight to their landing (or the callbackUrl), and presents the
+    // picker to users who hold more than one role.
+    router.push(`/continue?next=${encodeURIComponent(callbackUrl)}`);
     router.refresh();
   }
 

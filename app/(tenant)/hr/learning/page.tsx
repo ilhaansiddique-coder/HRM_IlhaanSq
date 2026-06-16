@@ -1,17 +1,14 @@
 import type { ReactNode } from "react";
 import { requireTenant } from "@/lib/auth";
 import { getLearningStats, listEnrollments } from "@/lib/services/hr/learning.service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { StatCard as MetricCard } from "@/components/ui/stat-card";
 import { GraduationCap, Award, BookOpen, TrendingUp } from "lucide-react";
 import { NewCourseDialog } from "./courses/_components/new-course-dialog";
+import {
+  RecentEnrollmentsTable,
+  type RecentEnrollmentRow,
+} from "./_components/recent-enrollments-table";
 
 export default async function LearningOverviewPage() {
   const session = await requireTenant();
@@ -19,6 +16,15 @@ export default async function LearningOverviewPage() {
     getLearningStats(session.tenantId),
     listEnrollments(session.tenantId),
   ]);
+
+  // Plain, serializable rows for the client DataTable (latest 8).
+  const recentRows: RecentEnrollmentRow[] = enrollments.slice(0, 8).map((e) => ({
+    id: e.id,
+    employeeName: e.employee.fullName,
+    courseTitle: e.course.title,
+    progress: e.progress,
+    hasCertificate: Boolean(e.certification),
+  }));
 
   return (
     <div className="space-y-6">
@@ -38,64 +44,52 @@ export default async function LearningOverviewPage() {
           <h2 className="text-lg font-semibold">Recent Enrollments</h2>
           <p className="text-sm text-muted-foreground">Latest course assignments</p>
         </div>
-        {enrollments.length === 0 ? (
-          <Card className="border-border/70 bg-card/40">
-            <CardContent className="py-10 text-center">
-              <p className="text-sm text-muted-foreground">No enrollments yet</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Course</TableHead>
-                <TableHead className="w-[220px]">Progress</TableHead>
-                <TableHead>Certificate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {enrollments.slice(0, 8).map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell className="font-medium">{e.employee.fullName}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.course.title}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-28 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: `${e.progress}%` }} />
-                      </div>
-                      <span className="text-xs font-medium tabular-nums">{e.progress}%</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {e.certification ? (
-                      <Award className="h-4 w-4 text-success" />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        {/* Desktop: the project-wide DataTable. Mobile uses the card stack below. */}
+        <div className="hidden md:block">
+          <RecentEnrollmentsTable rows={recentRows} />
+        </div>
+
+        {/* Mobile: same data as a compact card stack. */}
+        <div className="md:hidden space-y-3">
+          {recentRows.length === 0 ? (
+            <Card className="border-border/70 bg-card/40">
+              <CardContent className="py-10 text-center">
+                <p className="text-sm text-muted-foreground">No enrollments yet</p>
+              </CardContent>
+            </Card>
+          ) : (
+            recentRows.map((e) => (
+              <Card key={e.id} className="rounded-lg p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium leading-tight">{e.employeeName}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{e.courseTitle}</p>
+                  </div>
+                  {e.hasCertificate && <Award className="h-4 w-4 shrink-0 text-success" />}
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary" style={{ width: `${e.progress}%` }} />
+                  </div>
+                  <span className="text-xs font-medium tabular-nums">{e.progress}%</span>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 function StatCard({ icon, title, value, hint, variant }: { icon: ReactNode; title: string; value: number | string; hint?: string; variant?: "success" }) {
-  const iconBg = variant === "success" ? "bg-success/10 text-success" : "bg-primary/10 text-primary";
   return (
-    <Card className="border-border/70 bg-card/80">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${iconBg}`}>{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold">{value}</div>
-        {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
-      </CardContent>
-    </Card>
+    <MetricCard
+      icon={icon}
+      label={title}
+      value={typeof value === "number" ? value.toLocaleString() : value}
+      subtitle={hint}
+      tone={variant === "success" ? "success" : "primary"}
+    />
   );
 }

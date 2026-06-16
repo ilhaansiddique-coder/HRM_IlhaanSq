@@ -101,7 +101,7 @@ export function DocumentUploadField({ name = "fileUrl" }: { name?: string }) {
             type="button"
             size="icon"
             variant="ghost"
-            className="h-7 w-7 shrink-0"
+            className="h-7 w-7 shrink-0 rounded-full"
             onClick={onBrowse}
             title="Replace file"
           >
@@ -111,7 +111,7 @@ export function DocumentUploadField({ name = "fileUrl" }: { name?: string }) {
             type="button"
             size="icon"
             variant="ghost"
-            className="h-7 w-7 shrink-0 text-destructive"
+            className="h-7 w-7 shrink-0 rounded-full text-destructive"
             onClick={clearFile}
             title="Remove file"
           >

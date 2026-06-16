@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { requireTenant } from "@/lib/auth";
 import { listDocumentCategories } from "@/lib/services/hr/documents.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trash2, Folder } from "lucide-react";
+import { Trash2, Folder } from "lucide-react";
 import { deleteDocCategoryAction } from "../../actions-phase2";
 import { NewCategoryDialog } from "./_components/new-category-dialog";
 
@@ -14,10 +13,6 @@ export default async function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/hr/documents"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-      </div>
-
       {/* The new-category form lives in a dialog opened from the "+" button in
           the top bar (left of the notification bell). This portals its trigger +
           dialog into the TopBar and renders nothing inline here. */}
@@ -46,7 +41,7 @@ export default async function CategoriesPage() {
                   {c._count.documents === 0 && (
                     <form action={deleteDocCategoryAction}>
                       <input type="hidden" name="id" value={c.id} />
-                      <Button type="submit" variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Button type="submit" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-destructive">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </form>

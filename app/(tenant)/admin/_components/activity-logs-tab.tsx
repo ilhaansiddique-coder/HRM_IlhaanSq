@@ -11,14 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import { Search, ScrollText } from "lucide-react";
 
 const actionColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -51,6 +44,49 @@ export function ActivityLogsTab({ logs }: { logs: any[] }) {
     }
     return true;
   });
+
+  const columns: Column<any>[] = [
+    {
+      key: "date",
+      header: "Date",
+      className: "text-xs whitespace-nowrap",
+      cell: (log) => new Date(log.createdAt).toLocaleString(),
+    },
+    {
+      key: "user",
+      header: "User",
+      className: "text-xs",
+      cell: (log) => log.user?.fullName ?? "—",
+    },
+    {
+      key: "action",
+      header: "Action",
+      cell: (log) => (
+        <Badge variant={actionColors[log.action] ?? "outline"}>
+          {log.action}
+        </Badge>
+      ),
+    },
+    {
+      key: "entity",
+      header: "Entity",
+      cell: (log) => (
+        <Badge variant="outline" className="capitalize">
+          {log.entityType}
+        </Badge>
+      ),
+    },
+    {
+      key: "description",
+      header: "Description",
+      className: "text-xs text-muted-foreground max-w-md truncate",
+      cell: (log) =>
+        (log.details as any)?.name ??
+        (log.details as any)?.customerName ??
+        (log.details as any)?.invoiceNumber ??
+        "—",
+    },
+  ];
 
   return (
     <Card className="border-border/70 bg-card/80">
@@ -101,57 +137,20 @@ export function ActivityLogsTab({ logs }: { logs: any[] }) {
         </div>
 
         {/* Desktop: table view. Mobile uses the card stack below. */}
-        <div className="hidden md:block rounded-lg border border-border/60 overflow-hidden">
-          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-card z-10">
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Entity</TableHead>
-                  <TableHead>Description</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                      <ScrollText className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                      No activity logs found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filtered.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="text-xs whitespace-nowrap">
-                        {new Date(log.createdAt).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {log.user?.fullName ?? "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={actionColors[log.action] ?? "outline"}>
-                          {log.action}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {log.entityType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-md truncate">
-                        {(log.details as any)?.name ??
-                          (log.details as any)?.customerName ??
-                          (log.details as any)?.invoiceNumber ??
-                          "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <div className="hidden md:block">
+          <DataTable
+            rows={filtered}
+            columns={columns}
+            getId={(log) => log.id}
+            selectable={false}
+            itemNoun="log entries"
+            emptyState={
+              <div className="text-muted-foreground">
+                <ScrollText className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                No activity logs found
+              </div>
+            }
+          />
         </div>
 
         {/* Mobile: same data as a card stack — user + action header, date,

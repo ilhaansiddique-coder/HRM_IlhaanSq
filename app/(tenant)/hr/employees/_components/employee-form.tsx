@@ -13,8 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw, Copy, Check, KeyRound, UserCheck } from "lucide-react";
 import { createEmployeeAction, updateEmployeeAction } from "../../actions";
+
+// Readable temp-password generator (avoids ambiguous chars like 0/O, 1/l).
+const PWD_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
+function generateTempPassword() {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return "T" + Array.from(bytes, (b) => PWD_CHARS[b % PWD_CHARS.length]).join("");
+}
 
 export type EmployeeFormDefaults = {
   fullName?: string;
@@ -42,6 +50,7 @@ export function EmployeeForm({
   mode = "create",
   employeeId,
   defaultValues,
+  onClose,
 }: {
   departments: { id: string; name: string }[];
   positions: { id: string; title: string }[];
@@ -49,33 +58,56 @@ export function EmployeeForm({
   mode?: "create" | "edit";
   employeeId?: string;
   defaultValues?: EmployeeFormDefaults;
+  // When rendered inside a dialog: close it (and refresh) instead of navigating.
+  onClose?: () => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [tempPwd, setTempPwd] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [created, setCreated] = useState<{
+    email: string;
+    tempPassword: string | null;
+    reused: boolean;
+  } | null>(null);
 
   const dv = defaultValues ?? {};
+  // Every field is required (except email) on both the create AND edit forms.
+  const req = true;
 
   function handleSubmit(formData: FormData) {
     setError(null);
     startTransition(async () => {
       try {
-        let res: { ok: boolean; error?: string };
         if (mode === "edit" && employeeId) {
           formData.set("id", employeeId);
-          res = await updateEmployeeAction(formData);
-        } else {
-          res = await createEmployeeAction(formData);
-        }
-        if (!res.ok) {
-          setError(
-            res.error ??
-              `Failed to ${mode === "edit" ? "update" : "create"} employee`
-          );
+          const res = await updateEmployeeAction(formData);
+          if (!res.ok) {
+            setError(res.error ?? "Failed to update employee");
+            return;
+          }
+          router.refresh();
+          if (onClose) onClose();
+          else router.push("/hr/employees");
           return;
         }
-        router.push("/hr/employees");
+
+        const res = await createEmployeeAction(formData);
+        if (!res.ok) {
+          setError(res.error ?? "Failed to create employee");
+          return;
+        }
+        // If the admin set a temp password, stay on this screen and show the
+        // login credentials to hand over instead of redirecting immediately.
+        if (res.login) {
+          setCreated(res.login);
+          router.refresh();
+          return;
+        }
         router.refresh();
+        if (onClose) onClose();
+        else router.push("/hr/employees");
       } catch (e) {
         setError(
           e instanceof Error
@@ -84,6 +116,74 @@ export function EmployeeForm({
         );
       }
     });
+  }
+
+  if (created) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg border border-success/40 bg-success/5 p-4">
+          <p className="flex items-center gap-2 text-sm font-medium text-success">
+            <UserCheck className="h-4 w-4" />
+            Employee created and login activated.
+          </p>
+          {created.tempPassword ? (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Give these to the employee. They&apos;ll be asked to set their own
+                password the first time they sign in.
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Email:</span>
+                <code className="rounded bg-background/70 px-1.5 py-0.5">
+                  {created.email}
+                </code>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Temp password:</span>
+                <code className="rounded bg-background/70 px-1.5 py-0.5 font-semibold">
+                  {created.tempPassword}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(
+                      `${created.email} / ${created.tempPassword}`
+                    );
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">
+              An account already existed for{" "}
+              <code className="rounded bg-background/70 px-1 py-0.5">
+                {created.email}
+              </code>
+              , so the temporary password you set was not applied — they can sign
+              in with their existing password.
+            </p>
+          )}
+        </div>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            onClick={() => {
+              router.refresh();
+              if (onClose) onClose();
+              else router.push("/hr/employees");
+            }}
+          >
+            Done
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -98,21 +198,22 @@ export function EmployeeForm({
         <Field label="Full Name" required>
           <Input name="fullName" required minLength={2} defaultValue={dv.fullName} />
         </Field>
-        <Field label="Email" required>
-          <Input name="email" type="email" required defaultValue={dv.email} />
+        <Field label="Email">
+          <Input name="email" type="email" defaultValue={dv.email} />
         </Field>
-        <Field label="Phone">
-          <Input name="phone" type="tel" defaultValue={dv.phone} />
+        <Field label="Phone" required={req}>
+          <Input name="phone" type="tel" required={req} defaultValue={dv.phone} />
         </Field>
-        <Field label="Date of Birth">
+        <Field label="Date of Birth" required={req}>
           <Input
             name="dob"
             type="date"
+            required={req}
             defaultValue={dv.dob ? new Date(dv.dob).toISOString().slice(0, 10) : undefined}
           />
         </Field>
-        <Field label="Gender">
-          <Select name="gender" defaultValue={dv.gender}>
+        <Field label="Gender" required={req}>
+          <Select name="gender" defaultValue={dv.gender} required={req}>
             <SelectTrigger>
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
@@ -123,17 +224,17 @@ export function EmployeeForm({
             </SelectContent>
           </Select>
         </Field>
-        <Field label="National ID">
-          <Input name="nationalId" defaultValue={dv.nationalId} />
+        <Field label="National ID" required={req}>
+          <Input name="nationalId" required={req} defaultValue={dv.nationalId} />
         </Field>
-        <Field label="Address" full>
-          <Textarea name="address" rows={2} defaultValue={dv.address} />
+        <Field label="Address" full required={req}>
+          <Textarea name="address" rows={2} required={req} defaultValue={dv.address} />
         </Field>
-        <Field label="Emergency Contact">
-          <Input name="emergencyContact" placeholder="Contact name" defaultValue={dv.emergencyContact} />
+        <Field label="Emergency Contact" required={req}>
+          <Input name="emergencyContact" required={req} placeholder="Contact name" defaultValue={dv.emergencyContact} />
         </Field>
-        <Field label="Emergency Phone">
-          <Input name="emergencyPhone" type="tel" defaultValue={dv.emergencyPhone} />
+        <Field label="Emergency Phone" required={req}>
+          <Input name="emergencyPhone" type="tel" required={req} defaultValue={dv.emergencyPhone} />
         </Field>
       </Section>
 
@@ -150,8 +251,8 @@ export function EmployeeForm({
             }
           />
         </Field>
-        <Field label="Employment Type">
-          <Select name="employmentType" defaultValue={dv.employmentType ?? "full_time"}>
+        <Field label="Employment Type" required={req}>
+          <Select name="employmentType" defaultValue={dv.employmentType ?? "full_time"} required={req}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -164,8 +265,8 @@ export function EmployeeForm({
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Department">
-          <Select name="departmentId" defaultValue={dv.departmentId}>
+        <Field label="Department" required={req}>
+          <Select name="departmentId" defaultValue={dv.departmentId} required={req}>
             <SelectTrigger>
               <SelectValue placeholder="Select department..." />
             </SelectTrigger>
@@ -184,8 +285,8 @@ export function EmployeeForm({
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Position">
-          <Select name="positionId" defaultValue={dv.positionId}>
+        <Field label="Position" required={req}>
+          <Select name="positionId" defaultValue={dv.positionId} required={req}>
             <SelectTrigger>
               <SelectValue placeholder="Select position..." />
             </SelectTrigger>
@@ -229,22 +330,66 @@ export function EmployeeForm({
       </Section>
 
       <Section title="Compensation">
-        <Field label="Base Salary">
+        <Field label="Base Salary" required={req}>
           <Input
             name="baseSalary"
             type="number"
             step="0.01"
             min="0"
+            required={req}
             defaultValue={dv.baseSalary}
           />
         </Field>
-        <Field label="Currency">
-          <Input name="currency" defaultValue={dv.currency ?? "BDT"} />
+        <Field label="Currency" required={req}>
+          <Input name="currency" required={req} defaultValue={dv.currency ?? "BDT"} />
         </Field>
       </Section>
 
+      {mode === "create" && (
+        <div className="space-y-3">
+          <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <KeyRound className="h-3.5 w-3.5" />
+            Login Access
+          </h3>
+          <div className="rounded-lg border border-border/60 bg-background/40 p-3 space-y-2">
+            <Label className="text-xs">
+              Temporary password <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                name="tempPassword"
+                value={tempPwd}
+                onChange={(e) => setTempPwd(e.target.value)}
+                required
+                minLength={6}
+                placeholder="At least 6 characters"
+                autoComplete="off"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setTempPwd(generateTempPassword())}
+                title="Generate a password"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Generate
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              The employee can sign in immediately with their email and this
+              password — they&apos;ll be required to choose their own password on
+              first login. An email address is needed for them to sign in.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2 pt-4 border-t border-border/60">
-        <Button type="button" variant="outline" onClick={() => router.back()}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => (onClose ? onClose() : router.back())}
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={pending}>
@@ -262,7 +407,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {title}
       </h3>
-      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">{children}</div>
     </div>
   );
 }
@@ -279,7 +424,7 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className={`space-y-1.5 ${full ? "sm:col-span-2" : ""}`}>
+    <div className={`space-y-1.5 ${full ? "sm:col-span-2 md:col-span-3" : ""}`}>
       <Label className="text-xs">
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
