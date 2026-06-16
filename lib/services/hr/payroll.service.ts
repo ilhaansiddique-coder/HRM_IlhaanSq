@@ -71,7 +71,7 @@ function resolveAllowances(
 }
 
 /**
- * HRM_IlhaanSq "terms of payment" (derived from the company salary sheet):
+ * HRM SaaS "terms of payment" (derived from the company salary sheet):
  *
  *   Gross Salary      = Basic + House Rent + Health + Education + Savings
  *                       + Daily Hand Expenses        (per-employee amounts)
@@ -131,7 +131,7 @@ export async function updateSalaryStructure(
   });
 }
 
-const STRUCTURE_NAME = "Standard Monthly Salary (HRM_IlhaanSq)";
+const STRUCTURE_NAME = "Standard Monthly Salary (HRM SaaS)";
 const STRUCTURE_DESC =
   "Earnings for future payroll runs are driven by this structure's allowance rules (House Rent, Health, Education, Savings, Daily Hand). Basic is per-employee. A slot with no rule falls back to the employee's own amount. Extra duty added, advance & absence deducted at payroll-run time.";
 
@@ -170,7 +170,7 @@ function assertValidComponent(input: {
 }
 
 /**
- * HRM_IlhaanSq standard salary "policy" — created idempotently. The structure
+ * HRM SaaS standard salary "policy" — created idempotently. The structure
  * starts with no components; an empty structure keeps the legacy
  * per-employee behavior. Use seedStandardAllowanceRows to add editable
  * rules. (We no longer strip the allowance codes — they're meaningful now.)
@@ -442,8 +442,8 @@ export async function createAdvance(
     },
   });
 
-  const emp = await prisma.employee.findUnique({
-    where: { id: input.employeeId },
+  const emp = await prisma.employee.findFirst({
+    where: { id: input.employeeId, tenantId },
     select: { fullName: true, empCode: true },
   });
   await createApprovalRequest({
@@ -849,7 +849,7 @@ export async function getPayrollRun(tenantId: string, id: string) {
       id: true,
       fullName: true,
       empCode: true,
-      position: { select: { title: true } },
+      position: { select: { title: true, grade: true } },
     },
   });
   const empMap = new Map(employees.map((e) => [e.id, e]));
@@ -863,6 +863,7 @@ export async function getPayrollRun(tenantId: string, id: string) {
         employeeName: e?.fullName ?? "(removed)",
         employeeCode: e?.empCode ?? "—",
         designation: e?.position?.title ?? "—",
+        salaryGrade: e?.position?.grade ?? "—",
       };
     }),
   };
@@ -890,7 +891,7 @@ export async function getPayrollPrep(
           id: true,
           fullName: true,
           empCode: true,
-          position: { select: { title: true } },
+          position: { select: { title: true, grade: true } },
         },
       },
       structure: { include: { components: { orderBy: { sortOrder: "asc" } } } },
@@ -954,6 +955,7 @@ export async function getPayrollPrep(
       empCode: s.employee.empCode,
       name: s.employee.fullName,
       designation: s.employee.position?.title ?? "—",
+      salaryGrade: s.employee.position?.grade ?? "—",
       baseSalary: basic,
       grossSalary: gross,
       absentDays: totalAbsentDays,
@@ -1093,6 +1095,7 @@ export async function runPayroll(
     // per extra day.
     const workedRows = await prisma.attendanceRecord.findMany({
       where: {
+        tenantId,
         employeeId: sal.employeeId,
         checkIn: { not: null },
         date: { gte: input.periodStart, lte: input.periodEnd },
@@ -1136,6 +1139,7 @@ export async function runPayroll(
     const [absentRows, lateDetail] = await Promise.all([
       prisma.attendanceRecord.findMany({
         where: {
+          tenantId,
           employeeId: sal.employeeId,
           status: "absent",
           date: { gte: input.periodStart, lte: input.periodEnd },

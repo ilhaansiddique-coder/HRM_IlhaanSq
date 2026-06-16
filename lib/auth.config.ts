@@ -50,6 +50,8 @@ export default {
         "/login",
         "/auth",
         "/reset-password",
+        "/privacy",
+        "/terms",
       ]);
       const isPublic =
         publicPaths.has(pathname) ||

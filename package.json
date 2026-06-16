@@ -17,6 +17,8 @@
     "db:create-admin": "tsx scripts/create-super-admin.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
+    "db:backup": "bash scripts/backup.sh",
+    "db:backup:verify": "bash scripts/backup-verify.sh",
     "test:security": "node ./scripts/security/assertions.mjs",
     "test:security:smoke": "node ./scripts/security/smoke-authz.mjs"
   },

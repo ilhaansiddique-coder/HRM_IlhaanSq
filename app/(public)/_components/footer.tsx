@@ -12,7 +12,7 @@ export function Footer() {
                 <Package className="h-4 w-4" />
               </div>
               <span className="text-base font-semibold tracking-tight">
-                HRM_IlhaanSq
+                HRM SaaS
               </span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground max-w-md">
@@ -65,10 +65,14 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <span className="text-muted-foreground">Privacy</span>
+                <Link href="/privacy" className="text-muted-foreground hover:text-foreground">
+                  Privacy
+                </Link>
               </li>
               <li>
-                <span className="text-muted-foreground">Terms</span>
+                <Link href="/terms" className="text-muted-foreground hover:text-foreground">
+                  Terms
+                </Link>
               </li>
             </ul>
           </div>
@@ -76,7 +80,7 @@ export function Footer() {
 
         <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} HRM_IlhaanSq. All rights reserved.
+            © {new Date().getFullYear()} HRM SaaS. All rights reserved.
           </p>
           <p className="text-xs text-muted-foreground">
             Built for businesses that value clarity and speed.

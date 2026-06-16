@@ -56,3 +56,6 @@ apply-migration.ps1
 
 /generated/prisma
 .vercel
+
+# Database backups (contain real data — never commit)
+/backups/
