@@ -197,11 +197,6 @@ function AppSidebar({
     pathname === path || pathname.startsWith(`${path}/`);
   const isInTenantsAdmin = pathname.startsWith("/tenants");
   const [tenantsOpen, setTenantsOpen] = useState(isInTenantsAdmin);
-  // Payroll submenu — toggled ONLY by its chevron; clicking the label
-  // navigates to /hr/payroll instead of expanding.
-  const [payrollOpen, setPayrollOpen] = useState(
-    isRouteActive("/hr/payroll/assign")
-  );
   // Performance submenu — same chevron-only toggle behaviour as Payroll.
   const [performanceOpen, setPerformanceOpen] = useState(
     isRouteActive("/hr/performance/cycles") ||
@@ -371,51 +366,6 @@ function AppSidebar({
                 { href: "/hr/learning", icon: GraduationCap, label: "Learning", active: isRouteActive("/hr/learning") },
                 { href: "/hr/documents", icon: FolderLock, label: "Documents", active: isRouteActive("/hr/documents") },
               ].map(({ href, icon: Icon, label, active }) => {
-                // Payroll: label navigates to /hr/payroll; chevron (only) opens
-                // the Assign Salary submenu.
-                if (href === "/hr/payroll") {
-                  return (
-                    <SidebarMenuItem key={href}>
-                      <div className="relative">
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          tooltip={isCollapsed ? label : undefined}
-                          className={navClass(active)}
-                        >
-                          <NavLink href={href}>
-                            <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 pr-8 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
-                              <Icon className="h-5 w-5" />
-                              {!isCollapsed && <span>{label}</span>}
-                            </span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                        {!isCollapsed && (
-                          <button
-                            type="button"
-                            aria-label="Toggle Payroll submenu"
-                            onClick={() => setPayrollOpen((o) => !o)}
-                            className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
-                          >
-                            <ChevronDown
-                              className={`h-4 w-4 transition-transform ${payrollOpen ? "rotate-180" : ""}`}
-                            />
-                          </button>
-                        )}
-                      </div>
-                      {payrollOpen && !isCollapsed && (
-                        <SidebarMenuSub>
-                          <TenantSubLink
-                            href="/hr/payroll/assign"
-                            icon={<UserPlus className="h-4 w-4" />}
-                            label="Assign Salary"
-                            active={isRouteActive("/hr/payroll/assign")}
-                          />
-                        </SidebarMenuSub>
-                      )}
-                    </SidebarMenuItem>
-                  );
-                }
                 // Performance: label navigates to /hr/performance; chevron
                 // (only) opens the Cycles + Goals submenu.
                 if (href === "/hr/performance") {

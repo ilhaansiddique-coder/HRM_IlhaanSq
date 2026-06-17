@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
+import { Plus, GraduationCap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -58,12 +58,12 @@ export function EnrollEmployeeDialog({
           <Plus className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="!h-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Enroll Employee</DialogTitle>
-          <DialogDescription>
-            Assign an employee to a published course.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-primary" />
+            Enroll Employee
+          </DialogTitle>
         </DialogHeader>
         <form
           action={async (formData) => {

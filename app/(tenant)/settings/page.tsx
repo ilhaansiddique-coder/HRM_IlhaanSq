@@ -8,6 +8,7 @@ import { SalaryStructureSection } from "./_components/salary-structure-section";
 import { BreakPenaltiesSection } from "./_components/break-penalties-section";
 import { LeaveTypesSection } from "./_components/leave-types-section";
 import { AdvancesSection } from "./_components/advances-section";
+import { AssignSalarySection } from "./_components/assign-salary-section";
 
 export default async function SettingsPage() {
   const session = await requireTenant();
@@ -29,6 +30,7 @@ export default async function SettingsPage() {
         breakPenalties={isAdmin ? <BreakPenaltiesSection /> : undefined}
         leaveTypes={isAdmin ? <LeaveTypesSection /> : undefined}
         advances={isAdmin ? <AdvancesSection /> : undefined}
+        assignSalary={isAdmin ? <AssignSalarySection /> : undefined}
       />
     </div>
   );

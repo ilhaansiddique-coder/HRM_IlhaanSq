@@ -58,6 +58,7 @@ export function LeaveRequestForm({
           {error}
         </div>
       )}
+      <div className="grid grid-cols-2 gap-3">
       {unlinked ? (
         <div className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           Your account isn&apos;t linked to an employee record, so a leave request
@@ -113,6 +114,7 @@ export function LeaveRequestForm({
             )}
           </SelectContent>
         </Select>
+      </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">

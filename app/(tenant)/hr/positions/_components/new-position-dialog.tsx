@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
+import { Plus, ClipboardCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,10 +53,13 @@ export function NewPositionDialog({
           <Plus className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="!h-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Position</DialogTitle>
-          <DialogDescription>Add a job title</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-primary" />
+            New Position
+          </DialogTitle>
+
         </DialogHeader>
         <form
           action={async (formData) => {
@@ -65,28 +68,30 @@ export function NewPositionDialog({
           }}
           className="space-y-3"
         >
-          <div className="space-y-1.5">
-            <Label htmlFor="title" className="text-xs">
-              Title <span className="text-destructive">*</span>
-            </Label>
-            <Input id="title" name="title" required minLength={2} placeholder="Sales Manager" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="departmentId" className="text-xs">Department</Label>
-            <Select name="departmentId">
-              <SelectTrigger>
-                <SelectValue placeholder="Select..." />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.length === 0 ? (
-                  <SelectItem value="_none" disabled>No departments</SelectItem>
-                ) : (
-                  departments.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="title" className="text-xs">
+                Title <span className="text-destructive">*</span>
+              </Label>
+              <Input id="title" name="title" required minLength={2} placeholder="Sales Manager" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="departmentId" className="text-xs">Department</Label>
+              <Select name="departmentId">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.length === 0 ? (
+                    <SelectItem value="_none" disabled>No departments</SelectItem>
+                  ) : (
+                    departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="grade" className="text-xs">Salary Grade</Label>

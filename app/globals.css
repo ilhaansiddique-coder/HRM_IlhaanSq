@@ -821,3 +821,14 @@
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 40%, transparent);
 }
+
+/* Dialog submit buttons — compact and pinned to the right edge across every
+   dialog (overrides the per-button `w-full`). Unlayered so it beats Tailwind
+   utilities regardless of source order. */
+.dialog-content button[type="submit"],
+.alert-dialog-content button[type="submit"] {
+  display: flex;
+  width: 200px;
+  max-width: 100%;
+  margin-left: auto;
+}

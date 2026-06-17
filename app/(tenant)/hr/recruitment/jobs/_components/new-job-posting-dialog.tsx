@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
+import { Plus, Briefcase } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -51,9 +51,12 @@ export function NewJobPostingDialog() {
           <Plus className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="!h-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Job Posting</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-primary" />
+            New Job Posting
+          </DialogTitle>
           <DialogDescription>
             Create a job posting. Choosing Open immediately raises an admin
             approval before it goes live.
@@ -66,6 +69,7 @@ export function NewJobPostingDialog() {
           }}
           className="space-y-3"
         >
+          <div className="grid grid-cols-3 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="title" className="text-xs">
               Title *
@@ -94,7 +98,8 @@ export function NewJobPostingDialog() {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          </div>
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="salaryMin" className="text-xs">
                 Min Salary
@@ -106,6 +111,20 @@ export function NewJobPostingDialog() {
                 Max Salary
               </Label>
               <Input id="salaryMax" name="salaryMax" type="number" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="status" className="text-xs">
+                Status
+              </Label>
+              <Select name="status" defaultValue="draft">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="open">Open immediately</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-1.5">
@@ -119,20 +138,6 @@ export function NewJobPostingDialog() {
               Requirements
             </Label>
             <Textarea id="requirements" name="requirements" rows={2} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="status" className="text-xs">
-              Status
-            </Label>
-            <Select name="status" defaultValue="draft">
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="open">Open immediately</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <Button type="submit" className="w-full">
             <Plus className="h-4 w-4" />

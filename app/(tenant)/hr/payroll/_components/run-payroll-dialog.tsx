@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,13 +59,12 @@ export function RunPayrollDialog({
           </button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="!h-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Run Payroll</DialogTitle>
-          <DialogDescription>
-            Calculates payslips for all active employees — gross, absence,
-            advance, payable &amp; paid.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-primary" />
+            Run Payroll
+          </DialogTitle>
         </DialogHeader>
         {disabled && (
           <div className="space-y-1.5 rounded-lg border border-warning/35 bg-warning/5 px-3 py-2 text-xs">

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -61,55 +61,60 @@ export function UploadDocumentDialog({
           <Plus className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="flex flex-col sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Upload Document</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Upload Document
+          </DialogTitle>
+          {/* <DialogDescription>
             Attach a document to an employee record.
-          </DialogDescription>
+          </DialogDescription> */}
         </DialogHeader>
         <form
           action={async (formData) => {
             await createDocumentAction(formData);
             setOpen(false);
           }}
-          className="space-y-3"
+          className="flex flex-1 flex-col space-y-3"
         >
-          <div className="space-y-1.5">
-            <Label className="text-xs">Employee *</Label>
-            <Select name="employeeId" required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select employee..." />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.fullName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Category</Label>
-            <Select name="categoryId">
-              <SelectTrigger>
-                <SelectValue placeholder="Optional" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.length === 0 ? (
-                  <SelectItem value="_none" disabled>
-                    No categories
-                  </SelectItem>
-                ) : (
-                  categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Employee *</Label>
+              <Select name="employeeId" required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.fullName}
                     </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Category</Label>
+              <Select name="categoryId">
+                <SelectTrigger>
+                  <SelectValue placeholder="Optional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.length === 0 ? (
+                    <SelectItem value="_none" disabled>
+                      No categories
+                    </SelectItem>
+                  ) : (
+                    categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="name" className="text-xs">
@@ -132,11 +137,15 @@ export function UploadDocumentDialog({
             </Label>
             <Input id="expiresAt" name="expiresAt" type="date" />
           </div>
-          <div className="space-y-1.5">
+          <div className="flex flex-1 flex-col space-y-1.5">
             <Label htmlFor="description" className="text-xs">
               Description
             </Label>
-            <Textarea id="description" name="description" rows={2} />
+            <Textarea
+              id="description"
+              name="description"
+              className="!h-full flex-1 resize-none"
+            />
           </div>
           <Button type="submit" className="w-full">
             <Plus className="h-4 w-4" />

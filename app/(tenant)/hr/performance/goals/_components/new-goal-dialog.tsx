@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
+import { Plus, Target } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -60,10 +60,12 @@ export function NewGoalDialog({
           <Plus className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="!h-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Goal</DialogTitle>
-          <DialogDescription>Set an OKR or KPI goal for an employee.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            New Goal
+          </DialogTitle>
         </DialogHeader>
         <form
           action={async (formData) => {
@@ -72,6 +74,7 @@ export function NewGoalDialog({
           }}
           className="space-y-3"
         >
+          <div className="grid grid-cols-3 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Employee *</Label>
             <Select name="employeeId" required>
@@ -105,13 +108,8 @@ export function NewGoalDialog({
             </Label>
             <Input id="title" name="title" required minLength={2} placeholder="Increase sales by 30%" />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="description" className="text-xs">
-              Description
-            </Label>
-            <Textarea id="description" name="description" rows={2} />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="targetValue" className="text-xs">
                 Target
@@ -124,27 +122,33 @@ export function NewGoalDialog({
               </Label>
               <Input id="unit" name="unit" placeholder="%, $, units" />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Cycle (optional)</Label>
+              <Select name="cycleId">
+                <SelectTrigger>
+                  <SelectValue placeholder="No cycle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cycles.length === 0 ? (
+                    <SelectItem value="_none" disabled>
+                      No cycles
+                    </SelectItem>
+                  ) : (
+                    cycles.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Cycle (optional)</Label>
-            <Select name="cycleId">
-              <SelectTrigger>
-                <SelectValue placeholder="No cycle" />
-              </SelectTrigger>
-              <SelectContent>
-                {cycles.length === 0 ? (
-                  <SelectItem value="_none" disabled>
-                    No cycles
-                  </SelectItem>
-                ) : (
-                  cycles.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="description" className="text-xs">
+              Description
+            </Label>
+            <Textarea id="description" name="description" rows={2} />
           </div>
           <Button type="submit" className="w-full">
             <Plus className="h-4 w-4" />

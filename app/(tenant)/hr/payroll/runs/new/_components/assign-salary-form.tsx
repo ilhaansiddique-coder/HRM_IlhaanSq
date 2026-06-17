@@ -44,27 +44,29 @@ export function AssignSalaryForm({
     <form id="assign-salary-form" action={handleSubmit} className="space-y-3">
       {error && <div className="rounded-lg border border-destructive/35 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>}
       {success && <div className="rounded-lg border border-success/35 bg-success/10 px-3 py-2 text-xs text-success flex items-center gap-2"><CheckCircle2 className="h-3 w-3" />Salary assigned</div>}
-      <div className="space-y-1.5">
-        <Label className="text-xs">Employee *</Label>
-        <Select name="employeeId" required>
-          <SelectTrigger><SelectValue placeholder="Select employee..." /></SelectTrigger>
-          <SelectContent>
-            {employees.length === 0 ? <SelectItem value="_none" disabled>No employees</SelectItem> : employees.map((e) => (
-              <SelectItem key={e.id} value={e.id}>{e.name} ({e.code})</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs">Salary Structure *</Label>
-        <Select name="structureId" required>
-          <SelectTrigger><SelectValue placeholder="Select structure..." /></SelectTrigger>
-          <SelectContent>
-            {structures.length === 0 ? <SelectItem value="_none" disabled>No structures</SelectItem> : structures.map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Employee *</Label>
+          <Select name="employeeId" required>
+            <SelectTrigger><SelectValue placeholder="Select employee..." /></SelectTrigger>
+            <SelectContent>
+              {employees.length === 0 ? <SelectItem value="_none" disabled>No employees</SelectItem> : employees.map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.name} ({e.code})</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Salary Structure *</Label>
+          <Select name="structureId" required>
+            <SelectTrigger><SelectValue placeholder="Select structure..." /></SelectTrigger>
+            <SelectContent>
+              {structures.length === 0 ? <SelectItem value="_none" disabled>No structures</SelectItem> : structures.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">

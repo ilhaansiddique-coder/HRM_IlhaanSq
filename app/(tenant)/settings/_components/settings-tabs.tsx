@@ -17,6 +17,7 @@ export function SettingsTabs({
   breakPenalties,
   leaveTypes,
   advances,
+  assignSalary,
 }: {
   business: any;
   system: any;
@@ -24,6 +25,7 @@ export function SettingsTabs({
   breakPenalties?: ReactNode;
   leaveTypes?: ReactNode;
   advances?: ReactNode;
+  assignSalary?: ReactNode;
 }) {
   return (
     <Tabs defaultValue="business" className="w-full">
@@ -41,6 +43,9 @@ export function SettingsTabs({
         )}
         {advances != null && (
           <TabsTrigger value="advances">Advances</TabsTrigger>
+        )}
+        {assignSalary != null && (
+          <TabsTrigger value="assign-salary">Assign Salary</TabsTrigger>
         )}
       </TabsList>
 
@@ -195,6 +200,12 @@ export function SettingsTabs({
       {advances != null && (
         <TabsContent value="advances" className="mt-4">
           {advances}
+        </TabsContent>
+      )}
+
+      {assignSalary != null && (
+        <TabsContent value="assign-salary" className="mt-4">
+          {assignSalary}
         </TabsContent>
       )}
     </Tabs>
