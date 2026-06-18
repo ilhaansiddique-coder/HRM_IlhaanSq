@@ -1,14 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { DepartmentRowActions, type DepartmentRow } from "./department-row-actions";
 import { deleteDepartmentAction } from "../../actions";
 
 export function DepartmentsTable({ rows }: { rows: DepartmentRow[] }) {
-  const router = useRouter();
-
   const columns: Column<DepartmentRow>[] = [
     { key: "name", header: "Name", className: "font-medium", cell: (d) => d.name },
     {
@@ -41,7 +38,6 @@ export function DepartmentsTable({ rows }: { rows: DepartmentRow[] }) {
             return deleteDepartmentAction(fd);
           })
         );
-        router.refresh();
       }}
     />
   );

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
+import { Plus, HandCoins } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,10 +43,12 @@ export function AdvanceDialog({
           <Plus className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="!h-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Advance</DialogTitle>
-          <DialogDescription>Record a salary advance for an employee.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <HandCoins className="h-5 w-5 text-primary" />
+            New Advance
+          </DialogTitle>
         </DialogHeader>
         <AdvanceForm employees={employees} onSuccess={() => setOpen(false)} />
       </DialogContent>

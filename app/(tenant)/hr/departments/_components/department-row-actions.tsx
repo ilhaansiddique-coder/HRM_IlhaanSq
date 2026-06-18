@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { SquarePen, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +46,6 @@ export function DepartmentRowActions({
   department: DepartmentRow;
   variant?: "icon" | "full";
 }) {
-  const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -59,7 +57,6 @@ export function DepartmentRowActions({
       if (res.ok) {
         toast.success("Department updated");
         setEditOpen(false);
-        router.refresh();
       } else {
         toast.error(res.error ?? "Failed to update department");
       }
@@ -74,7 +71,6 @@ export function DepartmentRowActions({
       if (res.ok) {
         toast.success("Department deleted");
         setConfirmOpen(false);
-        router.refresh();
       } else {
         toast.error(res.error ?? "Failed to delete department");
         setConfirmOpen(false);

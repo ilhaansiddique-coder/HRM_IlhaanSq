@@ -8,6 +8,8 @@ import {
 } from "@/lib/services/hr/attendance.service";
 import { getActiveBreak } from "@/lib/services/hr/break.service";
 import { listPayslipsForEmployee } from "@/lib/services/hr/payroll.service";
+import { getEmployeePerformance } from "@/lib/services/hr/task.service";
+import { getWorkingDayChecker } from "@/lib/services/hr/holiday.service";
 import {
   Card,
   CardContent,
@@ -26,8 +28,23 @@ import {
   AlertCircle,
   UserCircle,
   Wallet,
+  Gauge,
+  ArrowUpRight,
 } from "lucide-react";
 import { SelfCheckInOut } from "../_components/self-check-in-out";
+
+function monthBounds() {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  return { from, to };
+}
+
+function scoreTone(score: number) {
+  if (score >= 80) return "text-success";
+  if (score >= 50) return "text-warning";
+  return "text-destructive";
+}
 
 export default async function EmployeeHomePage() {
   const session = await requireTenant();
@@ -53,11 +70,20 @@ export default async function EmployeeHomePage() {
     );
   }
 
-  const [summary, activeBreak, payslips] = await Promise.all([
+  const { from, to } = monthBounds();
+  const [summary, activeBreak, payslips, wd] = await Promise.all([
     getEmployeeAttendanceSummary(session.tenantId, employee.id),
     getActiveBreak(session.tenantId, employee.id),
     listPayslipsForEmployee(session.tenantId, employee.id),
+    getWorkingDayChecker(session.tenantId),
   ]);
+  const perf = await getEmployeePerformance(
+    session.tenantId,
+    employee.id,
+    from,
+    to,
+    wd.isWorkingDay
+  );
 
   const todayKey = await getAttendanceDayKey(session.tenantId);
   const todayRec =
@@ -140,6 +166,57 @@ export default async function EmployeeHomePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* My performance this month — auto-computed from completed tasks */}
+      <Card className="border-border/70 bg-card/80">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Gauge className="h-5 w-5 text-primary" />
+              My performance
+            </CardTitle>
+            <CardDescription>
+              This month · updates automatically as you complete tasks
+            </CardDescription>
+          </div>
+          <Link href="/hr/tasks">
+            <Button variant="outline" size="sm" className="gap-1">
+              My tasks
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-full border-2 border-border/60">
+              <span className={`text-2xl font-bold leading-none ${scoreTone(perf.score)}`}>
+                {perf.score}
+              </span>
+              <span className="text-[9px] uppercase tracking-wide text-muted-foreground">
+                score
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${perf.taskCompletionRate}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {perf.completed}/{perf.assigned} due tasks done ·{" "}
+                {perf.taskCompletionRate}% completion
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Mini label="Completed" value={perf.throughput} tone="success" />
+            <Mini label="On time" value={`${perf.onTimeRatio}%`} tone="primary" />
+            <Mini label="Active days" value={perf.activeDays} />
+            <Mini label="Due this month" value={perf.assigned} />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Latest payslip + link */}
       <Card className="border-border/70 bg-card/80">

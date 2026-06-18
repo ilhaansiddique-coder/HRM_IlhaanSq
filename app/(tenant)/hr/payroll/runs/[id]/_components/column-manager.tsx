@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -60,7 +59,6 @@ export function ColumnManager({
   columns: ManagerCol[];
   baseFields: Field[];
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(blank());
   const [error, setError] = useState<string | null>(null);
@@ -208,7 +206,6 @@ export function ColumnManager({
       setNotice(
         `${wasEditing ? "Updated" : "Saved"} “${savedName}”. It now appears in the list above.`
       );
-      router.refresh();
     });
   }
 
@@ -223,7 +220,6 @@ export function ColumnManager({
         return;
       }
       if (form.id === id) reset();
-      router.refresh();
     });
   }
 

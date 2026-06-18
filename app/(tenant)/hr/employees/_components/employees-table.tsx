@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   Mail,
   Phone,
@@ -9,7 +8,6 @@ import {
   Eye,
   Printer,
   Copy,
-  RefreshCw,
   Trash2,
   Users,
 } from "lucide-react";
@@ -107,7 +105,6 @@ export function EmployeesTable({
   positions: { id: string; title: string }[];
   managers: { id: string; fullName: string; empCode: string }[];
 }) {
-  const router = useRouter();
   const [, startTransition] = useTransition();
   const [profileId, setProfileId] = useState<string | null>(null);
   const [editing, setEditing] = useState<EmployeeRow | null>(null);
@@ -129,13 +126,6 @@ export function EmployeesTable({
       .catch(() => toast.error("Could not copy to clipboard"));
   }
 
-  function refreshRow() {
-    startTransition(() => {
-      router.refresh();
-      toast.success("Refreshed");
-    });
-  }
-
   function removeEmployee(e: EmployeeRow) {
     if (
       !window.confirm(
@@ -148,7 +138,6 @@ export function EmployeesTable({
     startTransition(async () => {
       await deleteEmployeeAction(fd);
       toast.success("Employee deleted");
-      router.refresh();
     });
   }
 
@@ -269,12 +258,6 @@ export function EmployeesTable({
       onClick: (e) => copyEmployee(e),
     },
     {
-      key: "refresh",
-      label: "Refresh",
-      icon: <RefreshCw className="h-3.5 w-3.5" />,
-      onClick: () => refreshRow(),
-    },
-    {
       key: "delete",
       label: "Delete employee",
       icon: <Trash2 className="h-3.5 w-3.5" />,
@@ -291,7 +274,7 @@ export function EmployeesTable({
         getId={(e) => e.id}
         rowActions={rowActions}
         itemNoun="employees"
-        actionsWidth="15rem"
+        actionsWidth="13rem"
         tableMinWidth="1180px"
         onBulkDelete={async (ids) => {
           await Promise.all(

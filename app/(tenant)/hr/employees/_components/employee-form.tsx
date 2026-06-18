@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -87,7 +88,6 @@ export function EmployeeForm({
             setError(res.error ?? "Failed to update employee");
             return;
           }
-          router.refresh();
           if (onClose) onClose();
           else router.push("/hr/employees");
           return;
@@ -102,10 +102,8 @@ export function EmployeeForm({
         // login credentials to hand over instead of redirecting immediately.
         if (res.login) {
           setCreated(res.login);
-          router.refresh();
           return;
         }
-        router.refresh();
         if (onClose) onClose();
         else router.push("/hr/employees");
       } catch (e) {
@@ -174,7 +172,6 @@ export function EmployeeForm({
           <Button
             type="button"
             onClick={() => {
-              router.refresh();
               if (onClose) onClose();
               else router.push("/hr/employees");
             }}
@@ -205,10 +202,12 @@ export function EmployeeForm({
           <Input name="phone" type="tel" required={req} defaultValue={dv.phone} />
         </Field>
         <Field label="Date of Birth" required={req}>
-          <Input
+          <DatePicker
             name="dob"
-            type="date"
             required={req}
+            placeholder="Date of birth"
+            yearNavigation
+            fromYear={1940}
             defaultValue={dv.dob ? new Date(dv.dob).toISOString().slice(0, 10) : undefined}
           />
         </Field>
@@ -240,10 +239,13 @@ export function EmployeeForm({
 
       <Section title="Employment">
         <Field label="Hire Date" required>
-          <Input
+          <DatePicker
             name="hireDate"
-            type="date"
             required
+            placeholder="Hire date"
+            yearNavigation
+            fromYear={2000}
+            showPresets
             defaultValue={
               dv.hireDate
                 ? new Date(dv.hireDate).toISOString().slice(0, 10)

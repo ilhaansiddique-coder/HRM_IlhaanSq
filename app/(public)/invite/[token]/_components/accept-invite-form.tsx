@@ -36,7 +36,6 @@ export function AcceptInviteForm({
           return;
         }
         router.push("/hr");
-        router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to accept invite");
       }

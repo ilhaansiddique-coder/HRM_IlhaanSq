@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Eye, SquarePen, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import {
   Dialog,
   DialogContent,
@@ -57,7 +57,6 @@ export function BreakSessionsTable({
    *  read-only. */
   showEmployee?: boolean;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [viewing, setViewing] = useState<BreakSessionRow | null>(null);
   const [editing, setEditing] = useState<BreakSessionRow | null>(null);
@@ -70,7 +69,6 @@ export function BreakSessionsTable({
       if (res.ok) {
         toast.success("Break session updated");
         setEditing(null);
-        router.refresh();
       } else {
         toast.error(res.error ?? "Failed to update break");
       }
@@ -217,7 +215,6 @@ export function BreakSessionsTable({
                     return deleteBreakSessionAction(fd);
                   })
                 );
-                router.refresh();
               }
             : undefined
         }
@@ -293,22 +290,22 @@ export function BreakSessionsTable({
                     <Label className="text-xs" htmlFor="brk-start">
                       Start
                     </Label>
-                    <Input
+                    <DateTimePicker
                       id="brk-start"
                       name="breakStart"
-                      type="datetime-local"
                       defaultValue={toLocalInput(editing.breakStart)}
+                      placeholder="Break start"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs" htmlFor="brk-end">
                       End
                     </Label>
-                    <Input
+                    <DateTimePicker
                       id="brk-end"
                       name="breakEnd"
-                      type="datetime-local"
                       defaultValue={toLocalInput(editing.breakEnd)}
+                      placeholder="Break end"
                     />
                   </div>
                 </div>

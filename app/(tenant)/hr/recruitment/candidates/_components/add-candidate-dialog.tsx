@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -51,10 +51,12 @@ export function AddCandidateDialog() {
           <Plus className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="!h-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Candidate</DialogTitle>
-          <DialogDescription>Add a candidate to the talent pool.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-primary" />
+            Add Candidate
+          </DialogTitle>
         </DialogHeader>
         <form
           action={async (formData) => {
@@ -63,41 +65,43 @@ export function AddCandidateDialog() {
           }}
           className="space-y-3"
         >
-          <div className="space-y-1.5">
-            <Label htmlFor="fullName" className="text-xs">
-              Full name *
-            </Label>
-            <Input id="fullName" name="fullName" required minLength={2} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs">
-              Email *
-            </Label>
-            <Input id="email" name="email" type="email" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone" className="text-xs">
-              Phone
-            </Label>
-            <Input id="phone" name="phone" type="tel" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="currentRole" className="text-xs">
-              Current role
-            </Label>
-            <Input id="currentRole" name="currentRole" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="currentCompany" className="text-xs">
-              Current company
-            </Label>
-            <Input id="currentCompany" name="currentCompany" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="linkedinUrl" className="text-xs">
-              LinkedIn URL
-            </Label>
-            <Input id="linkedinUrl" name="linkedinUrl" type="url" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="fullName" className="text-xs">
+                Full name *
+              </Label>
+              <Input id="fullName" name="fullName" required minLength={2} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs">
+                Email *
+              </Label>
+              <Input id="email" name="email" type="email" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phone" className="text-xs">
+                Phone
+              </Label>
+              <Input id="phone" name="phone" type="tel" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="currentRole" className="text-xs">
+                Current role
+              </Label>
+              <Input id="currentRole" name="currentRole" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="currentCompany" className="text-xs">
+                Current company
+              </Label>
+              <Input id="currentCompany" name="currentCompany" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="linkedinUrl" className="text-xs">
+                LinkedIn URL
+              </Label>
+              <Input id="linkedinUrl" name="linkedinUrl" type="url" />
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="source" className="text-xs">

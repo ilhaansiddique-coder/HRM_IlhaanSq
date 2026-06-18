@@ -11,15 +11,14 @@
 // Server pages pass plain data + (optionally) server actions; a thin client
 // wrapper per table supplies the column/render/action functions.
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { Fragment, useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  RefreshCw,
   Printer,
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,8 +62,6 @@ export type DataTableProps<T> = {
   selectable?: boolean;
   /** wired to a server action; receives the selected row ids */
   onBulkDelete?: (ids: string[]) => Promise<void> | void;
-  /** override the refresh handler (defaults to router.refresh) */
-  onRefresh?: () => void;
   /** override print (defaults to window.print) */
   onPrint?: () => void;
   emptyState?: ReactNode;
@@ -75,6 +72,9 @@ export type DataTableProps<T> = {
   /** Min width for the (fixed-layout) table so it scrolls instead of squashing
    *  on narrow screens, e.g. "1180px". */
   tableMinWidth?: string;
+  /** When provided, each row gets a leading chevron that expands a full-width
+   *  panel beneath it rendering this content (e.g. a task's subtasks). */
+  renderExpanded?: (row: T) => ReactNode;
 };
 
 export function DataTable<T>({
@@ -86,17 +86,18 @@ export function DataTable<T>({
   pageSize = 10,
   selectable = true,
   onBulkDelete,
-  onRefresh,
   onPrint,
   emptyState,
   itemNoun = "items",
   actionsWidth,
   tableMinWidth,
+  renderExpanded,
 }: DataTableProps<T>) {
-  const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [pending, startTransition] = useTransition();
+  const expandable = Boolean(renderExpanded);
 
   const total = rows.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -118,7 +119,19 @@ export function DataTable<T>({
   const hasActions = Boolean(rowActions || actionsCell);
   const hasWidths = columns.some((c) => c.width) || Boolean(actionsWidth);
   const colSpan =
-    columns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0);
+    columns.length +
+    (selectable ? 1 : 0) +
+    (hasActions ? 1 : 0) +
+    (expandable ? 1 : 0);
+
+  function toggleExpand(id: string) {
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
 
   function toggleAll(next: boolean) {
     setSelected(next ? new Set(allIds) : new Set());
@@ -132,10 +145,6 @@ export function DataTable<T>({
     });
   }
 
-  function handleRefresh() {
-    if (onRefresh) onRefresh();
-    else router.refresh();
-  }
   function handlePrint() {
     if (onPrint) onPrint();
     else if (typeof window !== "undefined") window.print();
@@ -146,7 +155,6 @@ export function DataTable<T>({
     startTransition(async () => {
       await onBulkDelete(ids);
       setSelected(new Set());
-      router.refresh();
     });
   }
 
@@ -165,6 +173,7 @@ export function DataTable<T>({
           {hasWidths && (
             <colgroup>
               {selectable && <col style={{ width: "2.75rem" }} />}
+              {expandable && <col style={{ width: "2.5rem" }} />}
               {columns.map((c) => (
                 <col
                   key={c.key}
@@ -190,6 +199,7 @@ export function DataTable<T>({
                   />
                 </th>
               )}
+              {expandable && <th className="w-10 px-1 py-3" aria-hidden />}
               {columns.map((c) => (
                 <th
                   key={c.key}
@@ -205,13 +215,6 @@ export function DataTable<T>({
                 <th className="px-4 py-3 align-middle">
                   <div className="flex items-center justify-end gap-1.5 pr-4">
                     <span className="mr-1">Actions</span>
-                    <ToolbarBtn
-                      title="Refresh"
-                      onClick={handleRefresh}
-                      disabled={pending}
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    </ToolbarBtn>
                     <ToolbarBtn title="Print" onClick={handlePrint}>
                       <Printer className="h-3.5 w-3.5" />
                     </ToolbarBtn>
@@ -256,11 +259,15 @@ export function DataTable<T>({
                 const actions = rowActions
                   ? rowActions(row).filter((a) => !a.hidden?.(row))
                   : [];
+                const isExpanded = expanded.has(id);
                 return (
+                  <Fragment key={id}>
                   <tr
-                    key={id}
                     data-state={isSel ? "selected" : undefined}
-                    className="border-b border-border/60 transition-colors last:border-0 hover:bg-[var(--table-head)] data-[state=selected]:bg-primary/5"
+                    className={cn(
+                      "border-b border-border/60 transition-colors hover:bg-[var(--table-head)] data-[state=selected]:bg-primary/5",
+                      !isExpanded && "last:border-0"
+                    )}
                   >
                     {selectable && (
                       <td className="w-10 px-3 py-3 align-middle">
@@ -270,6 +277,23 @@ export function DataTable<T>({
                           checked={isSel}
                           onCheckedChange={(v) => toggleRow(id, v === true)}
                         />
+                      </td>
+                    )}
+                    {expandable && (
+                      <td className="w-10 px-1 py-3 align-middle">
+                        <button
+                          type="button"
+                          aria-label={isExpanded ? "Collapse" : "Expand subtasks"}
+                          onClick={() => toggleExpand(id)}
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              isExpanded && "rotate-180"
+                            )}
+                          />
+                        </button>
                       </td>
                     )}
                     {columns.map((c) => (
@@ -316,6 +340,14 @@ export function DataTable<T>({
                       </td>
                     )}
                   </tr>
+                  {expandable && isExpanded && (
+                    <tr className="border-b border-border/60 bg-muted/20 last:border-0">
+                      <td colSpan={colSpan} className="px-4 pb-4 pt-1">
+                        {renderExpanded!(row)}
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })
             )}

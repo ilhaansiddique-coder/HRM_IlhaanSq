@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { updateLateThresholdAction } from "../../actions";
@@ -43,12 +43,12 @@ export function LateThresholdForm({
       <CardContent>
         <div className="flex items-end gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Threshold Time (HH:mm)</Label>
-            <Input
-              type="time"
+            <Label className="text-xs">Threshold Time</Label>
+            <TimePicker
               value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-40"
+              onChange={setValue}
+              placeholder="Set threshold"
+              className="w-44"
             />
           </div>
           <Button onClick={handleSave} disabled={pending}>

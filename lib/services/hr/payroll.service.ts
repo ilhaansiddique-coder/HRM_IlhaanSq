@@ -4,8 +4,8 @@ import { assertTenantOwns } from "./_shared";
 import {
   countLateToAbsenceBatch,
   getLateToAbsenceDetail,
-  isWeeklyHoliday,
 } from "./attendance.service";
+import { getWorkingDayChecker } from "./holiday.service";
 import { createApprovalRequest } from "../approvals.service";
 
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -1082,6 +1082,10 @@ export async function runPayroll(
   let totalDeductions = 0;
   let totalNet = 0;
 
+  // Configured weekend + holidays: a worked non-working day is extra duty, and
+  // an absence on a non-working day is never deducted.
+  const wd = await getWorkingDayChecker(tenantId);
+
   for (const sal of salaries) {
     const basic = Number(sal.baseSalary);
     // Allowances: structure earning rules drive these when defined,
@@ -1126,12 +1130,11 @@ export async function runPayroll(
       },
       select: { date: true },
     });
-    const fridayWorkedDays = workedRows.filter((r) =>
-      isWeeklyHoliday(r.date)
-    ).length;
+    // Worked on a weekly off day or a holiday → extra duty.
+    const offDayWorkedDays = workedRows.filter((r) => !wd.isWorkingDay(r.date)).length;
     const manualExtraDuty =
       input.adjustments?.[sal.employeeId]?.extraDutyDays ?? 0;
-    const extraDutyDays = manualExtraDuty + fridayWorkedDays;
+    const extraDutyDays = manualExtraDuty + offDayWorkedDays;
     const extraDutyPayment = round2((basic / 30) * extraDutyDays);
     if (extraDutyPayment > 0) {
       lines.push({
@@ -1177,10 +1180,8 @@ export async function runPayroll(
         input.periodEnd
       ),
     ]);
-    // Friday (weekly holiday) is never counted as an absent working day.
-    const attendanceDays = absentRows.filter(
-      (r) => !isWeeklyHoliday(r.date)
-    ).length;
+    // A weekly off day or holiday is never counted as an absent working day.
+    const attendanceDays = absentRows.filter((r) => wd.isWorkingDay(r.date)).length;
     // Late → absence: per month, every 3 lates = 1 absent day.
     const lateAbsenceDays = lateDetail.absenceDays;
     const adj = input.adjustments?.[sal.employeeId];

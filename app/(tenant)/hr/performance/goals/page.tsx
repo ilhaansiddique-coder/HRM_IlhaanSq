@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Target, Trash2 } from "lucide-react";
+import { Target, Trash2, ListChecks } from "lucide-react";
 import {
   updateGoalAction,
   deleteGoalAction,
@@ -54,7 +54,13 @@ export default async function GoalsPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <CardTitle className="text-base">{g.title}</CardTitle>
-                        <Badge variant="outline" className="text-[10px] uppercase">{g.type}</Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] uppercase"
+                          title={g.type === "kpi" ? "KPI — Key Performance Indicator" : "OKR — Objectives & Key Results"}
+                        >
+                          {g.type}
+                        </Badge>
                         <Badge variant={statusColors[g.status]} className="text-[10px]">{g.status.replace("_", " ")}</Badge>
                       </div>
                       <CardDescription>{g.employee.fullName} {g.cycle && `· ${g.cycle.name}`}</CardDescription>
@@ -80,20 +86,33 @@ export default async function GoalsPage() {
                       <div className="h-full bg-primary transition-all" style={{ width: `${g.progress}%` }} />
                     </div>
                   </div>
-                  <form action={updateGoalAction} className="flex gap-2 items-end pt-2 border-t border-border/60">
-                    <input type="hidden" name="id" value={g.id} />
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-xs">Update progress (%)</Label>
-                      <Input name="progress" type="number" min="0" max="100" defaultValue={g.progress} />
+                  {g._count.tasks > 0 ? (
+                    <div className="flex items-center gap-2 pt-2 border-t border-border/60 text-xs text-muted-foreground">
+                      <ListChecks className="h-4 w-4 text-primary shrink-0" />
+                      <span>
+                        Task-driven · progress updates automatically from{" "}
+                        <span className="font-medium text-foreground">
+                          {g._count.tasks} linked task{g._count.tasks !== 1 ? "s" : ""}
+                        </span>
+                        . Manual entry is disabled.
+                      </span>
                     </div>
-                    {g.targetValue && (
+                  ) : (
+                    <form action={updateGoalAction} className="flex gap-2 items-end pt-2 border-t border-border/60">
+                      <input type="hidden" name="id" value={g.id} />
                       <div className="flex-1 space-y-1">
-                        <Label className="text-xs">Current value</Label>
-                        <Input name="currentValue" type="number" step="0.01" defaultValue={Number(g.currentValue)} />
+                        <Label className="text-xs">Update progress (%)</Label>
+                        <Input name="progress" type="number" min="0" max="100" defaultValue={g.progress} />
                       </div>
-                    )}
-                    <Button type="submit" size="sm">Update</Button>
-                  </form>
+                      {g.targetValue && (
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Current value</Label>
+                          <Input name="currentValue" type="number" step="0.01" defaultValue={Number(g.currentValue)} />
+                        </div>
+                      )}
+                      <Button type="submit" size="sm">Update</Button>
+                    </form>
+                  )}
                 </CardContent>
               </Card>
             ))

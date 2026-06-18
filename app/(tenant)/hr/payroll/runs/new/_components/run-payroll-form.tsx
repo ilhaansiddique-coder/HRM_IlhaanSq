@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
@@ -128,7 +129,6 @@ export function RunPayrollForm({
           return;
         }
         router.push("/hr/payroll");
-        router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed");
       }
@@ -154,16 +154,16 @@ export function RunPayrollForm({
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">
           <Label htmlFor="periodStart" className="text-xs">From</Label>
-          <Input id="periodStart" name="periodStart" type="date" required defaultValue={ymd(monthStart)} />
+          <DatePicker id="periodStart" name="periodStart" required defaultValue={ymd(monthStart)} placeholder="Select date" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="periodEnd" className="text-xs">To</Label>
-          <Input id="periodEnd" name="periodEnd" type="date" required defaultValue={ymd(monthEnd)} />
+          <DatePicker id="periodEnd" name="periodEnd" required defaultValue={ymd(monthEnd)} placeholder="Select date" />
         </div>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="payDate" className="text-xs">Pay date</Label>
-        <Input id="payDate" name="payDate" type="date" required defaultValue={ymd(monthEnd)} />
+        <DatePicker id="payDate" name="payDate" required defaultValue={ymd(monthEnd)} placeholder="Select date" />
       </div>
 
       {prep.length > 0 && (

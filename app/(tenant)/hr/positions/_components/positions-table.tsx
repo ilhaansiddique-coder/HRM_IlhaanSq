@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { PositionRowActions, type PositionRow } from "./position-row-actions";
@@ -13,7 +12,6 @@ export function PositionsTable({
   rows: PositionRow[];
   departments: { id: string; name: string }[];
 }) {
-  const router = useRouter();
   const deptName = (id: string | null) =>
     id ? departments.find((d) => d.id === id)?.name ?? null : null;
 
@@ -74,7 +72,6 @@ export function PositionsTable({
             return deletePositionAction(fd);
           })
         );
-        router.refresh();
       }}
     />
   );

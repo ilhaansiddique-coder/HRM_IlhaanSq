@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import {
   DropdownMenu,
@@ -116,8 +117,10 @@ export function NotificationBell({
             notifications.map((n) => {
               const isUnread = new Date(n.createdAt).getTime() > ackTs;
               return (
-                <div
+                <Link
                   key={n.id}
+                  href={n.link ?? "/hr"}
+                  onClick={() => setOpen(false)}
                   className={`flex items-start gap-3 px-3 py-2 text-xs transition-colors hover:bg-muted/60 ${
                     isUnread ? "bg-primary/5" : ""
                   }`}
@@ -141,8 +144,16 @@ export function NotificationBell({
                     <p className="text-muted-foreground">
                       {n.actorName ?? "System"} · {timeAgo(n.createdAt)}
                     </p>
+                    {n.actorId && (
+                      <p
+                        className="truncate font-mono text-[10px] text-muted-foreground/70"
+                        title={`User ID: ${n.actorId}`}
+                      >
+                        ID: {n.actorId}
+                      </p>
+                    )}
                   </div>
-                </div>
+                </Link>
               );
             })
           )}

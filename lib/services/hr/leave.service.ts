@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import type { LeaveStatus } from "@prisma/client";
 import { assertTenantOwns } from "./_shared";
 import { createApprovalRequest } from "../approvals.service";
+import { getWorkingDayChecker } from "./holiday.service";
 
 // ─── Leave Types ────────────────────────────────────────────
 
@@ -83,10 +84,20 @@ export async function listLeaveRequests(
   }));
 }
 
-function calculateDays(start: Date, end: Date): number {
-  const startMs = new Date(start).setHours(0, 0, 0, 0);
-  const endMs = new Date(end).setHours(0, 0, 0, 0);
-  return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
+/** Working days in [start, end] inclusive, excluding the configured weekend +
+ *  holidays. Falls back to ≥1 so a single off-day request still counts as 1. */
+function countLeaveDays(
+  start: Date,
+  end: Date,
+  isWorkingDay: (d: Date) => boolean
+): number {
+  const s = new Date(new Date(start).setHours(0, 0, 0, 0));
+  const e = new Date(new Date(end).setHours(0, 0, 0, 0));
+  let count = 0;
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+    if (isWorkingDay(new Date(d))) count++;
+  }
+  return Math.max(1, count);
 }
 
 export async function createLeaveRequest(
@@ -100,13 +111,16 @@ export async function createLeaveRequest(
   },
   actor?: { userId: string; name: string }
 ) {
-  const days = calculateDays(input.startDate, input.endDate);
   if (input.endDate < input.startDate) {
     throw new Error("End date must be on or after the start date");
   }
 
   await assertTenantOwns(tenantId, "employee", [input.employeeId]);
   await assertTenantOwns(tenantId, "leaveType", [input.leaveTypeId]);
+
+  // Count only working days — weekends + holidays don't consume leave balance.
+  const wd = await getWorkingDayChecker(tenantId);
+  const days = countLeaveDays(input.startDate, input.endDate, wd.isWorkingDay);
 
   const leave = await prisma.leaveRequest.create({
     data: {

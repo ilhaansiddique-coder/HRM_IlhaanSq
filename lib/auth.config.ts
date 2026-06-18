@@ -79,8 +79,8 @@ export default {
       }
 
       // EMPLOYEE PORTAL CONFINEMENT: the "employee" role can only reach their
-      // own self-service surface (Overview / Attendance / Break / Profile).
-      // Every other route bounces back to /employee.
+      // own self-service surface (Overview / Tasks / Attendance / Break /
+      // Leave / Payslips / Profile). Every other route bounces back to /employee.
       const role = (auth as any)?.role;
       if (auth?.user && role === "employee") {
         const allowed =
@@ -88,6 +88,8 @@ export default {
           pathname.startsWith("/employee/") ||
           pathname.startsWith("/hr/attendance") ||
           pathname.startsWith("/hr/break") ||
+          pathname.startsWith("/hr/leave") ||
+          pathname.startsWith("/hr/tasks") ||
           pathname.startsWith("/profile") ||
           pathname === "/change-password" ||
           pathname.startsWith("/api/") ||

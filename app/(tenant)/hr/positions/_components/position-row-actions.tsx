@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { SquarePen, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +57,6 @@ export function PositionRowActions({
   departments: { id: string; name: string }[];
   variant?: "icon" | "full";
 }) {
-  const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deptId, setDeptId] = useState<string>(
@@ -74,7 +72,6 @@ export function PositionRowActions({
       if (res.ok) {
         toast.success("Position updated");
         setEditOpen(false);
-        router.refresh();
       } else {
         toast.error(res.error ?? "Failed to update position");
       }
@@ -89,7 +86,6 @@ export function PositionRowActions({
       if (res.ok) {
         toast.success("Position deleted");
         setConfirmOpen(false);
-        router.refresh();
       } else {
         toast.error(res.error ?? "Failed to delete position");
         setConfirmOpen(false);

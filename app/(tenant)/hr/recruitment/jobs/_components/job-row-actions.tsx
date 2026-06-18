@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { SquarePen, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +46,6 @@ export type JobRow = {
 };
 
 export function JobRowActions({ job }: { job: JobRow }) {
-  const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [empType, setEmpType] = useState(job.employmentType || "full_time");
@@ -61,7 +59,6 @@ export function JobRowActions({ job }: { job: JobRow }) {
       if (res.ok) {
         toast.success("Edit submitted for admin approval");
         setEditOpen(false);
-        router.refresh();
       } else {
         toast.error(res.error ?? "Failed to submit edit");
       }
@@ -76,7 +73,6 @@ export function JobRowActions({ job }: { job: JobRow }) {
       if (res.ok) {
         toast.success("Delete submitted for admin approval");
         setConfirmOpen(false);
-        router.refresh();
       } else {
         toast.error(res.error ?? "Failed to submit delete");
         setConfirmOpen(false);

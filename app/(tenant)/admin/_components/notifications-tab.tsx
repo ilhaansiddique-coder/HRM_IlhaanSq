@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -130,7 +131,10 @@ export function NotificationsTab({
                     n.read ? "bg-transparent" : SEV_DOT[n.severity] ?? "bg-primary"
                   }`}
                 />
-                <div className="min-w-0 flex-1">
+                <Link
+                  href={n.link ?? "/hr"}
+                  className="min-w-0 flex-1 transition-colors hover:opacity-80"
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-medium capitalize">{n.title}</p>
                     <Badge variant="outline" className="gap-1 text-[10px] capitalize">
@@ -148,7 +152,15 @@ export function NotificationsTab({
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
                     {n.actorName ?? "System"} · {timeAgo(n.createdAt)}
                   </p>
-                </div>
+                  {n.actorId && (
+                    <p
+                      className="truncate font-mono text-[10px] text-muted-foreground/70"
+                      title={`User ID: ${n.actorId}`}
+                    >
+                      ID: {n.actorId}
+                    </p>
+                  )}
+                </Link>
                 {n.source === "notification" && !n.read && (
                   <form action={markNotificationReadAction}>
                     <input type="hidden" name="id" value={n.id} />

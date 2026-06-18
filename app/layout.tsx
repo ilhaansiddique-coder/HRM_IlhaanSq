@@ -59,7 +59,7 @@ const themeBootstrapScript = `
 (function () {
   try {
     var path = window.location.pathname;
-    var publicPrefixes = ['/', '/login', '/invite', '/reset-password', '/onboarding'];
+    var publicPrefixes = ['/', '/login', '/invite', '/reset-password', '/onboarding', '/careers'];
     var isPublic = path === '/' || publicPrefixes.some(function (p) {
       return p !== '/' && (path === p || path.indexOf(p + '/') === 0);
     });

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Zap, Copy, Check, Loader2 } from "lucide-react";
 import { activateEmployeeNowAction } from "../actions";
@@ -11,7 +10,6 @@ import { activateEmployeeNowAction } from "../actions";
 // password the admin hands over. Kept as its own client component so it can
 // surface the returned password (a plain form action couldn't).
 export function ActivateNowButton({ id }: { id: string }) {
-  const router = useRouter();
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{
     email: string;
@@ -77,15 +75,6 @@ export function ActivateNowButton({ id }: { id: string }) {
             their current password.
           </p>
         )}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="mt-2 h-7"
-          onClick={() => router.refresh()}
-        >
-          Done
-        </Button>
       </div>
     );
   }

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Ban } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,8 +26,6 @@ const statusVariant = (
   s === "active" ? "default" : s === "cleared" ? "secondary" : "outline";
 
 export function AdvancesTable({ rows }: { rows: AdvanceRow[] }) {
-  const router = useRouter();
-
   const columns: Column<AdvanceRow>[] = [
     {
       key: "employee",
@@ -131,7 +128,6 @@ export function AdvancesTable({ rows }: { rows: AdvanceRow[] }) {
             return cancelAdvanceAction(fd);
           })
         );
-        router.refresh();
       }}
     />
   );

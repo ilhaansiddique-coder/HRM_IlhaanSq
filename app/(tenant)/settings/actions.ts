@@ -1,6 +1,7 @@
 "use server";
 
 import { requireTenant } from "@/lib/auth";
+import { setRequestActor } from "@/lib/request-actor";
 import { v2 as cloudinary } from "cloudinary";
 import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
@@ -24,6 +25,7 @@ export async function uploadBusinessLogoAction(
   formData: FormData
 ): Promise<{ url: string; error?: string }> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
 
   const role = session.role;
   if (!["owner", "admin", "superadmin"].includes(role ?? "")) {
@@ -80,6 +82,7 @@ import { revalidatePath } from "next/cache";
 
 export async function saveBusinessSettings(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   // logoUrl is present in the form if the upload widget is used (or emptied).
   const hasLogoField = formData.has("logoUrl");
   const rawLogoUrl = formData.get("logoUrl") as string | null;
@@ -98,6 +101,7 @@ export async function saveBusinessSettings(formData: FormData) {
 
 export async function saveSystemSettings(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await updateSystemSettings(session.tenantId, {
     currencySymbol: formData.get("currencySymbol") as string,
     currencyCode: formData.get("currencyCode") as string,

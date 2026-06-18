@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { LogIn, LogOut, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
@@ -33,7 +32,6 @@ export function SelfCheckInOut({
   employeeId: string;
   today: Today;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [clock, setClock] = useState("");
   // `now` and the date string are time/locale dependent, so they must start
@@ -90,7 +88,6 @@ export function SelfCheckInOut({
       try {
         await fn(fd);
         toast.success(label);
-        router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Failed");
       }

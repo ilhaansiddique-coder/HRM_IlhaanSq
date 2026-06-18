@@ -1,6 +1,7 @@
 "use server";
 
 import { requireTenant } from "@/lib/auth";
+import { setRequestActor } from "@/lib/request-actor";
 import {
   adminCreateUser,
   adminDeleteUser,
@@ -35,6 +36,7 @@ function ensureAdmin(role: string | null) {
 
 export async function createUserAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
 
   await adminCreateUser(session.tenantId, {
@@ -49,6 +51,7 @@ export async function createUserAction(formData: FormData) {
 
 export async function updateUserAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
 
   await adminUpdateUser(session.tenantId, formData.get("userId") as string, {
@@ -61,6 +64,7 @@ export async function updateUserAction(formData: FormData) {
 
 export async function deleteUserAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   const userId = formData.get("userId") as string;
   if (userId === session.userId) throw new Error("Cannot remove yourself");
@@ -72,6 +76,7 @@ export async function deleteUserAction(formData: FormData) {
 
 export async function togglePermissionAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
 
   await setRolePermission(
@@ -87,6 +92,7 @@ export async function togglePermissionAction(formData: FormData) {
 
 export async function saveSystemSettingsAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
 
   await updateSystemSettings(session.tenantId, {
@@ -103,6 +109,7 @@ export async function saveSystemSettingsAction(formData: FormData) {
 
 export async function exportBackupAction() {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   return exportTenantData(session.tenantId);
 }
@@ -111,6 +118,7 @@ export async function exportBackupAction() {
 
 export async function approveRequestAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   await approveRequest(session.tenantId, formData.get("id") as string, {
     userId: session.userId,
@@ -134,6 +142,7 @@ export async function activateEmployeeNowAction(id: string): Promise<{
 }> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     ensureAdmin(session.role);
     const res = await approveOnboardingDirect(session.tenantId, id, {
       userId: session.userId,
@@ -153,6 +162,7 @@ export async function approvalDetailAction(
 ): Promise<ApprovalDetail | { error: string }> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     ensureAdmin(session.role);
     return await getApprovalDetail(session.tenantId, id);
   } catch (e) {
@@ -162,6 +172,7 @@ export async function approvalDetailAction(
 
 export async function approveWithEditsAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   await approveJobWithEdits(
     session.tenantId,
@@ -184,6 +195,7 @@ export async function approveWithEditsAction(formData: FormData) {
 
 export async function approveWithPayloadEditsAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   const id = formData.get("id") as string;
   const values: Record<string, string> = {};
@@ -203,6 +215,7 @@ export async function approveWithPayloadEditsAction(formData: FormData) {
 
 export async function requestChangesAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   await requestChanges(
     session.tenantId,
@@ -216,6 +229,7 @@ export async function requestChangesAction(formData: FormData) {
 
 export async function rejectRequestAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   await rejectRequest(
     session.tenantId,
@@ -233,6 +247,7 @@ export async function rejectRequestAction(formData: FormData) {
 
 export async function markNotificationReadAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   await markNotificationRead(
     session.tenantId,
@@ -244,6 +259,7 @@ export async function markNotificationReadAction(formData: FormData) {
 
 export async function markAllNotificationsReadAction() {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   ensureAdmin(session.role);
   await markAllNotificationsRead(session.tenantId, session.userId);
   revalidatePath("/admin");

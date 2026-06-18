@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +25,6 @@ export function EditAdvanceDialog({
 }: {
   advance: { id: string; amount: number; installment: number; reason: string | null };
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(String(advance.amount));
   const [installment, setInstallment] = useState(String(advance.installment));
@@ -45,7 +43,6 @@ export function EditAdvanceDialog({
       const res = await updateAdvanceAction(fd);
       if (res.ok) {
         setOpen(false);
-        router.refresh();
       } else {
         setError(res.error ?? "Failed");
       }

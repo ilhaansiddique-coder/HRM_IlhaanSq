@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -107,13 +108,14 @@ export function AssignSalaryForm({
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="effectiveFrom" className="text-xs">Effective From</Label>
-        <Input
+        <DatePicker
           id="effectiveFrom"
           name="effectiveFrom"
-          type="date"
           required
           defaultValue={new Date(new Date().getFullYear(), new Date().getMonth(), 1)
             .toLocaleDateString("en-CA")}
+          placeholder="Select date"
+          showPresets
         />
         <p className="text-[11px] text-muted-foreground">
           Use the 1st of the month (or earlier) — payroll only includes salaries

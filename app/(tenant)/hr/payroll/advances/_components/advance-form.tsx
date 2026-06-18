@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +25,6 @@ export function AdvanceForm({
   // Optional: called after a successful submit (e.g. to close a host dialog).
   onSuccess?: () => void;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -39,7 +38,6 @@ export function AdvanceForm({
         setSuccess(true);
         setTimeout(() => setSuccess(false), 2000);
         (document.getElementById("advance-form") as HTMLFormElement)?.reset();
-        router.refresh();
         onSuccess?.();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed");
@@ -100,12 +98,13 @@ export function AdvanceForm({
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="issuedAt" className="text-xs">Issued on</Label>
-        <Input
+        <DatePicker
           id="issuedAt"
           name="issuedAt"
-          type="date"
           required
           defaultValue={new Date().toISOString().slice(0, 10)}
+          placeholder="Select date"
+          showPresets
         />
       </div>
       <div className="space-y-1.5">

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -188,7 +187,6 @@ type FormState = {
 };
 
 function usePayslipEdit(slip: Slip, manualCols: CustomCol[] = []) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -270,7 +268,6 @@ function usePayslipEdit(slip: Slip, manualCols: CustomCol[] = []) {
           if (!r.ok) throw new Error(r.error ?? "Failed to save column value");
         }
         setEditing(false);
-        router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to save");
       }
@@ -285,7 +282,6 @@ function usePayslipEdit(slip: Slip, manualCols: CustomCol[] = []) {
 }
 
 function usePaidToggle(slip: Slip) {
-  const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const paid = !!slip.paidAt;
@@ -301,7 +297,6 @@ function usePaidToggle(slip: Slip) {
         setError(r.error ?? "Failed");
         return;
       }
-      router.refresh();
     });
   }
   return { paid, pending, error, toggle };

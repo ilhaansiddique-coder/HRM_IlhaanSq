@@ -40,7 +40,6 @@ export default function LoginPage() {
     // users straight to their landing (or the callbackUrl), and presents the
     // picker to users who hold more than one role.
     router.push(`/continue?next=${encodeURIComponent(callbackUrl)}`);
-    router.refresh();
   }
 
   return (

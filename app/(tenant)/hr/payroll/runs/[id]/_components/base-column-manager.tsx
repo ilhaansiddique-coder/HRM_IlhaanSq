@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -50,7 +49,6 @@ export function BaseColumnManager({
   const DLIST = "base-col-options";
   const opSym = (o: Op) =>
     o === "multiply" ? "×" : o === "add" ? "+" : o === "divide" ? "÷" : "−";
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -156,7 +154,6 @@ export function BaseColumnManager({
       }
       resetForm();
       setNotice(res.info ?? "Saved.");
-      router.refresh();
     });
   }
 
@@ -173,7 +170,6 @@ export function BaseColumnManager({
       }
       if (edit === c.key) resetForm();
       setNotice(res.info ?? "Reset.");
-      router.refresh();
     });
   }
 

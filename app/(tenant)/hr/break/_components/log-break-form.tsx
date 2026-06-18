@@ -9,8 +9,9 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Clock, Truck, User } from "lucide-react";
 import { logBreakAction } from "../../actions";
-import { useRouter } from "next/navigation";
 
 export function LogBreakForm({
   employees,
@@ -38,7 +38,6 @@ export function LogBreakForm({
   const [note, setNote] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   const isDuty = /courier/i.test(note);
 
@@ -80,7 +79,6 @@ export function LogBreakForm({
         setEndTime("");
         setNote("");
         if (!fixedEmployeeId) setEmployeeId("");
-        router.refresh();
         onSuccess?.();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to log break");
@@ -119,18 +117,18 @@ export function LogBreakForm({
 
         <div className="space-y-1.5">
           <Label className="text-xs">Date</Label>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DatePicker value={date} onChange={setDate} placeholder="Pick a date" showPresets />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs">From (start time)</Label>
-          <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <TimePicker value={startTime} onChange={setStartTime} placeholder="Start time" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">To (end time)</Label>
-          <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <TimePicker value={endTime} onChange={setEndTime} placeholder="End time" />
         </div>
       </div>
 

@@ -57,10 +57,6 @@ export function NewJobPostingDialog() {
             <Briefcase className="h-5 w-5 text-primary" />
             New Job Posting
           </DialogTitle>
-          <DialogDescription>
-            Create a job posting. Choosing Open immediately raises an admin
-            approval before it goes live.
-          </DialogDescription>
         </DialogHeader>
         <form
           action={async (formData) => {
@@ -70,34 +66,34 @@ export function NewJobPostingDialog() {
           className="space-y-3"
         >
           <div className="grid grid-cols-3 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="title" className="text-xs">
-              Title *
-            </Label>
-            <Input id="title" name="title" required minLength={2} placeholder="Senior Sales Manager" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="location" className="text-xs">
-              Location
-            </Label>
-            <Input id="location" name="location" placeholder="Dhaka / Remote" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="employmentType" className="text-xs">
-              Type
-            </Label>
-            <Select name="employmentType" defaultValue="full_time">
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full_time">Full-time</SelectItem>
-                <SelectItem value="part_time">Part-time</SelectItem>
-                <SelectItem value="contract">Contract</SelectItem>
-                <SelectItem value="intern">Intern</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="title" className="text-xs">
+                Title *
+              </Label>
+              <Input id="title" name="title" required minLength={2} placeholder="Senior Sales Manager" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="location" className="text-xs">
+                Location
+              </Label>
+              <Input id="location" name="location" placeholder="Dhaka / Remote" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="employmentType" className="text-xs">
+                Type
+              </Label>
+              <Select name="employmentType" defaultValue="full_time">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full_time">Full-time</SelectItem>
+                  <SelectItem value="part_time">Part-time</SelectItem>
+                  <SelectItem value="contract">Contract</SelectItem>
+                  <SelectItem value="intern">Intern</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">

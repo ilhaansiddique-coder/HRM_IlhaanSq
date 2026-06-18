@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Plus } from "lucide-react";
+import { Plus, CalendarRange } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -50,10 +51,12 @@ export function NewCycleDialog() {
           <Plus className="h-4 w-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="!h-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Cycle</DialogTitle>
-          <DialogDescription>Create a performance review cycle.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <CalendarRange className="h-5 w-5 text-primary" />
+            New Cycle
+          </DialogTitle>
         </DialogHeader>
         <form
           action={async (formData) => {
@@ -88,13 +91,13 @@ export function NewCycleDialog() {
               <Label htmlFor="startDate" className="text-xs">
                 From
               </Label>
-              <Input id="startDate" name="startDate" type="date" required />
+              <DatePicker id="startDate" name="startDate" required placeholder="Select date" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="endDate" className="text-xs">
                 To
               </Label>
-              <Input id="endDate" name="endDate" type="date" required />
+              <DatePicker id="endDate" name="endDate" required placeholder="Select date" />
             </div>
           </div>
           <Button type="submit" className="w-full">

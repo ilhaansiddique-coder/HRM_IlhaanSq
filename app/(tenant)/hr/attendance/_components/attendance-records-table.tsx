@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Eye, SquarePen, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import {
   Dialog,
   DialogContent,
@@ -72,7 +72,6 @@ function toLocalInput(iso: string | null): string {
 }
 
 export function AttendanceRecordsTable({ rows }: { rows: AttendanceRow[] }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [viewing, setViewing] = useState<AttendanceRow | null>(null);
   const [editing, setEditing] = useState<AttendanceRow | null>(null);
@@ -85,7 +84,6 @@ export function AttendanceRecordsTable({ rows }: { rows: AttendanceRow[] }) {
       if (res.ok) {
         toast.success("Attendance updated");
         setEditing(null);
-        router.refresh();
       } else {
         toast.error(res.error ?? "Failed to update record");
       }
@@ -187,7 +185,6 @@ export function AttendanceRecordsTable({ rows }: { rows: AttendanceRow[] }) {
               return deleteAttendanceAction(fd);
             })
           );
-          router.refresh();
         }}
         emptyState={
           <p className="text-sm text-muted-foreground">
@@ -255,22 +252,22 @@ export function AttendanceRecordsTable({ rows }: { rows: AttendanceRow[] }) {
                     <Label className="text-xs" htmlFor="att-checkin">
                       Check-in
                     </Label>
-                    <Input
+                    <DateTimePicker
                       id="att-checkin"
                       name="checkIn"
-                      type="datetime-local"
                       defaultValue={toLocalInput(editing.checkIn)}
+                      placeholder="Check-in time"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs" htmlFor="att-checkout">
                       Check-out
                     </Label>
-                    <Input
+                    <DateTimePicker
                       id="att-checkout"
                       name="checkOut"
-                      type="datetime-local"
                       defaultValue={toLocalInput(editing.checkOut)}
+                      placeholder="Check-out time"
                     />
                   </div>
                 </div>

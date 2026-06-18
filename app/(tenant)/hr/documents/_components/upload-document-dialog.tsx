@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -135,7 +136,7 @@ export function UploadDocumentDialog({
             <Label htmlFor="expiresAt" className="text-xs">
               Expiry date
             </Label>
-            <Input id="expiresAt" name="expiresAt" type="date" />
+            <DatePicker id="expiresAt" name="expiresAt" placeholder="Select date" showPresets />
           </div>
           <div className="flex flex-1 flex-col space-y-1.5">
             <Label htmlFor="description" className="text-xs">

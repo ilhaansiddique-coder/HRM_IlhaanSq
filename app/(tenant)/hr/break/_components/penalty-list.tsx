@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { applyBreakPenaltyAction, waiveBreakPenaltyAction, deleteBreakPenaltyAction } from "../../actions";
-import { useRouter } from "next/navigation";
 import { Check, X, Trash2, Loader2 } from "lucide-react";
 
 interface Penalty {
@@ -26,7 +25,6 @@ export function PenaltyList({
   penalties: Penalty[];
   isAdmin: boolean;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [actionId, setActionId] = useState<string | null>(null);
 
@@ -40,7 +38,6 @@ export function PenaltyList({
         const fd = new FormData();
         fd.set("penaltyId", penaltyId);
         await action(fd);
-        router.refresh();
       } catch (_) {
         /* handled by revalidation */
       } finally {

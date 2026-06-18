@@ -18,6 +18,7 @@ export function SettingsTabs({
   leaveTypes,
   advances,
   assignSalary,
+  holidays,
 }: {
   business: any;
   system: any;
@@ -26,6 +27,7 @@ export function SettingsTabs({
   leaveTypes?: ReactNode;
   advances?: ReactNode;
   assignSalary?: ReactNode;
+  holidays?: ReactNode;
 }) {
   return (
     <Tabs defaultValue="business" className="w-full">
@@ -46,6 +48,9 @@ export function SettingsTabs({
         )}
         {assignSalary != null && (
           <TabsTrigger value="assign-salary">Assign Salary</TabsTrigger>
+        )}
+        {holidays != null && (
+          <TabsTrigger value="holidays">Holidays</TabsTrigger>
         )}
       </TabsList>
 
@@ -206,6 +211,12 @@ export function SettingsTabs({
       {assignSalary != null && (
         <TabsContent value="assign-salary" className="mt-4">
           {assignSalary}
+        </TabsContent>
+      )}
+
+      {holidays != null && (
+        <TabsContent value="holidays" className="mt-4">
+          {holidays}
         </TabsContent>
       )}
     </Tabs>

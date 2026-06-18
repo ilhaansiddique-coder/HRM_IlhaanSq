@@ -27,6 +27,9 @@ import {
   Menu,
   Inbox,
   CheckCircle2,
+  ListTodo,
+  BarChart3,
+  History,
   XCircle,
   Plus,
   UserCog,
@@ -216,6 +219,10 @@ function AppSidebar({
   const [documentsOpen, setDocumentsOpen] = useState(
     isRouteActive("/hr/documents/categories")
   );
+  // Tasks submenu — same chevron-only toggle behaviour.
+  const [tasksOpen, setTasksOpen] = useState(
+    isRouteActive("/hr/tasks/history") || isRouteActive("/hr/tasks/reports")
+  );
 
   // On mobile, open the top-level groups by default so every menu item is
   // visible openly in the drawer. Desktop keeps them collapsed unless you're
@@ -236,6 +243,7 @@ function AppSidebar({
   if (isEmployee) {
     const employeeMenu = [
       { title: "Overview", url: "/employee", icon: Home },
+      { title: "Tasks", url: "/hr/tasks", icon: ListTodo },
       { title: "Attendance", url: "/hr/attendance", icon: CalendarClock },
       { title: "Break Time", url: "/hr/break", icon: Coffee },
       { title: "Leave", url: "/hr/leave", icon: CalendarDays },
@@ -360,12 +368,64 @@ function AppSidebar({
                 { href: "/hr/attendance", icon: CalendarClock, label: "Attendance", active: isRouteActive("/hr/attendance") },
                 { href: "/hr/break", icon: Coffee, label: "Break Time", active: isRouteActive("/hr/break") },
                 { href: "/hr/leave", icon: CalendarDays, label: "Leave", active: isRouteActive("/hr/leave") },
+                { href: "/hr/tasks", icon: ListTodo, label: "Tasks", active: isRouteActive("/hr/tasks") },
                 { href: "/hr/payroll", icon: Wallet, label: "Payroll", active: isRouteActive("/hr/payroll") },
                 { href: "/hr/performance", icon: Target, label: "Performance", active: isRouteActive("/hr/performance") },
                 { href: "/hr/recruitment", icon: UserPlus, label: "Recruitment", active: isRouteActive("/hr/recruitment") },
                 { href: "/hr/learning", icon: GraduationCap, label: "Learning", active: isRouteActive("/hr/learning") },
                 { href: "/hr/documents", icon: FolderLock, label: "Documents", active: isRouteActive("/hr/documents") },
               ].map(({ href, icon: Icon, label, active }) => {
+                // Tasks: label navigates to /hr/tasks; chevron (only) opens the
+                // My Tasks + Habits + History + Reports submenu.
+                if (href === "/hr/tasks") {
+                  return (
+                    <SidebarMenuItem key={href}>
+                      <div className="relative">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={isCollapsed ? label : undefined}
+                          className={navClass(active)}
+                        >
+                          <NavLink href={href}>
+                            <span className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 pr-8 text-sm font-medium group-data-[collapsible=icon]:!px-0 group-data-[collapsible=icon]:!py-0 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+                              <Icon className="h-5 w-5" />
+                              {!isCollapsed && <span>{label}</span>}
+                            </span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                        {!isCollapsed && (
+                          <button
+                            type="button"
+                            aria-label="Toggle Tasks submenu"
+                            onClick={() => setTasksOpen((o) => !o)}
+                            className="absolute right-1.5 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+                          >
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${tasksOpen ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        )}
+                      </div>
+                      {tasksOpen && !isCollapsed && (
+                        <SidebarMenuSub>
+                          <TenantSubLink
+                            href="/hr/tasks/history"
+                            icon={<History className="h-4 w-4" />}
+                            label="History"
+                            active={isRouteActive("/hr/tasks/history")}
+                          />
+                          <TenantSubLink
+                            href="/hr/tasks/reports"
+                            icon={<BarChart3 className="h-4 w-4" />}
+                            label="Reports"
+                            active={isRouteActive("/hr/tasks/reports")}
+                          />
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                }
                 // Performance: label navigates to /hr/performance; chevron
                 // (only) opens the Cycles + Goals submenu.
                 if (href === "/hr/performance") {
@@ -824,6 +884,7 @@ function MobileBottomNav({
     role === "employee"
       ? [
           { label: "Overview", to: "/employee", icon: Home },
+          { label: "Tasks", to: "/hr/tasks", icon: ListTodo },
           { label: "Attendance", to: "/hr/attendance", icon: CalendarClock },
           { label: "Break", to: "/hr/break", icon: Coffee },
           { label: "Leave", to: "/hr/leave", icon: CalendarDays },

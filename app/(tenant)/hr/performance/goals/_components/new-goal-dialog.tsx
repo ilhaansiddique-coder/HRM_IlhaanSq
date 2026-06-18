@@ -97,8 +97,8 @@ export function NewGoalDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="okr">OKR</SelectItem>
-                <SelectItem value="kpi">KPI</SelectItem>
+                <SelectItem value="okr">OKR (Objectives &amp; Key Results)</SelectItem>
+                <SelectItem value="kpi">KPI (Key Performance Indicator)</SelectItem>
               </SelectContent>
             </Select>
           </div>

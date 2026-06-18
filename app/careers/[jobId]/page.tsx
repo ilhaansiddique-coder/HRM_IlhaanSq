@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getJobById } from "@/lib/services/hr/recruitment.service";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, MapPin, Clock, DollarSign } from "lucide-react";
+import { Briefcase, MapPin, DollarSign } from "lucide-react";
 import { ApplyForm } from "./_components/apply-form";
 
 export default async function PublicCareersJobPage({
@@ -23,17 +22,8 @@ export default async function PublicCareersJobPage({
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-10">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Back to Home
-          </Link>
-        </div>
-
         <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
           <div>
             <div className="mb-6">

@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { assertTenantOwns } from "./_shared";
 import { createNotification } from "../notifications-center.service";
+import { getWorkingDayChecker } from "./holiday.service";
 
 export async function listAttendance(
   tenantId: string,
@@ -32,12 +33,15 @@ const LATE_TO_ABSENCE_RATIO = 3;
 // overrides it via the Late Threshold setting.
 const DEFAULT_LATE_THRESHOLD = "09:00";
 
-// Friday is the weekly holiday. AttendanceRecord.date is a DATE column
-// (stored at UTC midnight), so use getUTCDay() (Sun=0 … Fri=5 … Sat=6) to
-// avoid timezone drift.
+// Weekly off day(s). Bangladesh default = Friday, but admins configure this via
+// SystemSettings.weekendDays. AttendanceRecord.date is a DATE column (stored at
+// UTC midnight), so use getUTCDay() (Sun=0 … Fri=5 … Sat=6) to avoid tz drift.
 export const WEEKLY_HOLIDAY_DOW = 5;
-export function isWeeklyHoliday(date: Date | string): boolean {
-  return new Date(date).getUTCDay() === WEEKLY_HOLIDAY_DOW;
+export function isWeeklyHoliday(
+  date: Date | string,
+  weekendDays: number[] = [WEEKLY_HOLIDAY_DOW]
+): boolean {
+  return weekendDays.includes(new Date(date).getUTCDay());
 }
 
 // ─── Timezone-correct "business day" helpers ────────────────
@@ -103,9 +107,10 @@ export async function checkIn(tenantId: string, employeeId: string) {
   const now = new Date();
   const settings = await prisma.systemSettings.findUnique({
     where: { tenantId },
-    select: { lateThreshold: true, timezone: true },
+    select: { lateThreshold: true, timezone: true, weekendDays: true },
   });
   const tz = settings?.timezone?.trim() || "UTC";
+  const weekendDays = settings?.weekendDays?.length ? settings.weekendDays : [WEEKLY_HOLIDAY_DOW];
   const today = businessDate(tz, now); // UTC-midnight of tenant-local date
   const threshold = settings?.lateThreshold?.trim() || DEFAULT_LATE_THRESHOLD;
   const [th, tm] = threshold.split(":").map(Number);
@@ -116,11 +121,22 @@ export async function checkIn(tenantId: string, employeeId: string) {
   let notes: string | undefined;
   let lateMinutes = 0;
 
-  if (isWeeklyHoliday(today)) {
-    // Working the weekly holiday (Friday) → never late; counts as an extra
-    // duty day in payroll.
+  // A configured weekly off day OR an admin-defined holiday → worked = extra duty.
+  // Recurring holidays match on month-day in any year; fixed ones on exact date.
+  const holidays = await prisma.holiday.findMany({
+    where: { tenantId },
+    select: { date: true, name: true, isRecurring: true },
+  });
+  const todayKey = today.toISOString().slice(0, 10);
+  const todayMmdd = today.toISOString().slice(5, 10);
+  const holiday = holidays.find((h) =>
+    h.isRecurring
+      ? h.date.toISOString().slice(5, 10) === todayMmdd
+      : h.date.toISOString().slice(0, 10) === todayKey
+  );
+  if (isWeeklyHoliday(today, weekendDays) || holiday) {
     status = "present";
-    notes = "Worked on weekly holiday (Friday) — counts as extra duty";
+    notes = `Worked on ${holiday ? holiday.name : "weekly off day"} — counts as extra duty`;
   } else if (nowMinutes > thresholdMinutes) {
     status = "late";
     lateMinutes = nowMinutes - thresholdMinutes;
@@ -445,23 +461,26 @@ export async function getLateToAbsenceDetail(
   absenceDays: number;
   perMonth: { month: string; lates: number; absences: number }[];
 }> {
-  const lateRecords = await prisma.attendanceRecord.findMany({
-    where: {
-      tenantId,
-      employeeId,
-      status: "late",
-      date: { gte: from, lte: to },
-    },
-    orderBy: { date: "asc" },
-    select: { date: true },
-  });
+  const [lateRecords, wd] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: {
+        tenantId,
+        employeeId,
+        status: "late",
+        date: { gte: from, lte: to },
+      },
+      orderBy: { date: "asc" },
+      select: { date: true },
+    }),
+    getWorkingDayChecker(tenantId),
+  ]);
 
-  // Bucket by calendar month (UTC — date is a DATE column). Skip the weekly
-  // holiday defensively.
+  // Bucket by calendar month (UTC — date is a DATE column). Skip non-working
+  // days (weekend + holidays) defensively.
   const monthly = new Map<string, number>();
   for (const r of lateRecords) {
     const d = new Date(r.date);
-    if (isWeeklyHoliday(d)) continue;
+    if (!wd.isWorkingDay(d)) continue;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     monthly.set(key, (monthly.get(key) ?? 0) + 1);
   }
@@ -493,21 +512,24 @@ export async function countLateToAbsenceBatch(
 ): Promise<Map<string, number>> {
   if (employeeIds.length === 0) return new Map();
 
-  const lateRecords = await prisma.attendanceRecord.findMany({
-    where: {
-      tenantId,
-      employeeId: { in: employeeIds },
-      status: "late",
-      date: { gte: from, lte: to },
-    },
-    select: { employeeId: true, date: true },
-  });
+  const [lateRecords, wd] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: {
+        tenantId,
+        employeeId: { in: employeeIds },
+        status: "late",
+        date: { gte: from, lte: to },
+      },
+      select: { employeeId: true, date: true },
+    }),
+    getWorkingDayChecker(tenantId),
+  ]);
 
-  // employeeId → monthKey → late count (skip the weekly holiday defensively).
+  // employeeId → monthKey → late count (skip non-working days defensively).
   const perEmpMonth = new Map<string, Map<string, number>>();
   for (const r of lateRecords) {
     const d = new Date(r.date);
-    if (isWeeklyHoliday(d)) continue;
+    if (!wd.isWorkingDay(d)) continue;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     let months = perEmpMonth.get(r.employeeId);
     if (!months) {
@@ -541,27 +563,30 @@ export async function getEmployeeAttendanceSummary(
     from ?? new Date(now.getFullYear(), now.getMonth() - 2, 1);
   const end = to ?? now;
 
-  const rows = await prisma.attendanceRecord.findMany({
-    where: { tenantId, employeeId, date: { gte: start, lte: end } },
-    orderBy: { date: "desc" },
-    select: {
-      id: true,
-      date: true,
-      status: true,
-      checkIn: true,
-      checkOut: true,
-      workHours: true,
-      notes: true,
-    },
-    take: 400,
-  });
+  const [rows, wd] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: { tenantId, employeeId, date: { gte: start, lte: end } },
+      orderBy: { date: "desc" },
+      select: {
+        id: true,
+        date: true,
+        status: true,
+        checkIn: true,
+        checkOut: true,
+        workHours: true,
+        notes: true,
+      },
+      take: 400,
+    }),
+    getWorkingDayChecker(tenantId),
+  ]);
 
   let present = 0;
   let late = 0;
   let absent = 0;
   let holidayWorked = 0;
   for (const r of rows) {
-    if (isWeeklyHoliday(r.date) && r.checkIn) holidayWorked++;
+    if (!wd.isWorkingDay(r.date) && r.checkIn) holidayWorked++;
     else if (r.status === "late") late++;
     else if (r.status === "absent") absent++;
     else if (r.status === "present" || r.checkIn) present++;
@@ -579,7 +604,7 @@ export async function getEmployeeAttendanceSummary(
       checkOut: r.checkOut ? r.checkOut.toISOString() : null,
       workHours: r.workHours ? Number(r.workHours) : null,
       notes: r.notes,
-      isHoliday: isWeeklyHoliday(r.date),
+      isHoliday: !wd.isWorkingDay(r.date),
     })),
   };
 }

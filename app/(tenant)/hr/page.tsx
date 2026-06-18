@@ -128,7 +128,7 @@ export default async function HROverviewPage() {
             <ModuleLink href="/hr/attendance" title="Attendance" desc="Daily check-in/out tracking" />
             <ModuleLink href="/hr/leave" title="Leave Management" desc="Multi-policy leave engine" />
             <ModuleLink href="/hr/payroll" title="Payroll Engine" desc="Multi-currency, statutory" />
-            <ModuleLink href="/hr/performance" title="Performance" desc="OKR / KPI / 360 reviews" />
+            <ModuleLink href="/hr/performance" title="Performance" desc="OKR (Objectives & Key Results) / KPI (Key Performance Indicator) / 360 reviews" />
             <ModuleLink href="/hr/recruitment" title="Recruitment (ATS)" desc="Pipeline, JD, offers" />
             <ModuleLink href="/hr/learning" title="Learning (LMS)" desc="Courses & certifications" />
             <ModuleLink href="/hr/documents" title="Documents" desc="e-Sign, contracts, DMS" />

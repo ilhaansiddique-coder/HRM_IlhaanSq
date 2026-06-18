@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -119,11 +119,11 @@ export function LeaveRequestForm({
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">
           <Label htmlFor="startDate" className="text-xs">From</Label>
-          <Input id="startDate" name="startDate" type="date" required />
+          <DatePicker id="startDate" name="startDate" required placeholder="Select date" showPresets />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="endDate" className="text-xs">To</Label>
-          <Input id="endDate" name="endDate" type="date" required />
+          <DatePicker id="endDate" name="endDate" required placeholder="Select date" showPresets />
         </div>
       </div>
       <div className="space-y-1.5">

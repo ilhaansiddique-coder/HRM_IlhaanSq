@@ -64,6 +64,7 @@ export type AdminNotification = {
   body: string | null;
   entityType: string | null;
   link: string | null;
+  actorId: string | null;
   actorName: string | null;
   severity: string;
   createdAt: string;
@@ -100,6 +101,7 @@ export async function listAdminNotifications(
     body: n.body,
     entityType: n.entityType,
     link: n.link,
+    actorId: n.actorId,
     actorName: n.actorName,
     severity: n.severity,
     createdAt: n.createdAt.toISOString(),

@@ -147,7 +147,7 @@ export const PERMISSION_CATEGORIES = {
       { key: "hr.performance.view_team", label: "View Team's Performance" },
       { key: "hr.performance.view_all", label: "View All Performance Data" },
       { key: "hr.performance.cycles.manage", label: "Create / Manage Review Cycles" },
-      { key: "hr.performance.goals.create", label: "Create Goals (OKR / KPI)" },
+      { key: "hr.performance.goals.create", label: "Create Goals (OKR — Objectives & Key Results / KPI — Key Performance Indicator)" },
       { key: "hr.performance.goals.edit_own", label: "Edit Own Goals" },
       { key: "hr.performance.goals.edit_team", label: "Edit Team's Goals" },
       { key: "hr.performance.goals.update_progress", label: "Update Goal Progress" },

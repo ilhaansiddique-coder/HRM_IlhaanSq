@@ -1,6 +1,7 @@
 "use server";
 
 import { requireTenant } from "@/lib/auth";
+import { setRequestActor } from "@/lib/request-actor";
 import { revalidatePath } from "next/cache";
 import { createApprovalRequest } from "@/lib/services/approvals.service";
 import { v2 as cloudinary } from "cloudinary";
@@ -137,6 +138,7 @@ export async function createSalaryStructureAction(
   formData: FormData
 ): Promise<StructureActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const name = formData.get("name") as string;
   return submitPayrollConfig(
     session,
@@ -151,6 +153,7 @@ export async function updateSalaryStructureAction(
   formData: FormData
 ): Promise<StructureActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const description = (formData.get("description") as string)?.trim();
   const name = (formData.get("name") as string).trim();
   return submitPayrollConfig(
@@ -173,6 +176,7 @@ export async function addSalaryComponentAction(
   formData: FormData
 ): Promise<StructureActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const name = formData.get("name") as string;
   return submitPayrollConfig(
     session,
@@ -198,6 +202,7 @@ export async function updateSalaryComponentAction(
   formData: FormData
 ): Promise<StructureActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   return submitPayrollConfig(
     session,
     "updateSalaryComponent",
@@ -223,6 +228,7 @@ export async function deleteSalaryComponentAction(
   formData: FormData
 ): Promise<StructureActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   try {
     return await submitPayrollConfig(
       session,
@@ -241,6 +247,7 @@ export async function deleteSalaryComponentAction(
 
 export async function createStandardStructureAction(): Promise<StructureActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   try {
     await ensureStandardSalaryStructure(session.tenantId);
     revalidatePath("/settings");
@@ -258,6 +265,7 @@ export async function seedStandardAllowanceRowsAction(
   formData: FormData
 ): Promise<StructureActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   try {
     await seedStandardAllowanceRows(
       session.tenantId,
@@ -275,6 +283,7 @@ export async function seedStandardAllowanceRowsAction(
 
 export async function runPayrollAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
 
   // Per-employee payroll adjustments (JSON map of employeeId -> {absentDays,
   // deduction, reason, extraDutyDays}), from the run-payroll adjustments table.
@@ -351,6 +360,7 @@ export async function runPayrollAction(formData: FormData) {
 
 export async function updatePayslipAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   // Only tenant owners/admins may edit a processed salary sheet. Resolve the
   // role live from the DB (the login JWT can be stale).
   const allowed =
@@ -410,6 +420,7 @@ export async function updatePayslipAction(formData: FormData) {
 
 export async function createAdvanceAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const amount = parseFloat(formData.get("amount") as string);
   // Optional recovery window (date-range picker). yyyy-MM-dd → UTC date.
   const toDate = (k: string) => {
@@ -462,6 +473,7 @@ export async function createAdvanceAction(formData: FormData) {
 
 export async function cancelAdvanceAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await cancelAdvance(session.tenantId, formData.get("id") as string);
   await syncAdvances(session.tenantId, "cancelled");
   revalidatePath("/hr/payroll/advances");
@@ -472,6 +484,7 @@ export async function updateAdvanceAction(
   formData: FormData
 ): Promise<ActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -504,6 +517,7 @@ export async function updateAdvanceAction(
 
 export async function assignSalaryAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const num = (k: string) => {
     const n = parseFloat(formData.get(k) as string);
     return Number.isFinite(n) && n >= 0 ? n : 0;
@@ -556,6 +570,7 @@ import {
 
 export async function createCycleAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createReviewCycle(session.tenantId, {
     name: formData.get("name") as string,
     type: (formData.get("type") as string) || "annual",
@@ -567,18 +582,21 @@ export async function createCycleAction(formData: FormData) {
 
 export async function activateCycleAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await activateCycle(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/performance/cycles");
 }
 
 export async function closeCycleAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await closeCycle(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/performance/cycles");
 }
 
 export async function createGoalAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createGoal(session.tenantId, {
     employeeId: formData.get("employeeId") as string,
     cycleId: (formData.get("cycleId") as string) || undefined,
@@ -599,6 +617,7 @@ export async function createGoalAction(formData: FormData) {
 
 export async function updateGoalAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await updateGoalProgress(session.tenantId, formData.get("id") as string, {
     currentValue: formData.get("currentValue")
       ? parseFloat(formData.get("currentValue") as string)
@@ -612,12 +631,14 @@ export async function updateGoalAction(formData: FormData) {
 
 export async function deleteGoalAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await deleteGoal(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/performance/goals");
 }
 
 export async function createReviewAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createReview(session.tenantId, {
     cycleId: formData.get("cycleId") as string,
     employeeId: formData.get("employeeId") as string,
@@ -645,6 +666,7 @@ import {
 
 export async function createJobAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const requestedStatus = (formData.get("status") as string) || "draft";
 
   // Publishing is gated. A job is ALWAYS created as a draft; if the user
@@ -685,6 +707,7 @@ export async function createJobAction(formData: FormData) {
 
 export async function changeJobStatusAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const id = formData.get("id") as string;
   const status = formData.get("status") as string;
 
@@ -723,6 +746,7 @@ export async function updateJobAction(
   formData: FormData
 ): Promise<{ ok: boolean; error?: string }> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const id = formData.get("id") as string;
   if (!id) return { ok: false, error: "Missing job id" };
   const title = (formData.get("title") as string)?.trim();
@@ -790,6 +814,7 @@ export async function deleteJobAction(
   formData: FormData
 ): Promise<{ ok: boolean; error?: string }> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const id = formData.get("id") as string;
   if (!id) return { ok: false, error: "Missing job id" };
   try {
@@ -823,6 +848,7 @@ export async function deleteJobAction(
 
 export async function createCandidateAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createCandidate(session.tenantId, {
     fullName: formData.get("fullName") as string,
     email: formData.get("email") as string,
@@ -839,6 +865,7 @@ export async function createCandidateAction(formData: FormData) {
 
 export async function createApplicationAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createApplication(session.tenantId, {
     candidateId: formData.get("candidateId") as string,
     jobPostingId: formData.get("jobPostingId") as string,
@@ -848,6 +875,7 @@ export async function createApplicationAction(formData: FormData) {
 
 export async function moveStageAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await moveApplicationStage(
     session.tenantId,
     formData.get("id") as string,
@@ -876,6 +904,7 @@ import {
 
 export async function createCourseAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createCourse(session.tenantId, {
     title: formData.get("title") as string,
     description: (formData.get("description") as string) || undefined,
@@ -893,12 +922,14 @@ export async function createCourseAction(formData: FormData) {
 
 export async function publishCourseAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await publishCourse(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/learning/courses");
 }
 
 export async function enrollAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await enrollEmployee(session.tenantId, {
     courseId: formData.get("courseId") as string,
     employeeId: formData.get("employeeId") as string,
@@ -908,6 +939,7 @@ export async function enrollAction(formData: FormData) {
 
 export async function updateProgressAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await updateEnrollmentProgress(
     session.tenantId,
     formData.get("id") as string,
@@ -928,6 +960,7 @@ import {
 
 export async function createDocCategoryAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createDocumentCategory(session.tenantId, {
     name: formData.get("name") as string,
     description: (formData.get("description") as string) || undefined,
@@ -941,6 +974,7 @@ export async function createDocCategoryAction(formData: FormData) {
 
 export async function deleteDocCategoryAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await deleteDocumentCategory(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/documents/categories");
 }
@@ -949,6 +983,7 @@ export async function uploadHrDocumentAction(
   formData: FormData
 ): Promise<{ url: string; name: string; size: number; mime: string; error?: string }> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
 
   const hdrs = await headers();
   const xf = hdrs.get("x-forwarded-for");
@@ -1005,6 +1040,7 @@ export async function uploadHrDocumentAction(
 
 export async function createDocumentAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const fileSizeRaw = formData.get("fileSize") as string | null;
   const fileSize = fileSizeRaw ? Number(fileSizeRaw) : undefined;
   await createDocument(session.tenantId, {
@@ -1025,6 +1061,7 @@ export async function createDocumentAction(formData: FormData) {
 
 export async function signDocumentAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await markDocumentSigned(
     session.tenantId,
     formData.get("id") as string,
@@ -1035,6 +1072,7 @@ export async function signDocumentAction(formData: FormData) {
 
 export async function deleteDocumentAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await deleteDocument(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/documents");
 }
@@ -1070,6 +1108,7 @@ export async function createPayrollColumnAction(
   formData: FormData
 ): Promise<ActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -1088,6 +1127,7 @@ export async function updatePayrollColumnAction(
   formData: FormData
 ): Promise<ActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -1110,6 +1150,7 @@ export async function deletePayrollColumnAction(
   formData: FormData
 ): Promise<ActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -1128,6 +1169,7 @@ export async function setPayslipPaidAction(
   formData: FormData
 ): Promise<ActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -1162,6 +1204,7 @@ export async function refreshRunAdvancesAction(
   formData: FormData
 ): Promise<ActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -1194,6 +1237,7 @@ export async function setPayslipCustomValueAction(
   formData: FormData
 ): Promise<ActionResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -1238,6 +1282,7 @@ export async function setBaseColumnAction(
   formData: FormData
 ): Promise<BaseResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -1273,6 +1318,7 @@ export async function clearBaseColumnAction(
   formData: FormData
 ): Promise<BaseResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));
@@ -1300,6 +1346,7 @@ export async function restoreRecomputeBackupAction(
   formData: FormData
 ): Promise<BaseResult> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const allowed =
     session.isSuperAdmin ||
     (await isTenantAdmin(session.tenantId, session.userId));

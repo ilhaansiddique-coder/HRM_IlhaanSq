@@ -1,6 +1,7 @@
 "use server";
 
 import { requireTenant } from "@/lib/auth";
+import { setRequestActor } from "@/lib/request-actor";
 import { prisma } from "@/lib/db";
 import { resolveLinkedApproval } from "@/lib/services/approvals.service";
 import { onboardEmployeeWithPassword } from "@/lib/services/employee-onboarding.service";
@@ -65,6 +66,7 @@ export async function getEmployeeProfileAction(
   id: string
 ): Promise<EmployeeProfile | null> {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   return getEmployeeProfile(session.tenantId, id);
 }
 
@@ -73,6 +75,7 @@ export async function createEmployeeAction(
 ): Promise<EmployeeActionResult> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
 
     const tempPassword = ((formData.get("tempPassword") as string | null) ?? "").trim();
     if (tempPassword && tempPassword.length < 6) {
@@ -146,6 +149,7 @@ export async function updateEmployeeAction(
 ): Promise<EmployeeActionResult> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     await updateEmployee(session.tenantId, {
       id: formData.get("id") as string,
       fullName: formData.get("fullName") as string,
@@ -171,6 +175,7 @@ export async function updateEmployeeAction(
 
 export async function terminateEmployeeAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await terminateEmployee(
     session.tenantId,
     formData.get("id") as string,
@@ -183,6 +188,7 @@ export async function terminateEmployeeAction(formData: FormData) {
 
 export async function deleteEmployeeAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await deleteEmployee(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/employees");
   revalidatePath("/hr");
@@ -192,6 +198,7 @@ export async function deleteEmployeeAction(formData: FormData) {
 
 export async function createDepartmentAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createDepartment(session.tenantId, {
     name: formData.get("name") as string,
     code: (formData.get("code") as string) || undefined,
@@ -208,6 +215,7 @@ export async function updateDepartmentAction(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     const id = formData.get("id") as string;
     if (!id) return { ok: false, error: "Missing department id" };
     const name = (formData.get("name") as string)?.trim();
@@ -237,6 +245,7 @@ export async function deleteDepartmentAction(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     await deleteDepartment(session.tenantId, formData.get("id") as string);
     revalidatePath("/hr/departments");
     revalidatePath("/hr");
@@ -253,6 +262,7 @@ export async function deleteDepartmentAction(
 
 export async function createPositionAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createPosition(session.tenantId, {
     title: formData.get("title") as string,
     departmentId: (formData.get("departmentId") as string) || undefined,
@@ -270,6 +280,7 @@ export async function updatePositionAction(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     const id = formData.get("id") as string;
     if (!id) return { ok: false, error: "Missing position id" };
     const title = (formData.get("title") as string)?.trim();
@@ -301,6 +312,7 @@ export async function deletePositionAction(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     await deletePosition(session.tenantId, formData.get("id") as string);
     revalidatePath("/hr/positions");
     revalidatePath("/hr");
@@ -317,6 +329,7 @@ export async function deletePositionAction(
 
 export async function createLeaveTypeAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createLeaveType(session.tenantId, {
     name: formData.get("name") as string,
     code: formData.get("code") as string,
@@ -333,6 +346,7 @@ export async function createLeaveTypeAction(formData: FormData) {
 
 export async function deleteLeaveTypeAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await deleteLeaveType(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/leave/types");
 }
@@ -341,6 +355,7 @@ export async function deleteLeaveTypeAction(formData: FormData) {
 
 export async function createLeaveRequestAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const isAdmin = ["owner", "admin", "superadmin"].includes(session.role ?? "");
 
   // Non-admins may only file leave for THEIR OWN linked employee record — never
@@ -373,6 +388,7 @@ export async function createLeaveRequestAction(formData: FormData) {
 
 export async function approveLeaveAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const id = formData.get("id") as string;
   await approveLeaveRequest(session.tenantId, id, session.userId);
   // Keep the central /admin inbox consistent when decided from /hr/leave.
@@ -387,6 +403,7 @@ export async function approveLeaveAction(formData: FormData) {
 
 export async function rejectLeaveAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const id = formData.get("id") as string;
   const reason = (formData.get("reason") as string) || undefined;
   await rejectLeaveRequest(session.tenantId, id, session.userId, reason);
@@ -407,6 +424,7 @@ export async function rejectLeaveAction(formData: FormData) {
 
 export async function checkInAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await checkIn(session.tenantId, formData.get("employeeId") as string);
   revalidatePath("/hr/attendance");
   revalidatePath("/hr");
@@ -414,6 +432,7 @@ export async function checkInAction(formData: FormData) {
 
 export async function checkOutAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await checkOut(session.tenantId, formData.get("employeeId") as string);
   revalidatePath("/hr/attendance");
 }
@@ -423,6 +442,7 @@ export async function updateAttendanceAction(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     const checkInRaw = (formData.get("checkIn") as string)?.trim();
     const checkOutRaw = (formData.get("checkOut") as string)?.trim();
     await updateAttendanceRecord(session.tenantId, formData.get("id") as string, {
@@ -443,6 +463,7 @@ export async function updateAttendanceAction(
 
 export async function deleteAttendanceAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await deleteAttendanceRecord(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/attendance");
   revalidatePath("/hr");
@@ -450,6 +471,7 @@ export async function deleteAttendanceAction(formData: FormData) {
 
 export async function updateLateThresholdAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const raw = formData.get("lateThreshold") as string;
   await updateSystemSettings(session.tenantId, {
     lateThreshold: raw?.trim() || null,
@@ -461,6 +483,7 @@ export async function updateLateThresholdAction(formData: FormData) {
 
 export async function startBreakAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const note = ((formData.get("note") as string | null) ?? "").trim();
   await startBreak(session.tenantId, formData.get("employeeId") as string, {
     note,
@@ -470,6 +493,7 @@ export async function startBreakAction(formData: FormData) {
 
 export async function endBreakAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await endBreak(
     session.tenantId,
     formData.get("employeeId") as string,
@@ -480,6 +504,7 @@ export async function endBreakAction(formData: FormData) {
 
 export async function logBreakAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await logBreak(session.tenantId, formData.get("employeeId") as string, {
     breakStart: new Date(formData.get("breakStart") as string),
     breakEnd: new Date(formData.get("breakEnd") as string),
@@ -493,6 +518,7 @@ export async function updateBreakSessionAction(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const session = await requireTenant();
+    setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
     const startRaw = (formData.get("breakStart") as string)?.trim();
     const endRaw = (formData.get("breakEnd") as string)?.trim();
     await updateBreakSession(session.tenantId, formData.get("id") as string, {
@@ -512,12 +538,14 @@ export async function updateBreakSessionAction(
 
 export async function deleteBreakSessionAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await deleteBreakSession(session.tenantId, formData.get("id") as string);
   revalidatePath("/hr/break");
 }
 
 export async function createBreakPenaltyAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await createBreakPenalty(session.tenantId, {
     employeeId: formData.get("employeeId") as string,
     breakSessionId: (formData.get("breakSessionId") as string) || undefined,
@@ -530,6 +558,7 @@ export async function createBreakPenaltyAction(formData: FormData) {
 
 export async function applyBreakPenaltyAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await applyBreakPenalty(
     session.tenantId,
     formData.get("penaltyId") as string,
@@ -540,18 +569,21 @@ export async function applyBreakPenaltyAction(formData: FormData) {
 
 export async function waiveBreakPenaltyAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await waiveBreakPenalty(session.tenantId, formData.get("penaltyId") as string);
   revalidatePath("/hr/break");
 }
 
 export async function deleteBreakPenaltyAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   await deleteBreakPenalty(session.tenantId, formData.get("penaltyId") as string);
   revalidatePath("/hr/break");
 }
 
 export async function updateBreakTimeThresholdAction(formData: FormData) {
   const session = await requireTenant();
+  setRequestActor({ userId: session.userId, userName: session.name || session.email || null });
   const minutes = parseInt(formData.get("breakTimeThreshold") as string, 10);
   if (isNaN(minutes) || minutes < 1) throw new Error("Invalid threshold value");
   await updateBreakTimeThreshold(session.tenantId, minutes);

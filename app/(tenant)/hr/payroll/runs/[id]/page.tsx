@@ -16,8 +16,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw } from "lucide-react";
-import { refreshRunAdvancesFormAction } from "../../../actions-phase2";
 import { SalarySheet, type Slip, type CustomCol } from "./_components/salary-sheet";
 import { SalarySheetFullView } from "./_components/salary-sheet-full-view";
 import { ColumnManager, type ManagerCol } from "./_components/column-manager";
@@ -226,19 +224,6 @@ export default async function PayrollRunDetailPage({
                   columns={baseColumns}
                   baseFields={baseFields}
                 />
-                <form action={refreshRunAdvancesFormAction}>
-                  <input type="hidden" name="runId" value={id} />
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5"
-                    title="Re-sync the Advance column with the current Advances ledger (idempotent)"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Refresh advances
-                  </Button>
-                </form>
               </div>
             )}
           </div>

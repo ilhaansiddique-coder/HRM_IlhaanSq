@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { updateBreakTimeThresholdAction } from "../../actions";
-import { useRouter } from "next/navigation";
 
 export function BreakThresholdForm({
   defaultValue,
@@ -16,7 +15,6 @@ export function BreakThresholdForm({
   const [minutes, setMinutes] = useState(String(defaultValue));
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   function handleSave() {
     const val = parseInt(minutes, 10);
@@ -30,7 +28,6 @@ export function BreakThresholdForm({
         const fd = new FormData();
         fd.set("breakTimeThreshold", String(val));
         await updateBreakTimeThresholdAction(fd);
-        router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to update");
       }

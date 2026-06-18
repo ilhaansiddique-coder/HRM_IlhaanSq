@@ -1,5 +1,44 @@
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { publishRealtime } from "./realtime/bus";
+import { getRequestActor } from "./request-actor";
+
+// Map a Prisma model (entityType) to the page where that activity lives, so the
+// bell can deep-link straight to it. Employee has a detail route; the rest land
+// on their list page. Unmapped models fall back to the HR dashboard so every
+// notification is still clickable.
+const LINK_BASE: Record<string, string> = {
+  Employee: "/hr/employees",
+  Department: "/hr/departments",
+  Position: "/hr/positions",
+  AttendanceRecord: "/hr/attendance",
+  BreakSession: "/hr/break",
+  BreakPenalty: "/hr/break",
+  LeaveRequest: "/hr/leave",
+  LeaveType: "/hr/leave",
+  LeaveBalance: "/hr/leave",
+  Task: "/hr/tasks",
+  TaskComment: "/hr/tasks",
+  Goal: "/hr/performance/goals",
+  ReviewCycle: "/hr/performance/cycles",
+  Review: "/hr/performance/reviews",
+  Candidate: "/hr/recruitment/candidates",
+  JobPosting: "/hr/recruitment/jobs",
+  Application: "/hr/recruitment/pipeline",
+  Course: "/hr/learning/courses",
+  CourseModule: "/hr/learning/courses",
+  Enrollment: "/hr/learning/enrollments",
+  EmployeeDocument: "/hr/documents",
+  DocumentCategory: "/hr/documents/categories",
+  Certification: "/hr/employees",
+  EmployeeSalary: "/hr/payroll",
+  Holiday: "/settings",
+};
+
+function linkForEntity(model: string, entityId: string | null): string {
+  // Models with a real detail route deep-link by id; others go to the list page.
+  if (model === "Employee" && entityId) return `/hr/employees/${entityId}`;
+  return LINK_BASE[model] ?? "/hr";
+}
 
 // Global write → notification bridge.
 //
@@ -41,6 +80,12 @@ const DENYLIST = new Set<string>([
   // other high-frequency per-line / log tables
   "InventoryLog",
   "PaymentLog",
+  // task management: our own audit log + per-tick sub-tables would otherwise
+  // spam the feed on every checklist tick / habit check-in. Task, Habit and
+  // TaskComment creates still notify (meaningful events).
+  "TaskActivity",
+  "ChecklistItem",
+  "HabitEntry",
 ]);
 
 const VERB: Record<string, string> = {
@@ -98,6 +143,11 @@ export function attachActivityNotifier(client: PrismaClient) {
         (r.code as string) ??
         null;
 
+      // Who performed this write (resolved from the request's session). null on
+      // system / unauthenticated paths (cron, webhooks) → shown as "System".
+      const actor = getRequestActor();
+      const link = linkForEntity(model, entityId ? String(entityId) : null);
+
       // Separate call; `Notification` is denylisted so this does not recurse.
       await client.notification.create({
         data: {
@@ -108,6 +158,9 @@ export function attachActivityNotifier(client: PrismaClient) {
           body: typeof label === "string" ? label : null,
           entityType: model,
           entityId: entityId ? String(entityId) : null,
+          link,
+          actorId: actor?.userId ?? null,
+          actorName: actor?.userName ?? null,
           severity: SEVERITY[action] ?? "info",
         },
       });

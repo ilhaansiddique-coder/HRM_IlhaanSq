@@ -86,6 +86,10 @@ export const getOptionalSession = cache(async (): Promise<AppSession | null> => 
 export async function requireAuth(): Promise<AppSession> {
   const session = await getSession();
   if (!session) redirect("/login");
+  // NOTE: actor attribution for the notification middleware is set via
+  // setRequestActor() in each server ACTION body — not here. enterWith() does
+  // not propagate out of requireAuth because getSession() is React-cache-wrapped
+  // and runs in a detached async context. See lib/request-actor.ts.
   return session;
 }
 

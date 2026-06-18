@@ -19,7 +19,9 @@ export type NotificationItem = {
   action: string;
   entityType: string;
   entityId: string | null;
+  actorId: string | null;
   actorName: string | null;
+  link: string | null;
   tenantName: string | null;
   createdAt: Date;
   details: Record<string, unknown> | null;
@@ -53,7 +55,9 @@ export async function getRecentNotifications(
       action: r.title,
       entityType: "",
       entityId: r.entityId,
+      actorId: r.actorId,
       actorName: r.actorName,
+      link: r.link,
       tenantName:
         "tenant" in r && r.tenant && typeof r.tenant === "object"
           ? (r.tenant as { name: string }).name

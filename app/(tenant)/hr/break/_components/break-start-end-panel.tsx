@@ -4,7 +4,6 @@ import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Coffee, TimerOff, Loader2, Play } from "lucide-react";
 import { startBreakAction, endBreakAction } from "../../actions";
-import { useRouter } from "next/navigation";
 
 type ActiveBreak = {
   id: string;
@@ -91,7 +90,6 @@ export function BreakStartEndPanel({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
-  const router = useRouter();
 
   function handleStart() {
     setError(null);
@@ -106,7 +104,6 @@ export function BreakStartEndPanel({
         fd.set("note", note.trim());
         await startBreakAction(fd);
         setNote("");
-        router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to start break");
       }
@@ -122,7 +119,6 @@ export function BreakStartEndPanel({
         fd.set("employeeId", employeeId);
         fd.set("breakSessionId", activeBreak.id);
         await endBreakAction(fd);
-        router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to end break");
       }
