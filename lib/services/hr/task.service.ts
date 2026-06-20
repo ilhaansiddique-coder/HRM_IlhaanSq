@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import type { Prisma, TaskStatus, TaskPriority } from "@prisma/client";
 import { assertTenantOwns } from "./_shared";
 import { getWorkingDayChecker } from "./holiday.service";
+import { businessDate } from "./attendance.service";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -106,6 +107,9 @@ export type TaskFilter = {
   status?: TaskStatus;
   open?: boolean; // only todo/in_progress/blocked
   dueBefore?: Date;
+  /** Top-bar date filter — bound the task list by due date (inclusive). */
+  dueFrom?: Date;
+  dueTo?: Date;
   q?: string;
 };
 
@@ -115,7 +119,12 @@ export async function listTasks(tenantId: string, filter: TaskFilter = {}) {
   if (filter.assigneeIds) where.assigneeId = { in: filter.assigneeIds };
   if (filter.status) where.status = filter.status;
   if (filter.open) where.status = { in: OPEN_STATUSES };
-  if (filter.dueBefore) where.dueDate = { lt: filter.dueBefore };
+  // Combine any due-date bounds (dueBefore + the range filter) into one filter.
+  const due: Prisma.DateTimeFilter = {};
+  if (filter.dueBefore) due.lt = filter.dueBefore;
+  if (filter.dueFrom) due.gte = filter.dueFrom;
+  if (filter.dueTo) due.lte = filter.dueTo;
+  if (Object.keys(due).length) where.dueDate = due;
   if (filter.q) where.title = { contains: filter.q, mode: "insensitive" };
 
   return prisma.task.findMany({
@@ -683,21 +692,52 @@ export async function deleteChecklistItem(tenantId: string, itemId: string, acto
 
 export async function getDashboardStats(
   tenantId: string,
-  scope?: { assigneeIds?: string[] }
+  scope?: { assigneeIds?: string[] },
+  // Optional top-bar date filter. Bounds the operational cards (open / overdue /
+  // status breakdown) by DUE DATE so they agree with the date-filtered task
+  // list/tabs. "Done this week" stays a fixed last-7-days metric by design.
+  range?: { from?: Date | null; to?: Date | null }
 ) {
   const base: Prisma.TaskWhereInput = { tenantId };
   if (scope?.assigneeIds) base.assigneeId = { in: scope.assigneeIds };
 
-  const weekAgo = today();
-  weekAgo.setDate(weekAgo.getDate() - 7);
+  const dueRange =
+    range?.from || range?.to
+      ? { ...(range?.from && { gte: range.from }), ...(range?.to && { lte: range.to }) }
+      : undefined;
+
+  // "Today" must be the tenant-local calendar day as a UTC-midnight Date.
+  // dueDate is a @db.Date column, so Prisma truncates this bound to its UTC
+  // date — passing a SERVER-local midnight (18:00Z the day before for UTC+6)
+  // made the overdue cutoff land a day early, so a task due "yesterday" counted
+  // as 0. businessDate(tz) is the same day key attendance/payroll already use,
+  // which keeps this card in agreement with the Overdue tab/table.
+  const settings = await prisma.systemSettings.findUnique({
+    where: { tenantId },
+    select: { timezone: true },
+  });
+  const todayDate = businessDate(settings?.timezone?.trim() || "UTC");
+  const weekAgo = new Date(todayDate);
+  weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
 
   const [open, overdue, completedThisWeek, byStatus] = await Promise.all([
-    prisma.task.count({ where: { ...base, status: { in: OPEN_STATUSES } } }),
     prisma.task.count({
-      where: { ...base, status: { in: OPEN_STATUSES }, dueDate: { lt: today() } },
+      where: { ...base, status: { in: OPEN_STATUSES }, ...(dueRange && { dueDate: dueRange }) },
     }),
+    prisma.task.count({
+      where: {
+        ...base,
+        status: { in: OPEN_STATUSES },
+        dueDate: { ...(dueRange ?? {}), lt: todayDate },
+      },
+    }),
+    // "Done this week" is intentionally NOT bounded by the due-date range.
     prisma.task.count({ where: { ...base, status: "done", completedAt: { gte: weekAgo } } }),
-    prisma.task.groupBy({ by: ["status"], where: base, _count: { _all: true } }),
+    prisma.task.groupBy({
+      by: ["status"],
+      where: { ...base, ...(dueRange && { dueDate: dueRange }) },
+      _count: { _all: true },
+    }),
   ]);
 
   return {
@@ -866,7 +906,7 @@ export async function getTeamPerformance(
       employeeId: e.id,
       fullName: e.fullName,
       empCode: e.empCode,
-      ...(await getEmployeePerformance(tenantId, e.id, from, to, wd.isWorkingDay)),
+      ...(await getEmployeePerformance(tenantId, e.id, from, to, (d) => wd.isWorkingDay(d, e.id))),
     }))
   );
   return rows.sort((a, b) => b.score - a.score);
@@ -917,9 +957,9 @@ export async function getMonthlyReport(
   const rows = await Promise.all(
     employees.map(async (e) => {
       const [today, wk, month] = await Promise.all([
-        getEmployeePerformance(tenantId, e.id, todayFrom, todayTo, wd.isWorkingDay),
-        getEmployeePerformance(tenantId, e.id, week.from, week.to, wd.isWorkingDay),
-        getEmployeePerformance(tenantId, e.id, monthFrom, monthTo, wd.isWorkingDay),
+        getEmployeePerformance(tenantId, e.id, todayFrom, todayTo, (d) => wd.isWorkingDay(d, e.id)),
+        getEmployeePerformance(tenantId, e.id, week.from, week.to, (d) => wd.isWorkingDay(d, e.id)),
+        getEmployeePerformance(tenantId, e.id, monthFrom, monthTo, (d) => wd.isWorkingDay(d, e.id)),
       ]);
       return {
         employeeId: e.id,

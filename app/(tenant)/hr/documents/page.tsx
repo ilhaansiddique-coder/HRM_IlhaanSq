@@ -25,12 +25,23 @@ import {
   deleteDocumentAction,
 } from "../actions-phase2";
 import { UploadDocumentDialog } from "./_components/upload-document-dialog";
+import { resolveDateBounds } from "@/lib/date-range";
 
-export default async function DocumentsOverviewPage() {
+export default async function DocumentsOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
+  // Top-bar date filter bounds the document list by upload time (all-time default).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
   const [stats, documents, categories, employees] = await Promise.all([
     getDocumentStats(session.tenantId),
-    listDocuments(session.tenantId),
+    listDocuments(session.tenantId, {
+      ...(start && { from: start }),
+      ...(end && { to: end }),
+    }),
     listDocumentCategories(session.tenantId),
     listEmployees(session.tenantId, { status: "active" }),
   ]);

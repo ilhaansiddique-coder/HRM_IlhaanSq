@@ -123,6 +123,7 @@ model Tenant {
   habitEntries       HabitEntry[]
   taskComments       TaskComment[]
   holidays           Holiday[]
+  employeeOffDays    EmployeeOffDay[]
 
   @@map("tenants")
 }
@@ -258,9 +259,11 @@ model Holiday {
   name        String
   type        HolidayType @default(public)
   isRecurring Boolean     @default(false) @map("is_recurring") // fixed-date, repeats every year
+  isTentative Boolean     @default(false) @map("is_tentative") // lunar/Eid: dates not yet confirmed
   createdAt   DateTime    @default(now()) @map("created_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appliedOffDays EmployeeOffDay[]
 
   @@unique([tenantId, date, name])
   @@index([tenantId, date])
@@ -444,6 +447,13 @@ model Employee {
   baseSalary        Decimal? @map("base_salary") @db.Decimal(12, 2)
   currency          String   @default("BDT")
 
+  // Per-employee schedule: custom weekly off (specific dates, the monthly grid)
+  // + lunch window. When usesCustomSchedule is true the off days REPLACE the
+  // tenant weekend in attendance/payroll working-day maths.
+  lunchStart         String?  @map("lunch_start")
+  lunchEnd           String?  @map("lunch_end")
+  usesCustomSchedule Boolean  @default(false) @map("uses_custom_schedule")
+
   // Meta
   photoUrl          String?  @map("photo_url")
   notes             String?
@@ -471,6 +481,7 @@ model Employee {
   documents      EmployeeDocument[]
   tasksAssigned  Task[]             @relation("TaskAssignee")
   habits         Habit[]            @relation("HabitOwner")
+  offDays        EmployeeOffDay[]
 
   @@unique([tenantId, empCode])
   @@unique([tenantId, email])
@@ -478,6 +489,28 @@ model Employee {
   @@index([tenantId, approvalStatus])
   @@index([tenantId, departmentId])
   @@map("employees")
+}
+
+/// A specific calendar date an individual employee is off (the monthly off-day
+/// grid). For custom-scheduled employees these dates are their weekend.
+model EmployeeOffDay {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  offDate    DateTime @map("off_date") @db.Date
+  // Set when this off-day was created by applying a holiday to the employee;
+  // NULL for manually-set off days. Lets admins see/undo applied holidays.
+  holidayId  String?  @map("holiday_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  holiday  Holiday?  @relation(fields: [holidayId], references: [id], onDelete: SetNull)
+
+  @@unique([employeeId, offDate])
+  @@index([tenantId, offDate])
+  @@index([holidayId])
+  @@map("employee_off_days")
 }
 
 model LeaveType {

@@ -10,6 +10,7 @@ import { LeaveTypesSection } from "./_components/leave-types-section";
 import { AdvancesSection } from "./_components/advances-section";
 import { AssignSalarySection } from "./_components/assign-salary-section";
 import { HolidaysSection } from "./_components/holidays-section";
+import { ScheduleSection } from "./_components/schedule-section";
 
 export default async function SettingsPage() {
   const session = await requireTenant();
@@ -32,7 +33,15 @@ export default async function SettingsPage() {
         leaveTypes={isAdmin ? <LeaveTypesSection /> : undefined}
         advances={isAdmin ? <AdvancesSection /> : undefined}
         assignSalary={isAdmin ? <AssignSalarySection /> : undefined}
-        holidays={isAdmin ? <HolidaysSection /> : undefined}
+        holidays={
+          isAdmin ? (
+            <div className="space-y-8">
+              <ScheduleSection />
+              <div className="border-t border-border/60" />
+              <HolidaysSection />
+            </div>
+          ) : undefined
+        }
       />
     </div>
   );

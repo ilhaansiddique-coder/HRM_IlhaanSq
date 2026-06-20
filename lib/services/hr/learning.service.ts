@@ -98,10 +98,19 @@ export async function addCourseModule(
 
 export async function listEnrollments(
   tenantId: string,
-  filters: { courseId?: string; employeeId?: string } = {}
+  filters: { courseId?: string; employeeId?: string; from?: Date; to?: Date } = {}
 ) {
+  const { courseId, employeeId, from, to } = filters;
   return prisma.enrollment.findMany({
-    where: { tenantId, ...filters },
+    where: {
+      tenantId,
+      ...(courseId && { courseId }),
+      ...(employeeId && { employeeId }),
+      // Top-bar date filter — bounds by when the employee was enrolled.
+      ...(from || to
+        ? { enrolledAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+        : {}),
+    },
     include: {
       course: { select: { id: true, title: true, category: true, durationHours: true } },
       employee: { select: { id: true, fullName: true, empCode: true } },
@@ -158,12 +167,23 @@ export async function updateEnrollmentProgress(
   return updated;
 }
 
-export async function getLearningStats(tenantId: string) {
+// Course counts are catalog snapshots (ignore the range); enrollment + completed
+// counts are bounded by `range` (enrolledAt) when the top-bar filter is set.
+export async function getLearningStats(
+  tenantId: string,
+  range?: { from?: Date | null; to?: Date | null }
+) {
+  const enrolledAt =
+    range?.from || range?.to
+      ? { ...(range?.from && { gte: range.from }), ...(range?.to && { lte: range.to }) }
+      : undefined;
   const [courseCount, publishedCount, enrollmentCount, completedCount] = await Promise.all([
     prisma.course.count({ where: { tenantId } }),
     prisma.course.count({ where: { tenantId, isPublished: true } }),
-    prisma.enrollment.count({ where: { tenantId } }),
-    prisma.enrollment.count({ where: { tenantId, status: "completed" } }),
+    prisma.enrollment.count({ where: { tenantId, ...(enrolledAt && { enrolledAt }) } }),
+    prisma.enrollment.count({
+      where: { tenantId, status: "completed", ...(enrolledAt && { enrolledAt }) },
+    }),
   ]);
   return {
     courseCount,

@@ -10,16 +10,16 @@ import type { NotificationItem } from "@/lib/services/notifications.service";
 
 // Mobile-only dashboard header.
 //   ┌──────────────────────────────────┐
-//   │ Dashboard           [📅 Today ]  │
+//   │ Overview          [ 🔔 ] [ 📅 ]  │
 //   │ ┌──┐ ┌──┐ ┌──┐ ┌──┐              │
 //   │ │👥│ │🕒│ │📅│ │💰│              │
 //   │ Employees Attend. Leave Payroll  │
 //   └──────────────────────────────────┘
 // Wrapped in `lg:hidden` so desktop (>= 1024px) keeps the existing
 // TopBar layout. Tablets fall under this and use the mobile header
-// like phones — matches the boundary in tenant-shell.tsx.
-// The TopBar's own date picker is hidden on mobile so we don't show
-// the same control twice.
+// like phones — matches the boundary in tenant-shell.tsx. The date
+// picker mirrors the desktop TopBar so the Overview's period-based
+// analytics can be re-scoped on mobile too.
 export function MobileDashboardHeader({
   notifications,
 }: {

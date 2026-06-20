@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { listEmployees } from "@/lib/services/hr/employee.service";
 import { Target, Calendar, MessageSquare, CheckCircle2, ListChecks, Gauge } from "lucide-react";
 import { NewGoalDialog } from "./goals/_components/new-goal-dialog";
+import { resolveDateBounds } from "@/lib/date-range";
 
 function monthBounds() {
   const now = new Date();
@@ -30,7 +31,11 @@ function scoreTone(score: number) {
   return "text-red-600 dark:text-red-400";
 }
 
-export default async function PerformanceOverviewPage() {
+export default async function PerformanceOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
   const isAdmin =
     session.role === "owner" || session.role === "admin" || session.isSuperAdmin;
@@ -41,16 +46,27 @@ export default async function PerformanceOverviewPage() {
     await ensureMonthlyReviewCycle(session.tenantId);
   }
 
+  // Top-bar date filter (all-time default). Bounds goal/review counts + the goal
+  // list by createdAt; feeds the productivity widget (month fallback below).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
+
   const [stats, goals, cycles, employees, taskGoals] = await Promise.all([
-    getPerformanceStats(session.tenantId),
-    listGoals(session.tenantId),
+    getPerformanceStats(session.tenantId, { from: start, to: end }),
+    listGoals(session.tenantId, {
+      ...(start && { from: start }),
+      ...(end && { to: end }),
+    }),
     listReviewCycles(session.tenantId),
     listEmployees(session.tenantId, { status: "active" }),
     getTaskDrivenGoals(session.tenantId),
   ]);
 
-  // Task-derived productivity this month (admins see the whole team ranked).
-  const { from, to } = monthBounds();
+  // Task-derived productivity (admins see the whole team ranked). Honor the
+  // top-bar range when set, else this month.
+  const month = monthBounds();
+  const from = start ?? month.from;
+  const to = end ?? month.to;
   const team = isAdmin
     ? await getTeamPerformance(
         session.tenantId,

@@ -20,14 +20,24 @@ import {
 import { StatCard as MetricCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Inbox, Users, UserCog } from "lucide-react";
+import { resolveDateBounds } from "@/lib/date-range";
 
 // Merged Overview — this is the tenant home (formerly the separate /dashboard).
 // Top: role-aware analytics (super admins see platform counters; everyone else
 // sees the HR analytics dashboard). Below: the HR module map + workforce status
 // that used to be unique to /hr.
-export default async function HROverviewPage() {
+export default async function HROverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
   const scope = session.isSuperAdmin ? null : session.tenantId;
+
+  // Top-bar date filter. The Overview's KPIs are live snapshots; only the
+  // "Recent Hires" list honors the range (all-time default = recent hires).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
 
   const [
     analytics,
@@ -38,7 +48,7 @@ export default async function HROverviewPage() {
     positions,
     activeEmployees,
   ] = await Promise.all([
-    getDashboardAnalytics(scope),
+    getDashboardAnalytics(scope, { from: start, to: end }),
     session.isSuperAdmin ? getPlatformCounters() : Promise.resolve(null),
     // The mobile header renders its own NotificationBell (the desktop TopBar is
     // hidden on mobile) — fetch the same set the TopBar uses for accurate counts.

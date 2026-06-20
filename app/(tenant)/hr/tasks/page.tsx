@@ -14,6 +14,7 @@ import { ListTodo, AlertTriangle, CheckCircle2, Loader2, Gauge } from "lucide-re
 import { NewTaskDialog } from "./_components/new-task-dialog";
 import { type TaskRow } from "./_components/tasks-table";
 import { TasksTabs } from "./_components/tasks-tabs";
+import { resolveDateBounds } from "@/lib/date-range";
 
 function startOfToday() {
   const d = new Date();
@@ -34,7 +35,11 @@ function scoreTone(score: number) {
   return "text-red-600 dark:text-red-400";
 }
 
-export default async function TasksPage() {
+export default async function TasksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
 
   // full (admin) / team (manager: self + direct reports) / self scope.
@@ -46,9 +51,23 @@ export default async function TasksPage() {
   const canAssign = isAdmin || isManager;
   const editableSet = new Set(scopeIds ?? []);
 
+  // Top-bar date filter (all-time default). Bounds the task list + operational
+  // cards by due date; feeds the productivity widget (month fallback below).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
+  const dueRange = { from: start, to: end };
+
   const [stats, tasks, allActive, goals] = await Promise.all([
-    getDashboardStats(session.tenantId, scopeIds ? { assigneeIds: scopeIds } : undefined),
-    listTasks(session.tenantId, scopeIds ? { assigneeIds: scopeIds } : {}),
+    getDashboardStats(
+      session.tenantId,
+      scopeIds ? { assigneeIds: scopeIds } : undefined,
+      dueRange
+    ),
+    listTasks(session.tenantId, {
+      ...(scopeIds ? { assigneeIds: scopeIds } : {}),
+      ...(start && { dueFrom: start }),
+      ...(end && { dueTo: end }),
+    }),
     canAssign ? listEmployees(session.tenantId, { status: "active" }) : Promise.resolve([]),
     isAdmin ? listGoals(session.tenantId) : Promise.resolve([]),
   ]);
@@ -56,9 +75,12 @@ export default async function TasksPage() {
   // Assignee picker: admins → everyone; managers → self + direct reports.
   const employees = isAdmin ? allActive : allActive.filter((e) => editableSet.has(e.id));
 
-  // Productivity this month (spec §11.3 / §12). Admins & managers see a ranked
-  // team table; an individual sees their own. All figures trace to TaskActivity.
-  const { from, to } = monthBounds();
+  // Productivity (spec §11.3 / §12). Admins & managers see a ranked team table;
+  // an individual sees their own. The productivity engine needs a concrete
+  // window, so honor the top-bar range when set, else fall back to this month.
+  const month = monthBounds();
+  const from = start ?? month.from;
+  const to = end ?? month.to;
   const team = canAssign
     ? await getTeamPerformance(
         session.tenantId,

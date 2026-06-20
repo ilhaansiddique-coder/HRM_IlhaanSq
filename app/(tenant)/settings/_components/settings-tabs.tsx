@@ -31,7 +31,11 @@ export function SettingsTabs({
 }) {
   return (
     <Tabs defaultValue="business" className="w-full">
-      <TabsList>
+      {/* max-w-full + overflow-x-auto turns the tab bar into a horizontal
+          scroller on narrow screens; [&>*]:shrink-0 stops triggers from being
+          squeezed so they keep their width and scroll instead of clipping. */}
+      <TabsList className="max-w-full justify-start overflow-x-auto [&>*]:shrink-0">
+
         <TabsTrigger value="business">Business</TabsTrigger>
         <TabsTrigger value="system">System</TabsTrigger>
         {salaryStructure != null && (
@@ -50,7 +54,7 @@ export function SettingsTabs({
           <TabsTrigger value="assign-salary">Assign Salary</TabsTrigger>
         )}
         {holidays != null && (
-          <TabsTrigger value="holidays">Holidays</TabsTrigger>
+          <TabsTrigger value="holidays">Holidays &amp; Off Days</TabsTrigger>
         )}
       </TabsList>
 

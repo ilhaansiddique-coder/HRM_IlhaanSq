@@ -750,11 +750,11 @@ function TopBar({
     .join("")
     .toUpperCase();
 
-  // The date-range picker is only useful on pages with date-filtered data
-  // (the Overview analytics). Hide it where it does nothing — e.g. the
-  // Positions and Departments lists.
+  // The date-range picker filters page data on every menu page EXCEPT the three
+  // catalog/list pages whose rows aren't a date series (Employees, Departments,
+  // Positions). Denylist them; show it everywhere else.
   const { activePath: pathname } = useOptimisticNav();
-  const NO_DATE_PICKER = ["/hr/positions", "/hr/departments"];
+  const NO_DATE_PICKER = ["/hr/employees", "/hr/departments", "/hr/positions"];
   const showDatePicker = !NO_DATE_PICKER.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );

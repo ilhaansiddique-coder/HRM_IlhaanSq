@@ -213,13 +213,23 @@ export async function getActiveBreak(tenantId: string, employeeId: string) {
   });
 }
 
-export async function getBreakStats(tenantId: string, date?: Date) {
-  const targetDate = new Date(date ?? new Date());
-  targetDate.setHours(0, 0, 0, 0);
-  const nextDay = new Date(targetDate);
-  nextDay.setDate(nextDay.getDate() + 1);
+// Completed-break count + average duration over a window. With a `range` (from
+// the top-bar date filter) the figures cover that window; with no range they
+// cover all time. `activeBreaks` is always "right now" and `totalEmployees` is
+// a live headcount — both are snapshots and ignore the range by design.
+export async function getBreakStats(
+  tenantId: string,
+  range?: { from?: Date | null; to?: Date | null }
+) {
+  const breakStart =
+    range?.from || range?.to
+      ? {
+          ...(range?.from && { gte: range.from }),
+          ...(range?.to && { lte: range.to }),
+        }
+      : undefined;
 
-  const [activeBreaks, completedToday, totalEmployees] = await Promise.all([
+  const [activeBreaks, completed, totalEmployees] = await Promise.all([
     prisma.breakSession.count({
       where: {
         tenantId,
@@ -230,7 +240,7 @@ export async function getBreakStats(tenantId: string, date?: Date) {
       where: {
         tenantId,
         status: "completed",
-        breakStart: { gte: targetDate, lt: nextDay },
+        ...(breakStart && { breakStart }),
       },
       _count: { _all: true },
       _avg: { durationMin: true },
@@ -240,8 +250,8 @@ export async function getBreakStats(tenantId: string, date?: Date) {
 
   return {
     activeBreaks,
-    completedToday: (completedToday?._count?._all ?? 0) as number,
-    avgDurationMin: Math.round(((completedToday?._avg?.durationMin ?? 0) as number) * 100) / 100,
+    completed: (completed?._count?._all ?? 0) as number,
+    avgDurationMin: Math.round(((completed?._avg?.durationMin ?? 0) as number) * 100) / 100,
     totalEmployees,
   };
 }

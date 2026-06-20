@@ -91,9 +91,18 @@ const EMPTY: HrDashboard = {
 };
 
 export async function getDashboardAnalytics(
-  tenantId: Scope
+  tenantId: Scope,
+  // Optional top-bar date filter. The Overview's KPIs are live operational
+  // snapshots ("present today", pending approvals, headcount) and ignore it by
+  // design; only the date-bounded "Recent Hires" list honors the range.
+  range?: { from?: Date | null; to?: Date | null }
 ): Promise<HrDashboard> {
   if (!tenantId) return EMPTY;
+
+  const hireDate =
+    range?.from || range?.to
+      ? { ...(range?.from && { gte: range.from }), ...(range?.to && { lte: range.to }) }
+      : undefined;
 
   const [
     employee,
@@ -122,7 +131,7 @@ export async function getDashboardAnalytics(
       },
     }),
     prisma.employee.findMany({
-      where: { tenantId, status: "active" },
+      where: { tenantId, status: "active", ...(hireDate && { hireDate }) },
       orderBy: { hireDate: "desc" },
       take: 6,
       select: {

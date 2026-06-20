@@ -44,7 +44,14 @@ export async function deleteDocumentCategory(tenantId: string, id: string) {
 
 export async function listDocuments(
   tenantId: string,
-  filters: { employeeId?: string; categoryId?: string; expiringSoon?: boolean } = {}
+  filters: {
+    employeeId?: string;
+    categoryId?: string;
+    expiringSoon?: boolean;
+    // Top-bar date filter — bounds the document list by upload time (createdAt).
+    from?: Date;
+    to?: Date;
+  } = {}
 ) {
   const expiringSoonCutoff = new Date();
   expiringSoonCutoff.setDate(expiringSoonCutoff.getDate() + 30);
@@ -57,6 +64,14 @@ export async function listDocuments(
       ...(filters.expiringSoon && {
         expiresAt: { lte: expiringSoonCutoff, gte: new Date() },
       }),
+      ...(filters.from || filters.to
+        ? {
+            createdAt: {
+              ...(filters.from && { gte: filters.from }),
+              ...(filters.to && { lte: filters.to }),
+            },
+          }
+        : {}),
     },
     include: {
       employee: { select: { id: true, fullName: true, empCode: true } },

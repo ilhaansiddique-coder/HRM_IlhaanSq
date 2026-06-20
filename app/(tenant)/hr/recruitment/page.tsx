@@ -8,12 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, GitBranch, Users, Award, ArrowRight } from "lucide-react";
 import { NewJobPostingDialog } from "./jobs/_components/new-job-posting-dialog";
+import { resolveDateBounds } from "@/lib/date-range";
 
-export default async function RecruitmentOverviewPage() {
+export default async function RecruitmentOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
+  // Top-bar date filter bounds the applications list by appliedAt (all-time
+  // default). The KPI cards are current-pipeline state and stay as snapshots.
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
   const [stats, recentApps] = await Promise.all([
     getRecruitmentStats(session.tenantId),
-    listApplications(session.tenantId),
+    listApplications(session.tenantId, {
+      ...(start && { from: start }),
+      ...(end && { to: end }),
+    }),
   ]);
 
   return (

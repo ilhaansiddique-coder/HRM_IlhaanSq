@@ -82,22 +82,22 @@ export function TimeColumns({
   };
 
   return (
-    <div className="flex items-start justify-center gap-1.5 p-3">
+    <div className="flex items-start justify-center gap-1 p-2.5">
       <FlipField label="Hour" value={h12} min={1} max={12} onPick={setHour} onStep={stepHour} />
-      <div className="flex h-16 items-center">
-        <span className="text-2xl font-semibold text-muted-foreground">:</span>
+      <div className="flex h-11 items-center">
+        <span className="text-lg font-semibold text-muted-foreground">:</span>
       </div>
       <FlipField label="Minute" value={m} min={0} max={59} pad onPick={setMinute} onStep={stepMinute} />
       {/* Stacked AM/PM segmented toggle — padded container with rounded inner
           segments so the active half reads as a pill, never clipped. */}
-      <div className="ml-1 flex h-16 w-12 flex-col gap-1 rounded-xl border border-border bg-card/40 p-1">
+      <div className="ml-0.5 flex h-11 w-10 flex-col gap-1 rounded-lg border border-border bg-card/40 p-1">
         {(["AM", "PM"] as Meridiem[]).map((opt) => (
           <button
             key={opt}
             type="button"
             onClick={() => setMer(opt)}
             className={cn(
-              "flex flex-1 items-center justify-center rounded-lg text-xs font-bold transition-colors",
+              "flex flex-1 items-center justify-center rounded-md text-[11px] font-bold transition-colors",
               mer === opt
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-muted"
@@ -196,17 +196,17 @@ export function TimePicker({
           className="w-auto p-0"
         >
           <TimeColumns value={current} onChange={commit} minuteStep={minuteStep} />
-          <div className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2">
+          <div className="flex items-center justify-center gap-2 border-t border-border/60 p-2">
             <button
               type="button"
-              className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
               onClick={setNow}
             >
               Now
             </button>
             <button
               type="button"
-              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+              className="rounded-md bg-primary px-5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
               onClick={() => setOpen(false)}
             >
               Done
@@ -249,7 +249,7 @@ function FlipField({
   }, [value, editing, doPad]);
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="flex flex-col items-center gap-1">
       <input
         type="text"
         inputMode="numeric"
@@ -285,9 +285,9 @@ function FlipField({
             e.currentTarget.blur();
           }
         }}
-        className="h-16 w-[68px] rounded-xl border-2 border-border bg-card/40 text-center text-3xl font-semibold tabular-nums text-foreground caret-primary outline-none transition-colors focus:border-primary"
+        className="h-11 w-[62px] rounded-lg border-2 border-border bg-card/40 text-center text-xl font-semibold tabular-nums text-foreground caret-primary outline-none transition-colors focus:border-primary"
       />
-      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+      <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
     </div>
   );
 }

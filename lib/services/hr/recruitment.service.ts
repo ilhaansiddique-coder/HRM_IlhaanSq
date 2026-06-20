@@ -161,9 +161,19 @@ export async function createCandidate(
 
 // ─── Applications (Pipeline) ────────────────────────────────
 
-export async function listApplications(tenantId: string) {
+export async function listApplications(
+  tenantId: string,
+  filters: { from?: Date; to?: Date } = {}
+) {
+  const { from, to } = filters;
   return prisma.application.findMany({
-    where: { tenantId },
+    where: {
+      tenantId,
+      // Top-bar date filter — bounds by when the application was received.
+      ...(from || to
+        ? { appliedAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+        : {}),
+    },
     include: {
       candidate: true,
       jobPosting: { select: { id: true, title: true } },

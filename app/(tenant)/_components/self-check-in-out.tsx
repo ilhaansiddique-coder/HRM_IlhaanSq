@@ -28,9 +28,13 @@ function fmtDuration(totalSec: number) {
 export function SelfCheckInOut({
   employeeId,
   today,
+  onLeave = null,
 }: {
   employeeId: string;
   today: Today;
+  // Name of the approved leave type covering today, or null. When set, check-in
+  // is blocked (mirrors the server-side guard in checkIn()).
+  onLeave?: string | null;
 }) {
   const [pending, startTransition] = useTransition();
   const [clock, setClock] = useState("");
@@ -106,7 +110,13 @@ export function SelfCheckInOut({
         </p>
 
         <div className="mt-4">
-          {!checkedIn && (
+          {onLeave && !checkedIn && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-sm font-medium text-primary">
+              <CheckCircle2 className="h-4 w-4" />
+              On approved {onLeave} today
+            </span>
+          )}
+          {!onLeave && !checkedIn && (
             <span className="text-sm text-muted-foreground">
               Not checked in yet
             </span>
@@ -170,7 +180,7 @@ export function SelfCheckInOut({
         <Button
           size="lg"
           className="h-12 gap-2"
-          disabled={pending || checkedIn}
+          disabled={pending || checkedIn || !!onLeave}
           onClick={() => run(checkInAction, "Checked in")}
         >
           {pending ? (

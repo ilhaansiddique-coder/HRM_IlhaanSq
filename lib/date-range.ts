@@ -70,17 +70,18 @@ function parseISODate(raw: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-// Routes where the global top-bar date picker actually filters page data.
-// The picker hides itself everywhere else (Departments, Settings, etc.).
-export const DATE_FILTER_PATHS = [
-  "/hr/attendance",
-  "/hr/leave",
-  "/hr/payroll",
-  "/admin",
+// Catalog/list pages whose rows are NOT a date series — the global top-bar date
+// picker is hidden here (it filters page data on every other menu page). Kept in
+// sync with NO_DATE_PICKER in app/(tenant)/_components/tenant-shell.tsx, which is
+// the source of truth for visibility.
+export const NO_DATE_FILTER_PATHS = [
+  "/hr/employees",
+  "/hr/departments",
+  "/hr/positions",
 ];
 
 export function pathHasDateFilter(pathname: string): boolean {
-  return DATE_FILTER_PATHS.some(
+  return !NO_DATE_FILTER_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
 }

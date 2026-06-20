@@ -1,12 +1,15 @@
 import { requireTenant } from "@/lib/auth";
-import { listHolidays, getWeekendDays } from "@/lib/services/hr/holiday.service";
+import {
+  listHolidays,
+  getAppliedCountsByHoliday,
+} from "@/lib/services/hr/holiday.service";
 import { HolidaysManager, type HolidayRow } from "./holidays-manager";
 
 export async function HolidaysSection() {
   const session = await requireTenant();
-  const [holidays, weekendDays] = await Promise.all([
+  const [holidays, appliedCounts] = await Promise.all([
     listHolidays(session.tenantId),
-    getWeekendDays(session.tenantId),
+    getAppliedCountsByHoliday(session.tenantId),
   ]);
 
   const rows: HolidayRow[] = holidays.map((h) => ({
@@ -15,7 +18,8 @@ export async function HolidaysSection() {
     name: h.name,
     type: h.type,
     isRecurring: h.isRecurring,
+    isTentative: h.isTentative,
   }));
 
-  return <HolidaysManager holidays={rows} weekendDays={weekendDays} />;
+  return <HolidaysManager holidays={rows} appliedCounts={appliedCounts} />;
 }

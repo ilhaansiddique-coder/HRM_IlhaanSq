@@ -9,12 +9,23 @@ import {
   RecentEnrollmentsTable,
   type RecentEnrollmentRow,
 } from "./_components/recent-enrollments-table";
+import { resolveDateBounds } from "@/lib/date-range";
 
-export default async function LearningOverviewPage() {
+export default async function LearningOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
+  // Top-bar date filter bounds enrollments by enrolledAt (all-time default).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
   const [stats, enrollments] = await Promise.all([
-    getLearningStats(session.tenantId),
-    listEnrollments(session.tenantId),
+    getLearningStats(session.tenantId, { from: start, to: end }),
+    listEnrollments(session.tenantId, {
+      ...(start && { from: start }),
+      ...(end && { to: end }),
+    }),
   ]);
 
   // Plain, serializable rows for the client DataTable (latest 8).

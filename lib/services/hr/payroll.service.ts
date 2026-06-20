@@ -1130,8 +1130,8 @@ export async function runPayroll(
       },
       select: { date: true },
     });
-    // Worked on a weekly off day or a holiday → extra duty.
-    const offDayWorkedDays = workedRows.filter((r) => !wd.isWorkingDay(r.date)).length;
+    // Worked on a weekly off day or a holiday → extra duty (per-employee schedule).
+    const offDayWorkedDays = workedRows.filter((r) => !wd.isWorkingDay(r.date, sal.employeeId)).length;
     const manualExtraDuty =
       input.adjustments?.[sal.employeeId]?.extraDutyDays ?? 0;
     const extraDutyDays = manualExtraDuty + offDayWorkedDays;
@@ -1181,7 +1181,7 @@ export async function runPayroll(
       ),
     ]);
     // A weekly off day or holiday is never counted as an absent working day.
-    const attendanceDays = absentRows.filter((r) => wd.isWorkingDay(r.date)).length;
+    const attendanceDays = absentRows.filter((r) => wd.isWorkingDay(r.date, sal.employeeId)).length;
     // Late → absence: per month, every 3 lates = 1 absent day.
     const lateAbsenceDays = lateDetail.absenceDays;
     const adj = input.adjustments?.[sal.employeeId];

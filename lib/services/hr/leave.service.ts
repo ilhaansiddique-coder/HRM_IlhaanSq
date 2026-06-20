@@ -119,8 +119,11 @@ export async function createLeaveRequest(
   await assertTenantOwns(tenantId, "leaveType", [input.leaveTypeId]);
 
   // Count only working days — weekends + holidays don't consume leave balance.
+  // Uses the employee's own off-day schedule when they're custom-scheduled.
   const wd = await getWorkingDayChecker(tenantId);
-  const days = countLeaveDays(input.startDate, input.endDate, wd.isWorkingDay);
+  const days = countLeaveDays(input.startDate, input.endDate, (d) =>
+    wd.isWorkingDay(d, input.employeeId)
+  );
 
   const leave = await prisma.leaveRequest.create({
     data: {

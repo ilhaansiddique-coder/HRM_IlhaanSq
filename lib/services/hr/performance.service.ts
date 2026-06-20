@@ -46,10 +46,26 @@ export async function closeCycle(tenantId: string, id: string) {
 
 export async function listGoals(
   tenantId: string,
-  filters: { employeeId?: string; cycleId?: string; type?: "okr" | "kpi" } = {}
+  filters: {
+    employeeId?: string;
+    cycleId?: string;
+    type?: "okr" | "kpi";
+    from?: Date;
+    to?: Date;
+  } = {}
 ) {
+  const { employeeId, cycleId, type, from, to } = filters;
   return prisma.goal.findMany({
-    where: { tenantId, ...filters },
+    where: {
+      tenantId,
+      ...(employeeId && { employeeId }),
+      ...(cycleId && { cycleId }),
+      ...(type && { type }),
+      // Top-bar date filter — bounds the goal list by when it was created.
+      ...(from || to
+        ? { createdAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+        : {}),
+    },
     include: {
       employee: { select: { id: true, fullName: true, empCode: true } },
       cycle: { select: { id: true, name: true } },
@@ -271,18 +287,28 @@ export async function ensureMonthlyReviewCycle(tenantId: string, ref: Date = new
   return { cycle, createdDrafts };
 }
 
-export async function getPerformanceStats(tenantId: string) {
+// Goal + review counts are bounded by `range` (createdAt) when the top-bar
+// filter is set; cycle counts are current-state snapshots and ignore it.
+export async function getPerformanceStats(
+  tenantId: string,
+  range?: { from?: Date | null; to?: Date | null }
+) {
+  const createdAt =
+    range?.from || range?.to
+      ? { ...(range?.from && { gte: range.from }), ...(range?.to && { lte: range.to }) }
+      : undefined;
+  const dated = createdAt ? { createdAt } : {};
   const [cycleCount, activeCycles, goalCount, achievedGoals, reviewCount, draftReviews, submittedReviews] =
     await Promise.all([
       prisma.reviewCycle.count({ where: { tenantId } }),
       prisma.reviewCycle.count({ where: { tenantId, status: "active" } }),
-      prisma.goal.count({ where: { tenantId } }),
-      prisma.goal.count({ where: { tenantId, status: "achieved" } }),
-      prisma.review.count({ where: { tenantId } }),
+      prisma.goal.count({ where: { tenantId, ...dated } }),
+      prisma.goal.count({ where: { tenantId, status: "achieved", ...dated } }),
+      prisma.review.count({ where: { tenantId, ...dated } }),
       // Auto-generated drafts await edit+submit; "submitted" counts the finalised
       // ones. The dashboard shows these separately so drafts aren't miscounted.
-      prisma.review.count({ where: { tenantId, status: "draft" } }),
-      prisma.review.count({ where: { tenantId, status: { not: "draft" } } }),
+      prisma.review.count({ where: { tenantId, status: "draft", ...dated } }),
+      prisma.review.count({ where: { tenantId, status: { not: "draft" }, ...dated } }),
     ]);
   return { cycleCount, activeCycles, goalCount, achievedGoals, reviewCount, draftReviews, submittedReviews };
 }

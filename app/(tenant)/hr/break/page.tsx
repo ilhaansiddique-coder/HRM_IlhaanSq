@@ -25,10 +25,23 @@ import {
   BreakSessionsTable,
   type BreakSessionRow,
 } from "./_components/break-sessions-table";
+import { resolveDateBounds } from "@/lib/date-range";
 
-export default async function BreakTimePage() {
+export default async function BreakTimePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
   const session = await requireTenant();
   const isAdmin = ["owner", "admin", "superadmin"].includes(session.role ?? "");
+
+  // Top-bar date filter (defaults to all-time so the full history shows).
+  const sp = await searchParams;
+  const { start, end } = resolveDateBounds(sp.range, sp.from, sp.to, "all_time");
+  const rangeFilter = {
+    ...(start && { from: start }),
+    ...(end && { to: end }),
+  };
 
   // The logged-in user's own employee record (if any) — used for THEIR personal
   // Start/End break button. Looked up for every role so admins can take breaks
@@ -45,12 +58,12 @@ export default async function BreakTimePage() {
   // would crash Prisma).
   const NO_MATCH = "00000000-0000-0000-0000-000000000000";
   const dataFilter = isAdmin
-    ? {}
-    : { employeeId: myEmployeeId ?? NO_MATCH };
+    ? { ...rangeFilter }
+    : { employeeId: myEmployeeId ?? NO_MATCH, ...rangeFilter };
 
   const [stats, sessions, employees, threshold, activeBreak] =
     await Promise.all([
-      getBreakStats(session.tenantId),
+      getBreakStats(session.tenantId, { from: start, to: end }),
       listBreakSessions(session.tenantId, dataFilter),
       listEmployees(session.tenantId, { status: "active" }),
       getBreakTimeThreshold(session.tenantId),
@@ -168,8 +181,8 @@ export default async function BreakTimePage() {
         <div className="w-[68vw] max-w-[300px] xl:w-auto xl:max-w-none shrink-0 snap-start">
           <StatCard
             icon={<Clock className="h-4 w-4" />}
-            title="Completed Today"
-            value={stats.completedToday}
+            title={start || end ? "Completed" : "Completed (all time)"}
+            value={stats.completed}
             variant="success"
           />
         </div>

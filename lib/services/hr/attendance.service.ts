@@ -112,6 +112,26 @@ export async function checkIn(tenantId: string, employeeId: string) {
   const tz = settings?.timezone?.trim() || "UTC";
   const weekendDays = settings?.weekendDays?.length ? settings.weekendDays : [WEEKLY_HOLIDAY_DOW];
   const today = businessDate(tz, now); // UTC-midnight of tenant-local date
+
+  // An employee on approved leave today must not be able to file attendance —
+  // otherwise the record feeds the late→absence payroll rollup and stats as a
+  // normal working day. To work during a leave window, cancel the leave first.
+  const onLeave = await prisma.leaveRequest.findFirst({
+    where: {
+      tenantId,
+      employeeId,
+      status: "approved",
+      startDate: { lte: today },
+      endDate: { gte: today },
+    },
+    select: { leaveType: { select: { name: true } } },
+  });
+  if (onLeave) {
+    throw new Error(
+      `You are on approved ${onLeave.leaveType?.name ?? "leave"} today and cannot check in.`
+    );
+  }
+
   const threshold = settings?.lateThreshold?.trim() || DEFAULT_LATE_THRESHOLD;
   const [th, tm] = threshold.split(":").map(Number);
   const thresholdMinutes = th * 60 + tm;
@@ -480,7 +500,7 @@ export async function getLateToAbsenceDetail(
   const monthly = new Map<string, number>();
   for (const r of lateRecords) {
     const d = new Date(r.date);
-    if (!wd.isWorkingDay(d)) continue;
+    if (!wd.isWorkingDay(d, employeeId)) continue;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     monthly.set(key, (monthly.get(key) ?? 0) + 1);
   }
@@ -529,7 +549,7 @@ export async function countLateToAbsenceBatch(
   const perEmpMonth = new Map<string, Map<string, number>>();
   for (const r of lateRecords) {
     const d = new Date(r.date);
-    if (!wd.isWorkingDay(d)) continue;
+    if (!wd.isWorkingDay(d, r.employeeId)) continue;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     let months = perEmpMonth.get(r.employeeId);
     if (!months) {
@@ -586,7 +606,7 @@ export async function getEmployeeAttendanceSummary(
   let absent = 0;
   let holidayWorked = 0;
   for (const r of rows) {
-    if (!wd.isWorkingDay(r.date) && r.checkIn) holidayWorked++;
+    if (!wd.isWorkingDay(r.date, employeeId) && r.checkIn) holidayWorked++;
     else if (r.status === "late") late++;
     else if (r.status === "absent") absent++;
     else if (r.status === "present" || r.checkIn) present++;
@@ -604,7 +624,7 @@ export async function getEmployeeAttendanceSummary(
       checkOut: r.checkOut ? r.checkOut.toISOString() : null,
       workHours: r.workHours ? Number(r.workHours) : null,
       notes: r.notes,
-      isHoliday: !wd.isWorkingDay(r.date),
+      isHoliday: !wd.isWorkingDay(r.date, employeeId),
     })),
   };
 }

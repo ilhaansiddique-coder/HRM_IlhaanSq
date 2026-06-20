@@ -90,6 +90,19 @@ export default async function EmployeeHomePage() {
     summary.records.find(
       (r) => new Date(r.date).getTime() === todayKey.getTime()
     ) ?? null;
+
+  // Approved leave covering today blocks check-in (enforced server-side in
+  // checkIn()); surface it here so the button is disabled, not just erroring.
+  const leaveToday = await prisma.leaveRequest.findFirst({
+    where: {
+      tenantId: session.tenantId,
+      employeeId: employee.id,
+      status: "approved",
+      startDate: { lte: todayKey },
+      endDate: { gte: todayKey },
+    },
+    select: { leaveType: { select: { name: true } } },
+  });
   const latest = payslips[0];
 
   return (
@@ -134,6 +147,7 @@ export default async function EmployeeHomePage() {
           <CardContent>
             <SelfCheckInOut
               employeeId={employee.id}
+              onLeave={leaveToday?.leaveType?.name ?? null}
               today={
                 todayRec
                   ? {
